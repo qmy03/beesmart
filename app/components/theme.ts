@@ -45,6 +45,7 @@ const theme = createTheme({
     },
   },
   typography: {
+    fontFamily: 'Be Vietnam Pro, sans-serif', // Thiết lập font chữ mặc định cho toàn bộ trang
     fontSize: 14, // Đặt kích thước font mặc định là 14px
     body1: {
       fontSize: '14px', // Thiết lập kích thước cho body1 (có thể tùy chỉnh thêm nếu cần)

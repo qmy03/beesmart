@@ -12,6 +12,12 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      fontSize: {
+        'base': '14px',
+      },
+      fontFamily: {
+        sans: ["Be Vietnam Pro", "sans-serif"], // Font mặc định cho toàn bộ trang
+      },
     },
   },
   plugins: [],

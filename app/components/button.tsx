@@ -17,7 +17,7 @@ export function Button({ children, variant = "contained", color = "primary", ...
         textTransform:'none',
         '&.MuiButton-contained': {
           backgroundColor: color === "error" ? theme.palette.error.main : theme.palette.primary.main,
-          color: color === "error" ? '#fff' : undefined,
+          color: color === "error" ? '#fff' : '#fff',
           '&:disabled': {
             backgroundColor: theme.palette.secondary.light,
             color: theme.palette.secondary.main,
@@ -33,9 +33,9 @@ export function Button({ children, variant = "contained", color = "primary", ...
         },
         '&.MuiButton-text': {
           
-          color: color === "error" ? theme.palette.error.main : theme.palette.primary.main,
+          color: color === "primary" ? "#FFFFFF" : theme.palette.primary.main,
           '&:hover': {
-            backgroundColor: color === "error" ? theme.palette.error.light : theme.palette.primary.light,
+            backgroundColor: color === "primary" ? "#B8D07F" : theme.palette.primary.light,
           },
         }
       }}

@@ -1,4 +1,3 @@
-import React from 'react';
 import { TextField as MuiTextField, InputAdornment, TextFieldProps as MuiTextFieldProps } from '@mui/material';
 import { SxProps } from '@mui/system';
 import theme from './theme';
@@ -12,6 +11,7 @@ interface TextFieldProps extends Omit<MuiTextFieldProps, 'InputProps'> {
     endAdornment?: React.ReactNode;
     error?: boolean;
     helperText?: string;
+    FormHelperTextProps?: any; // Add this line
     sx?: SxProps;
 }
 
@@ -24,6 +24,7 @@ const TextField: React.FC<TextFieldProps> = ({
     endAdornment,
     error = false,
     helperText,
+    FormHelperTextProps, // Destructure this prop
     sx,
     ...muiProps
 }) => (
@@ -44,6 +45,14 @@ const TextField: React.FC<TextFieldProps> = ({
         }}
         error={error}
         helperText={helperText}
+        FormHelperTextProps={{
+            sx: {
+                margin: 0,
+                fontSize: '12px',
+                color: 'red', // Ensure the helper text is red
+            },
+            ...FormHelperTextProps, // Spread any additional props
+        }}
         sx={{
             '& .css-1pzfmz2-MuiInputBase-input-MuiOutlinedInput-input':{
                 fontSize: '14px',
@@ -59,6 +68,9 @@ const TextField: React.FC<TextFieldProps> = ({
             },
             '& label.Mui-focused': {
                 color: theme.palette.primary.main,
+            },
+            '& .MuiInputLabel-root': {
+                fontSize: '14px',
             },
             ...sx,
         }}

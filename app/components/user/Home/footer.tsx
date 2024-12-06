@@ -1,0 +1,141 @@
+import { Box, Typography, Link } from "@mui/material";
+import Image from "next/image";
+import { useRouter } from "next/navigation"; // Sử dụng useRouter để điều hướng
+import FacebookIcon from "@mui/icons-material/Facebook";
+import YouTubeIcon from "@mui/icons-material/YouTube";
+import PhoneInTalkIcon from "@mui/icons-material/PhoneInTalk";
+import EmailIcon from "@mui/icons-material/Email";
+const Footer = () => {
+  const router = useRouter();
+
+  return (
+    <Box
+      sx={{
+        backgroundColor: "#FFFBF3", // Màu nền Footer
+        padding: "20px 100px",
+        display: "flex",
+        gap: 4,
+        // justifyContent: "space-between", // Giãn đều các cột
+        // flexWrap: "wrap", // Để đảm bảo bố cục không bị lỗi trên màn hình nhỏ
+        borderTop: "1px solid #ccc",
+        // position: "fixed", // Cố định Footer ở cuối trang
+        // bottom: 0,
+        // left: 0,
+        width: "100%", // Đảm bảo Footer trải dài toàn trang
+        justifyContent: "center",
+        // alignItems: "center",
+      }}
+    >
+      {/* Cột 1: Giới thiệu */}
+      <Box sx={{ flex: "1", minWidth: "40%" }}>
+        <Typography
+          sx={{ fontWeight: "bold", marginBottom: "10px", fontSize: "16px" }}
+        >
+          Giới thiệu
+        </Typography>
+        <Link
+          onClick={() => router.push("/quy-dinh-chung")}
+          sx={{
+            display: "block",
+            color: "#555",
+            cursor: "pointer",
+            marginBottom: "5px",
+            textDecoration: "none",
+          }}
+        >
+          Quy định chung
+        </Link>
+        <Link
+          onClick={() => router.push("/chinh-sach-bao-mat")}
+          sx={{
+            display: "block",
+            color: "#555",
+            cursor: "pointer",
+            textDecoration: "none",
+          }}
+        >
+          Chính sách bảo mật
+        </Link>
+        <Box sx={{ marginTop: "20px" }}>
+          <Typography
+            sx={{ fontWeight: "bold", marginBottom: "5px", fontSize: "16px" }}
+          >
+            Thông tin liên hệ
+          </Typography>
+          <Box sx={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            <PhoneInTalkIcon sx={{ color: "#99BC4D" }} fontSize="small" />
+            <Box>
+              <Typography sx={{ display: "flex", alignItems: "center" }}>
+                Hỗ trợ trực tuyến: 0987654321
+              </Typography>
+              <Typography>Thời gian: 8h30 - 21h00 (Thứ 2 - Thứ 7)</Typography>
+            </Box>
+          </Box>
+          <Typography sx={{ marginTop: "5px" }}>
+            <EmailIcon sx={{ color: "#99BC4D" }} fontSize="small" />{" "}
+            beesmart669@gmail.com
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Cột 2: Về BeeSmart */}
+      <Box sx={{ flex: "1", minWidth: "40%" }}>
+        <Typography
+          sx={{ fontWeight: "bold", marginBottom: "10px", fontSize: "16px" }}
+        >
+          Về BeeSmart
+        </Typography>
+        {[
+          { name: "Trang chủ", path: "/" },
+          { name: "Danh sách chủ điểm", path: "/danh-sach-chu-diem" },
+          { name: "Đăng ký", path: "/dang-ky" },
+          { name: "Đăng nhập", path: "/dang-nhap" },
+          { name: "Hướng dẫn sử dụng", path: "/huong-dan-su-dung" },
+        ].map((item, index) => (
+          <Link
+            key={index}
+            onClick={() => router.push(item.path)}
+            sx={{
+              display: "block",
+              color: "#555",
+              cursor: "pointer",
+              marginBottom: "5px",
+              textDecoration: "none",
+            }}
+          >
+            {item.name}
+          </Link>
+        ))}
+      </Box>
+
+      {/* Cột 3: Logo và mạng xã hội */}
+      <Box
+        sx={{
+          flex: "1",
+          minWidth: "200px",
+          // textAlign: "center",
+        }}
+      >
+        <img
+          src="/logo.png"
+          alt="Logo"
+          style={{ width: 80, height: "auto", cursor: "pointer" }}
+        />
+        <Typography sx={{ marginY: "10px" }}>© 2024 BeeSmart.co</Typography>
+        <Typography>Mạng xã hội</Typography>
+        <Box sx={{ display: "flex", gap: "10px" }}>
+          <FacebookIcon
+            sx={{ cursor: "pointer", color: "#3b5998" }}
+            onClick={() => router.push("https://facebook.com")}
+          />
+          <YouTubeIcon
+            sx={{ cursor: "pointer", color: "#ff0000" }}
+            onClick={() => router.push("https://youtube.com")}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default Footer;
