@@ -6,7 +6,12 @@ import Image from "next/image";
 import { Button } from "../../button";
 import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import theme from "../../theme";
+import { useRouter } from "next/navigation";
 const HomePage: React.FC = () => {
+  const router = useRouter();
+  const handleSkillClick = () => {
+    router.push("/skill-list");
+  };
   return (
     <Layout>
       <CssBaseline />
@@ -33,7 +38,7 @@ const HomePage: React.FC = () => {
               Nền tảng học toán dành cho học sinh tiểu học, giúp trẻ khám phá
               kiến thức qua các bài học sinh động và trò chơi vui nhộn.
             </Typography>
-            <Button>Học thử ngay</Button>
+            <Button onClick={handleSkillClick}>Học thử ngay</Button>
           </Box>
           <Box sx={{ flex: 1 }}>
             <Image src="/hero.png" width={523} height={523} alt="Hero"></Image>
@@ -131,6 +136,7 @@ const HomePage: React.FC = () => {
                 {/* Nút thêm */}
                 <Button
                   variant="outlined"
+                  onClick={handleSkillClick}
                   sx={{
                     // Khoảng cách với dòng chữ
                     backgroundColor: "#70CBF2",
@@ -291,6 +297,7 @@ const HomePage: React.FC = () => {
                 {/* Nút thêm */}
                 <Button
                   variant="outlined"
+                  onClick={handleSkillClick}
                   sx={{
                     // Khoảng cách với dòng chữ
                     backgroundColor: "#70CBF2",
@@ -371,6 +378,7 @@ const HomePage: React.FC = () => {
                 {/* Nút thêm */}
                 <Button
                   variant="outlined"
+                  onClick={handleSkillClick}
                   sx={{
                     // Khoảng cách với dòng chữ
                     backgroundColor: "#70CBF2",
@@ -451,6 +459,7 @@ const HomePage: React.FC = () => {
                 {/* Nút thêm */}
                 <Button
                   variant="outlined"
+                  onClick={handleSkillClick}
                   sx={{
                     // Khoảng cách với dòng chữ
                     backgroundColor: "#70CBF2",

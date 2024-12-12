@@ -18,7 +18,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
                     style={{ objectFit: 'fill' }}
                 />
                 <div className="absolute inset-0 flex items-center justify-end px-24">
-                    <div className="w-full sm:w-3/5 md:w-2/5 max-w-lg">
+                    <div className="w-full sm:w-2.5/5 md:w-2.5/5 max-w-lg">
                         {children}
                     </div>
                 </div>

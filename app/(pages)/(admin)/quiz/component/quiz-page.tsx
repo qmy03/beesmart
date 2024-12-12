@@ -33,10 +33,14 @@ import QuestionDialog from "./question-dialog";
 import ClearIcon from "@mui/icons-material/Clear";
 import CheckIcon from "@mui/icons-material/Check";
 const QuizPage = () => {
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [severity, setSeverity] = useState<"success" | "error">("success");
   const { accessToken } = useAuth();
   console.log(accessToken);
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
+  const [selectedGradeName, setSelectedGradeName] = useState<string>("");
   const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1");
   const [topics, setTopics] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]); // State to store lessons for selected topic
@@ -58,6 +62,25 @@ const QuizPage = () => {
   const [selectedQuizzes, setSelectedQuizzes] = useState<Set<string>>(
     new Set()
   );
+  const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
+  // const handleAnswerSubmit = (questionId: string, correctAnswer: any) => {
+  //   const userAnswer = userAnswers[questionId];
+  //   const isCorrect = userAnswer === correctAnswer;
+
+  //   const message = isCorrect ? "Đúng rồi!" : "Sai rồi!";
+  //   const severity: "success" | "error" = isCorrect ? "success" : "error"; // Set severity based on correctness
+
+  //   setSnackbarMessage(message);
+  //   setSeverity(severity);
+  //   setSnackbarOpen(true); // Open Snackbar
+  // };
+  const handleInputChange = (questionId: string, answer: any) => {
+    setUserAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer, // Cập nhật câu trả lời người dùng cho câu hỏi tương ứng
+    }));
+  };
+
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
   const handleCheckboxChange = (quizId: string) => {
@@ -73,30 +96,31 @@ const QuizPage = () => {
   };
 
   const handleDeleteQuiz = () => {
-    if (selectedQuizzes.size === 0) return;
-  
-    // Convert the Set of selected quizzes to an array of quiz IDs
+    if (!selectedQuizzes.size) return;
+
     const quizIdsToDelete = Array.from(selectedQuizzes);
-    console.log("Deleting quizzes:", quizIdsToDelete);  
-    // Delete quizzes using the API call
     apiService
       .delete("/quizzes", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-        data: quizIdsToDelete, // Pass the array of quiz IDs to delete
+        data: quizIdsToDelete,
       })
       .then(() => {
-        // Filter out the deleted quizzes from the state
-        setQuizzes(quizzes.filter((quiz) => !quizIdsToDelete.includes(quiz.quizId)));
-        setOpenDeleteDialog(false); // Close the dialog
+        setQuizzes(
+          quizzes.filter((quiz) => !quizIdsToDelete.includes(quiz.quizId))
+        );
+        setSnackbarMessage("Quizzes deleted successfully!");
+        setSeverity("success");
+        setSnackbarOpen(true);
       })
       .catch((error) => {
         console.error("Error deleting quizzes:", error);
-        setOpenDeleteDialog(false); // Close the dialog on error
+        setSnackbarMessage("Error deleting quizzes.");
+        setSeverity("error");
+        setSnackbarOpen(true);
       });
   };
-  
 
   const handleDeleteDialogClose = () => {
     setOpenDeleteDialog(false);
@@ -114,6 +138,7 @@ const QuizPage = () => {
           if (fetchedGrades.length > 0) {
             const firstGrade = fetchedGrades[0];
             setSelectedGradeId(firstGrade.gradeId); // Automatically select the first grade
+            setSelectedGradeName(firstGrade.gradeName);
           }
           setLoading(false);
         })
@@ -125,12 +150,10 @@ const QuizPage = () => {
   }, [accessToken]);
 
   useEffect(() => {
-    if (selectedGradeId && selectedSemester) {
+    if (selectedGradeName && selectedSemester) {
       setLoading(true);
       apiService
-        .get(
-          `/topics/grade/${selectedGradeId}/semester?semester=${selectedSemester}`
-        )
+        .get(`/topics?grade=${selectedGradeName}&&semester=${selectedSemester}`)
         .then((response) => {
           const fetchedTopics = response.data.data.topics;
           setTopics(fetchedTopics);
@@ -152,12 +175,11 @@ const QuizPage = () => {
         (topic) => topic.topicId === selectedTopicId
       );
       if (selectedTopic) {
-        setLessons(selectedTopic.lessons); // Set lessons based on selected topic
-        if (selectedTopic.lessons.length > 0) {
-          setSelectedLessonId(selectedTopic.lessons[0].lessonId); // Automatically select the first lesson
-        }
+        setLessons(selectedTopic.lessons); // Cập nhật danh sách bài học
+        setSelectedLessonId(null); // Không gán bài học mặc định
       }
     }
+    console.log("selectedTopic", selectedTopicId);
   }, [selectedTopicId, topics]);
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -167,6 +189,7 @@ const QuizPage = () => {
     );
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
+      setSelectedGradeName(selectedGradeItem.gradeName);
     }
   };
 
@@ -190,6 +213,21 @@ const QuizPage = () => {
       apiService
         .get(`/lessons/${selectedLessonId}/quizzes`)
         .then((response) => {
+          console.log(response);
+          const quizzes = response.data.data.quizzes;
+          setQuizzes(quizzes);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching quizzes:", error);
+          setLoading(false);
+        });
+    } else if (selectedTopicId) {
+      setLoading(true);
+      apiService
+        .get(`/topics/${selectedTopicId}/quizzes`)
+        .then((response) => {
+          console.log("RRRRRRR", response);
           const quizzes = response.data.data.quizzes;
           setQuizzes(quizzes);
           setLoading(false);
@@ -199,7 +237,7 @@ const QuizPage = () => {
           setLoading(false);
         });
     }
-  }, [selectedLessonId]);
+  }, [selectedLessonId, selectedTopicId]);
   const handleExpandQuiz = (quizId: string) => {
     console.log("Expanding quiz ID:", quizId);
 
@@ -217,6 +255,7 @@ const QuizPage = () => {
         apiService
           .get(`/quizzes/${quizId}/questions`)
           .then((response) => {
+            console.log("responseQuizTopic", response);
             const fetchedQuestions = response.data.data.questions;
             console.log("quiz response", fetchedQuestions);
             setQuestions((prev) => ({ ...prev, [quizId]: fetchedQuestions }));
@@ -229,57 +268,179 @@ const QuizPage = () => {
       }
     }
   };
+  const handleAnswerSubmit = (questionId: string, correctAnswer: any) => {
+    let userAnswer = userAnswers[questionId];
 
-  // Handle creating a new quiz
-  // const handleCreateQuiz = (quizData: any) => {
-  //   setLoading(true);
+    // Ensure userAnswer is always an array when it's MULTI_SELECT
+    if (Array.isArray(userAnswer)) {
+      userAnswer = userAnswer.sort();
+    } else if (typeof userAnswer === "string") {
+      userAnswer = [userAnswer]; // Convert string answers to an array for consistency
+    }
 
-  //   const accessToken = localStorage.getItem("accessToken"); // Get token from localStorage
+    // Check the answer type and compare
+    let isCorrect = false;
 
-  //   if (!accessToken) {
-  //     console.error("Access token is missing");
-  //     setLoading(false);
-  //     return;
-  //   }
+    switch (correctAnswer?.constructor) {
+      case Array:
+        // MULTI_SELECT: Check if the user's selected answers match the correct ones
+        isCorrect =
+          JSON.stringify(userAnswer.sort()) ===
+          JSON.stringify(correctAnswer.sort());
+        break;
+      case String:
+        // MULTIPLE_CHOICE: Check if the selected option matches the correct answer
+        isCorrect = userAnswer[0] === correctAnswer; // userAnswer is an array with one string in this case
+        break;
+      default:
+        // FILL_IN_THE_BLANK: Check if the input matches the correct answer
+        isCorrect = userAnswer && userAnswer[0].trim() === correctAnswer[0];
+        break;
+    }
 
-  //   apiService
-  //     .post(`/quizzes/lesson/${selectedLessonId}`, quizData, {
-  //       headers: {
-  //         Authorization: `Bearer ${accessToken}`,
-  //       },
-  //     })
-  //     .then((response) => {
-  //       const newQuiz = response.data.data;
-  //       setQuizzes([...quizzes, newQuiz]);
-  //       setOpenDialog(false);
-  //       setLoading(false);
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error creating quiz:", error);
-  //       setLoading(false);
-  //     });
-  // };
-  // const handleUpdateQuiz = (quizId: string, quizData: any) => {
-  //   console.log("Updating quiz:", quizId, quizData); // Log dữ liệu
-  //   setLoading(true);
-  //   apiService
-  //     .put(`/quizzes/${quizId}`, quizData, {
-  //       headers: { Authorization: `Bearer ${accessToken}` },
-  //     })
-  //     .then((response) => {
-  //       const updatedQuiz = response.data.data;
-  //       console.log("Updated quiz response:", updatedQuiz);
-  //       setQuizzes((prev) =>
-  //         prev.map((quiz) => (quiz.quizId === quizId ? updatedQuiz : quiz))
-  //       );
-  //       setOpenDialog(false);
-  //       setLoading(false);
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error updating quiz:", error);
-  //       setLoading(false);
-  //     });
-  // };
+    // Show Snackbar based on answer correctness
+    if (isCorrect) {
+      setSeverity("success");
+      setSnackbarMessage("Correct!");
+    } else {
+      setSeverity("error");
+      setSnackbarMessage("Incorrect. Try again!");
+    }
+
+    // Log the result
+    console.log(
+      `Question ${questionId}: ${isCorrect ? "Correct" : "Incorrect"}`
+    );
+    setSnackbarOpen(true);
+  };
+
+  const renderQuestions = (questions: any[]) => {
+    return questions.map((question, index) => {
+      const correctAnswer = question.correctAnswer;
+      const questionNumber = index + 1; 
+      switch (question.questionType) {
+        case "MULTI_SELECT":
+          return (
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+              key={question.questionId}
+            >
+              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
+              {question.image && (
+                <img
+                  src={question.image}
+                  alt="question-image"
+                  style={{ maxWidth: "50%", height: "auto" }}
+                />
+              )}
+              {question.options.map((option, idx) => (
+                <Box key={idx} sx={{ display: "flex", gap: 2 }}>
+                  <input
+                    type="checkbox"
+                    value={option}
+                    onChange={(e) => {
+                      const newAnswer = [
+                        ...(userAnswers[question.questionId] || []),
+                        e.target.value,
+                      ];
+                      handleInputChange(question.questionId, newAnswer);
+                    }}
+                  />
+                  <label>{option}</label>
+                </Box>
+              ))}
+              <Button
+                onClick={() =>
+                  handleAnswerSubmit(
+                    question.questionId,
+                    question.correctAnswers
+                  )
+                }
+              >
+                Submit
+              </Button>
+            </Box>
+          );
+
+        case "MULTIPLE_CHOICE":
+          return (
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2, marginY: 4 }}
+              key={question.questionId}
+            >
+              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
+              {question.image && (
+                <img
+                  src={question.image}
+                  alt="question-image"
+                  style={{ maxWidth: "50%", height: "auto" }}
+                />
+              )}
+              {question.options.map((option, idx) => (
+                <div key={idx}>
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <input
+                      type="radio"
+                      name={question.questionId}
+                      value={option}
+                      onChange={(e) =>
+                        handleInputChange(question.questionId, e.target.value)
+                      }
+                    />
+                    <label>{option}</label>
+                  </Box>
+                </div>
+              ))}
+              <Button
+                onClick={() =>
+                  handleAnswerSubmit(
+                    question.questionId,
+                    question.correctAnswer
+                  )
+                }
+              >
+                Submit
+              </Button>
+            </Box>
+          );
+
+        case "FILL_IN_THE_BLANK":
+          return (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, marginY: 4 }} key={question.questionId}>
+              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
+              <Box>
+                <TextField
+                  sx={{ width: "100px" }}
+                  type="text"
+                  value={userAnswers[question.questionId] || ""}
+                  onChange={(e) =>
+                    handleInputChange(question.questionId, e.target.value)
+                  }
+                />
+                {question.image && (
+                  <img
+                    src={question.image}
+                    alt="question-image"
+                    style={{ width: "50%", height: "auto" }}
+                  />
+                )}
+              </Box>
+              <Button
+                onClick={() =>
+                  handleAnswerSubmit(question.questionId, question.answers)
+                }
+              >
+                Submit
+              </Button>
+            </Box>
+          );
+
+        default:
+          return null;
+      }
+    });
+  };
+
   const handleQuizUpdated = (updatedQuiz: any) => {
     if (dialogType === "add") {
       setQuizzes((prev) => [...prev, updatedQuiz]);
@@ -297,16 +458,11 @@ const QuizPage = () => {
     setDialogType("edit");
     setOpenDialog(true);
   };
-  // Handle creating a question for a quiz
   const handleCreateQuestion = (questionData: any) => {
-    // Check if a quiz is selected
     if (!selectedQuizId) {
       console.error("No quiz selected");
       return;
     }
-
-    console.log("Creating question for quiz ID:", selectedQuizId);
-    console.log("Question Data being sent to backend:", questionData); // Add this line to log the data
 
     setLoading(true);
 
@@ -318,18 +474,32 @@ const QuizPage = () => {
       })
       .then((response) => {
         const newQuestion = response.data.data;
+
+        // Cập nhật câu hỏi vào quiz tương ứng
         const updatedQuizzes = quizzes.map((quiz) => {
           if (quiz.quizId === selectedQuizId) {
             return { ...quiz, questions: [...quiz.questions, newQuestion] };
           }
           return quiz;
         });
+
         setQuizzes(updatedQuizzes);
+
+        // Hiển thị Snackbar
+        setSnackbarMessage(response.data.message || "Thêm câu hỏi thành công!");
+        setSnackbarOpen(true);
+
+        // Đóng dialog
         setOpenQuestionDialog(false);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Error creating question:", error);
+
+        // Hiển thị lỗi trong Snackbar
+        setSnackbarMessage("Thêm câu hỏi thất bại!");
+        setSnackbarOpen(true);
+
         setLoading(false);
       });
   };
@@ -364,7 +534,7 @@ const QuizPage = () => {
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedGradeId} // Display the selected grade ID
+              value={selectedGradeName} // Display the selected grade ID
               onChange={handleGradeChange}
               label="Chọn lớp học"
               fullWidth
@@ -372,7 +542,7 @@ const QuizPage = () => {
               {grades.map((grade) => (
                 <MenuItem
                   key={grade.gradeId}
-                  value={grade.gradeId} // Set value to gradeId
+                  value={grade.gradeName} // Set value to gradeId
                   sx={{
                     "&.Mui-selected": {
                       backgroundColor: "#BCD181 !important",
@@ -522,38 +692,7 @@ const QuizPage = () => {
                   {loadingQuestions[quiz.quizId] ? (
                     <CircularProgress />
                   ) : (
-                    questions[quiz.quizId]?.map((question, index) => (
-                      <Box
-                        key={question.questionId}
-                        sx={{
-                          marginBottom: 2,
-                          padding: "8px 32px",
-                          // border: "1px solid #ddd",
-                          borderRadius: "8px",
-                        }}
-                      >
-                        <Typography variant="body1" fontWeight={600}>
-                          Câu hỏi {index + 1}: {question.content}
-                        </Typography>
-                        <List>
-                          {question.options.map((option, optionIndex) => (
-                            <>
-                              <ListItem key={optionIndex}>
-                                <ListItemText
-                                  primary={`${String.fromCharCode(65 + optionIndex)}. ${option}`}
-                                />
-                              </ListItem>
-                            </>
-                          ))}
-                        </List>
-                        <Typography color="green">
-                          Đáp án đúng:{" "}
-                          {String.fromCharCode(
-                            65 + question.correctAnswerIndex
-                          )}
-                        </Typography>
-                      </Box>
-                    ))
+                    renderQuestions(questions[selectedQuizId] || [])
                   )}
                 </Box>
               )}
@@ -568,6 +707,7 @@ const QuizPage = () => {
           dialogType={dialogType}
           quizData={selectedQuiz}
           selectedLessonId={selectedLessonId}
+          selectedTopicId={selectedTopicId}
         />
 
         <QuestionDialog
@@ -576,11 +716,25 @@ const QuizPage = () => {
           onSave={handleCreateQuestion}
         />
         <DeleteDialog
-        open={openDeleteDialog}
-        handleClose={handleDeleteDialogClose}
-        onDelete={handleDeleteQuiz}
-        quantity={selectedQuizzes.size}
-      />
+          open={openDeleteDialog}
+          handleClose={handleDeleteDialogClose}
+          onDelete={handleDeleteQuiz}
+          quantity={selectedQuizzes.size}
+        />
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={3000}
+          onClose={() => setSnackbarOpen(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          <Alert
+            onClose={() => setSnackbarOpen(false)}
+            severity={severity}
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
       </Box>
     </Layout>
   );

@@ -10,22 +10,56 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-
+import PlayLessonIcon from "@mui/icons-material/PlayLesson";
+import { useAuth } from "@/app/hooks/AuthContext";
+import {
+  Avatar,
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+  Typography,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { Button } from "../button";
 const Sidebar: React.FC = () => {
+  const { accessToken, logoutUser, userInfo } = useAuth(); // Lấy accessToken từ context
+  console.log("userInfo", userInfo?.username);
+  // const username = userInfo?.username;
+  console.log("ABCtoken", accessToken);
+  const defaultUser = { username: "Guest", role: "user" };
+  const currentUser = userInfo || defaultUser;
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const router = useRouter();
   const pathname = usePathname(); // Get the current path
-
+  // const { accessToken, logoutUser, userInfo } = useAuth();
+  // console.log("AaaaccessToken", accessToken);
+  // console.log("userInfo", userInfo);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigateTo = (path: string) => {
     router.push(path);
+  };
+  const handleUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
   };
 
   const menuList = [
     {
-      name: "Dashboard",
+      name: "Tổng quan",
       icon: <DashboardIcon fontSize="small" />,
       path: "/dashboard",
+    },
+    {
+      name: "Quản lý bài học",
+      icon: <PlayLessonIcon fontSize="small" />,
+      // path: "/dashboard",
       subMenu: [
         {
           name: "Lớp học",
@@ -52,21 +86,38 @@ const Sidebar: React.FC = () => {
     {
       name: "Người dùng",
       icon: <PeopleAltIcon fontSize="small" />,
-      path: "/user",
-      subMenu: [{ name: "Quản lý người dùng", path: "/user/manage",
-        icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> }],
+      subMenu: [
+        {
+          name: "Quản lý người dùng",
+          path: "/user",
+          icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        },
+        {
+          name: "Lịch sử làm bài",
+          path: "/statistic-homework-history",
+          icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        },
+      ],
     },
     {
       name: "Báo cáo",
       icon: <AssessmentIcon fontSize="small" />,
-      path: "/reports",
       subMenu: [
-        { name: "Thống kê Lớp học", path: "/reports/classes",
-            icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
-        { name: "Thống kê Chủ điểm", path: "/reports/topics",
-            icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
-        { name: "Thống kê Bài học", path: "/reports/lessons",
-            icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
+        {
+          name: "Thống kê Bài học",
+          path: "/statistic-lessons",
+          icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        },
+        {
+          name: "Thống kê Quiz",
+          path: "/statistic-quizzes",
+          icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        },
+        // {
+        //   name: "Thống kê Bài học",
+        //   path: "/statistic-lessons",
+        //   icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        // },
       ],
     },
   ];
@@ -128,7 +179,7 @@ const Sidebar: React.FC = () => {
           {menuList.map((menu, index) => (
             <li key={index} className="p-2">
               <div
-                className={`flex justify-between items-center cursor-pointer p-2 ${pathname === menu.path ? "bg-[#99BC4D]" : "hover:bg-[#99BC4D]"}`}
+                className={`flex justify-between items-center cursor-pointer p-2  flex-1 ${pathname === menu.path ? "bg-[#99BC4D]" : "hover:bg-[#99BC4D]"}`}
                 onClick={() =>
                   menu.subMenu ? toggleMenu(menu.name) : navigateTo(menu.path)
                 }
@@ -151,7 +202,6 @@ const Sidebar: React.FC = () => {
                     />
                   ))}
               </div>
-
               {/* Submenu */}
               {!isCollapsed &&
                 menu.subMenu &&
@@ -177,6 +227,56 @@ const Sidebar: React.FC = () => {
           ))}
         </ul>
       </nav>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          borderTop: "1px solid #A8A8A8",
+          padding: 1,
+          borderBottom: "1px solid #A8A8A8",
+          marginBottom: 1,
+        }}
+      >
+        <Avatar
+          sx={{
+            border: "2px solid #BB9066",
+            color: "white",
+            bgcolor: "#99BC4D",
+          }}
+        >
+          {currentUser.username[0]}
+        </Avatar>
+        {!isCollapsed && (
+          <>
+            <Typography variant="body1" fontWeight={600} sx={{ flexGrow: 1 }}>
+              {currentUser.username}
+            </Typography>
+            <IconButton onClick={handleUserMenu}>
+              {anchorEl ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </>
+        )}
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleUserMenuClose}
+        >
+          <MenuItem onClick={logoutUser} sx={{ gap: 1 }}>
+            <LogoutIcon sx={{ color: "grey" }} />
+            Đăng xuất
+          </MenuItem>
+        </Menu>
+      </Box>
+      {/* <div className="p-4 border-t border-gray-300">
+        <button
+          className="w-full text-left text-red-600 hover:text-red-800 flex items-center"
+          onClick={logoutUser} // Gọi hàm logoutUser từ useAuth
+        >
+          <LogoutIcon fontSize="small" className="mr-2" />
+          Đăng xuất
+        </button>
+      </div> */}
     </aside>
   );
 };

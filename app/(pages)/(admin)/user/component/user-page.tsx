@@ -15,6 +15,7 @@ import {
   Switch,
   Snackbar,
   Alert,
+  TablePagination,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
@@ -23,7 +24,25 @@ const UserPage = () => {
   const { accessToken } = useAuth(); // Lấy accessToken từ context
   const [users, setUsers] = useState<any[]>([]); // State để lưu danh sách người dùng
   const [loading, setLoading] = useState(false); // State để xử lý loading
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Dữ liệu hiển thị trên trang hiện tại
+  const paginatedUsers = users.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
   // Snackbar state
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -114,47 +133,77 @@ const UserPage = () => {
         </Box>
 
         {/* Bảng danh sách người dùng */}
-        <Box sx={{ marginTop: 2 }}>
+        <Box sx={{ marginY: 2, maxHeight: "50vh" }}>
           {loading ? (
             <Typography>Đang tải...</Typography>
           ) : (
-            <TableContainer sx={{ boxShadow: 4, borderRadius: 2 }}>
-              <Table>
-                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                  <TableRow>
-                    <TableCell>Mã người dùng</TableCell>
-                    <TableCell>Tên người dùng</TableCell>
-                    <TableCell>Email</TableCell>
-                    <TableCell>Vai trò</TableCell>
-                    <TableCell>Trạng thái</TableCell>
-                    <TableCell>Ngày tạo</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.userId}>
-                      <TableCell>{user.userId}</TableCell>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={user.active}
-                          onChange={() =>
-                            handleStatusChange(user.userId, user.active)
-                          }
-                          name="active"
-                          color="primary"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+                <TableContainer
+                  sx={{
+                    // boxShadow: 4,
+                    borderRadius: 2,
+                    flex: 1,
+                    height: "80vh",
+                    width: "76vw", // Set a fixed height for the table
+                    overflow: "auto",
+                  }}
+                >
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                      <TableRow>
+                        <TableCell>Mã người dùng</TableCell>
+                        <TableCell>Tên người dùng</TableCell>
+                        <TableCell>Email</TableCell>
+                        <TableCell>Vai trò</TableCell>
+                        <TableCell>Trạng thái</TableCell>
+                        <TableCell>Ngày tạo</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.userId}>
+                          <TableCell>{user.userId}</TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.role}</TableCell>
+                          <TableCell>
+                            <Switch
+                              sx={{ fontSize: "small" }}
+                              checked={user.active}
+                              onChange={() =>
+                                handleStatusChange(user.userId, user.active)
+                              }
+                              name="active"
+                              color="primary"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {new Date(user.createdAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <div>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="flex-end"
+                  >
+                    <TablePagination
+                      component="div"
+                      count={users.length}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      rowsPerPage={rowsPerPage}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                  </Box>
+                </div>
+              </Box>
+            </>
           )}
         </Box>
       </Box>

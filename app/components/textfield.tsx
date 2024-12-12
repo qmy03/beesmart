@@ -15,6 +15,73 @@ interface TextFieldProps extends Omit<MuiTextFieldProps, 'InputProps'> {
     sx?: SxProps;
 }
 
+// const TextField: React.FC<TextFieldProps> = ({
+//     label,
+//     value,
+//     onChange,
+//     type = 'text',
+//     maxLength,
+//     endAdornment,
+//     error = false,
+//     helperText,
+//     FormHelperTextProps, // Destructure this prop
+//     sx,
+//     ...muiProps
+// }) => (
+//     <MuiTextField
+//         fullWidth
+//         margin="normal"
+//         size="small"
+//         label={label}
+//         variant="outlined"
+//         value={value}
+//         onChange={onChange}
+//         type={type}
+//         inputProps={{ maxLength }}
+//         InputProps={{
+//             endAdornment: endAdornment && (
+//                 <InputAdornment position="end">{endAdornment}</InputAdornment>
+//             ),
+//         }}
+//         error={error}
+//         helperText={helperText}
+//         FormHelperTextProps={{
+//             sx: {
+//                 margin: 0,
+//                 fontSize: '14px',
+//                 color: 'red', // Ensure the helper text is red
+//             },
+//             ...FormHelperTextProps, // Spread any additional props
+//         }}
+//         sx={{
+//             ".css-186ql75-MuiFormHelperText-root.Mui-error": {
+//             color: "red"
+//           },
+//             '& .css-1pzfmz2-MuiInputBase-input-MuiOutlinedInput-input':{
+//                 fontSize: '14px',
+//             },
+//             '& .css-1881zc6-MuiFormControl-root-MuiTextField-root':{
+//                 fontSize: '14px',
+//             },
+//             '& .MuiOutlinedInput-root:hover fieldset': {
+//                 borderColor: theme.palette.primary.main,
+//             },
+//             '& .MuiOutlinedInput-root.Mui-focused fieldset': {
+//                 borderColor: theme.palette.primary.main,
+//             },
+//             '& label.Mui-focused': {
+//                 color: theme.palette.primary.main,
+//             },
+//             '& .MuiInputLabel-root': {
+//                 fontSize: '14px',
+//             },
+//             ...sx,
+//         }}
+//         {...muiProps}
+//     />
+// );
+
+// export default TextField;
 const TextField: React.FC<TextFieldProps> = ({
     label,
     value,
@@ -24,7 +91,7 @@ const TextField: React.FC<TextFieldProps> = ({
     endAdornment,
     error = false,
     helperText,
-    FormHelperTextProps, // Destructure this prop
+    FormHelperTextProps,
     sx,
     ...muiProps
 }) => (
@@ -48,28 +115,33 @@ const TextField: React.FC<TextFieldProps> = ({
         FormHelperTextProps={{
             sx: {
                 margin: 0,
-                fontSize: '12px',
-                color: 'red', // Ensure the helper text is red
+                fontSize: '14px',
+                color: 'red', // Helper text in red
             },
-            ...FormHelperTextProps, // Spread any additional props
+            ...FormHelperTextProps,
         }}
         sx={{
-            '& .css-1pzfmz2-MuiInputBase-input-MuiOutlinedInput-input':{
-                fontSize: '14px',
+            '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                    borderColor: error ? 'red' : 'rgba(0, 0, 0, 0.23)', // Default border
+                },
+                '&:hover fieldset': {
+                    borderColor: error ? 'red' : theme.palette.primary.main, // Hover effect
+                },
+                '&.Mui-focused fieldset': {
+                    borderColor: error ? 'red' : theme.palette.primary.main, // Focus effect
+                },
             },
-            '& .css-1881zc6-MuiFormControl-root-MuiTextField-root':{
-                fontSize: '14px',
+            '& .MuiInputLabel-root.Mui-error': {
+                color: 'red', // Label color when error
             },
-            '& .MuiOutlinedInput-root:hover fieldset': {
-                borderColor: theme.palette.primary.main,
-            },
-            '& .MuiOutlinedInput-root.Mui-focused fieldset': {
-                borderColor: theme.palette.primary.main,
-            },
-            '& label.Mui-focused': {
-                color: theme.palette.primary.main,
+            '& .MuiFormHelperText-root.Mui-error': {
+                color: 'red', // Ensure helper text is red
             },
             '& .MuiInputLabel-root': {
+                fontSize: '14px',
+            },
+            '& .MuiOutlinedInput-input': {
                 fontSize: '14px',
             },
             ...sx,

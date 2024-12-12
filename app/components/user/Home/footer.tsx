@@ -34,7 +34,7 @@ const Footer = () => {
           Giới thiệu
         </Typography>
         <Link
-          onClick={() => router.push("/quy-dinh-chung")}
+          onClick={() => router.push("/general-regulations")}
           sx={{
             display: "block",
             color: "#555",
@@ -46,7 +46,7 @@ const Footer = () => {
           Quy định chung
         </Link>
         <Link
-          onClick={() => router.push("/chinh-sach-bao-mat")}
+          onClick={() => router.push("/priavcy-policy")}
           sx={{
             display: "block",
             color: "#555",
@@ -86,11 +86,11 @@ const Footer = () => {
           Về BeeSmart
         </Typography>
         {[
-          { name: "Trang chủ", path: "/" },
-          { name: "Danh sách chủ điểm", path: "/danh-sach-chu-diem" },
-          { name: "Đăng ký", path: "/dang-ky" },
-          { name: "Đăng nhập", path: "/dang-nhap" },
-          { name: "Hướng dẫn sử dụng", path: "/huong-dan-su-dung" },
+          { name: "Trang chủ", path: "/home" },
+          { name: "Danh sách chủ điểm", path: "/skill-list" },
+          { name: "Đăng ký", path: "/sign-up" },
+          { name: "Đăng nhập", path: "/login" },
+          { name: "Hướng dẫn sử dụng", path: "/instructions" },
         ].map((item, index) => (
           <Link
             key={index}

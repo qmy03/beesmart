@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
 class ApiService {
-  private api: AxiosInstance;
+  public api: AxiosInstance; // Make the api instance public
 
   constructor(baseURL: string) {
     this.api = axios.create({

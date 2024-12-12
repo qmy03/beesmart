@@ -8,7 +8,13 @@ import {
   Typography,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { Button } from "../../button";
 import SearchIcon from "@mui/icons-material/Search";
 import TextField from "../../textfield";
@@ -17,7 +23,9 @@ import apiService from "@/app/untils/api";
 import VideoThumbnail from "../../capture-frame";
 import { useRouter } from "next/navigation";
 const SkillListPage: React.FC = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, userInfo } = useAuth();
+  const gradeUser = userInfo?.grade;
+  console.log("gradeUser", gradeUser);
 
   const [selectedTerm, setSelectedTerm] = useState<string>("Học kì 1");
   const [loading, setLoading] = useState(false);
@@ -28,10 +36,14 @@ const SkillListPage: React.FC = () => {
   const [selectedTopic, setSelectedTopic] = useState<any>(null); // New state to store selected topic
   const [lessons, setLessons] = useState<any[]>([]); // New state to store lessons
   const [searchText, setSearchText] = useState<string>("");
+  const [topicQuizzes, setTopicQuizzes] = useState<any[]>([]); // State to store topic-specific quizzes
+
   const router = useRouter();
   const handleLessonClick = (lessonId: string) => {
     router.push(`/skill-detail/${lessonId}?grade=${selectedGradeName}`);
-  }
+  };
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [quizzes, setQuizzes] = useState<any[]>([]);
   const termMapping: { [key: string]: string } = {
     "Học kì 1": "term1",
     "Học kì 2": "term2",
@@ -39,46 +51,56 @@ const SkillListPage: React.FC = () => {
 
   const handleTermChange = (termDisplay: string) => {
     setSelectedTerm(termDisplay);
+    setSelectedTopic(null); // Reset selected topic when the term changes
+    setLessons([]); // Clear the lessons when the term changes
   };
 
   useEffect(() => {
-    if (accessToken) {
-      setLoading(true);
-      apiService
-        .get("/grades", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`,
-          // },
-        })
-        .then((response) => {
-          const fetchedGrades = response.data;
-          setGrades(fetchedGrades);
-          if (fetchedGrades.length > 0) {
-            const firstGrade = fetchedGrades[0];
-            setSelectedGradeId(firstGrade.gradeId);
-            setSelectedGradeName(firstGrade.gradeName);
-          }
-        })
-        .catch((error) => console.error("Error fetching grades:", error))
-        .finally(() => setLoading(false));
+    if (!userInfo) {
+      console.log("Đang chờ userInfo được load...");
+      return; // Dừng lại nếu userInfo chưa sẵn sàng
     }
-  }, [accessToken]);
+
+    setLoading(true);
+    apiService
+      .get("/grades")
+      .then((response) => {
+        const fetchedGrades = response.data;
+        setGrades(fetchedGrades);
+
+        if (gradeUser) {
+          const userGrade = fetchedGrades.find(
+            (grades) => grades.gradeName === gradeUser
+          );
+          if (userGrade) {
+            setSelectedGradeId(userGrade.gradeId);
+            setSelectedGradeName(userGrade.gradeName);
+          }
+        } else if (fetchedGrades.length > 0) {
+          const firstGrade = fetchedGrades[0];
+          setSelectedGradeId(firstGrade.gradeId);
+          setSelectedGradeName(firstGrade.gradeName);
+        }
+      })
+      .catch((error) => console.error("Error fetching grades:", error))
+      .finally(() => setLoading(false));
+  }, [userInfo, gradeUser]); // Lắng nghe cả `userInfo` và `gradeUser`
 
   useEffect(() => {
-    if (selectedGradeId && selectedTerm) {
+    if (selectedGradeName && selectedTerm) {
       const termCode = termMapping[selectedTerm];
       setLoading(true);
       apiService
-        .get(
-          `/topics/grade/${selectedGradeId}/semester?semester=${selectedTerm}`
-          // {
-          //   headers: { Authorization: `Bearer ${accessToken}` },
-          // }
-        )
+        .get(`/topics?grade=${selectedGradeName}&semester=${selectedTerm}`)
         .then((response) => {
           const topicsData = response.data.data.topics;
+          console.log("topicsData", topicsData);
           if (Array.isArray(topicsData)) {
             setTopics(topicsData);
+            // Automatically select the first topic if none is selected
+            if (!selectedTopic && topicsData.length > 0) {
+              setSelectedTopic(topicsData[0]);
+            }
           } else {
             console.error("Invalid topics data:", topicsData);
             setTopics([]);
@@ -91,34 +113,39 @@ const SkillListPage: React.FC = () => {
         .finally(() => setLoading(false));
     }
   }, [selectedGradeId, selectedTerm, accessToken]);
-
-  // Fetch lessons when a topic is selected
   useEffect(() => {
     if (selectedTopic) {
       setLoading(true);
       apiService
-        .get(`/topics/${selectedTopic.topicId}/lessons`, {
-          // headers: { Authorization: `Bearer ${accessToken}` },
-        })
+        .get(`/topics/${selectedTopic.topicId}/lessons-and-quizzes`)
         .then((response) => {
           const lessonsData = response.data.data.lessons;
-          const totalItems = response.data.data.totalItems;
-          console.log("totalItems", totalItems);
-          console.log("response", response);
+          const quizzesData = response.data.data.quizzes;
+
+          // Set the lessons data
           if (Array.isArray(lessonsData)) {
             setLessons(lessonsData);
           } else {
             console.error("Invalid lessons data:", lessonsData);
             setLessons([]);
           }
+
+          // Set the topic-specific quizzes (not related to lessons)
+          if (Array.isArray(quizzesData)) {
+            setTopicQuizzes(quizzesData); // Store topic quizzes separately
+          } else {
+            console.error("Invalid quizzes data:", quizzesData);
+            setTopicQuizzes([]); // Clear quizzes if the data is invalid
+          }
         })
         .catch((error) => {
-          console.error("Error fetching lessons:", error);
+          console.error("Error fetching lessons and quizzes:", error);
           setLessons([]);
+          setTopicQuizzes([]); // Clear quizzes on error
         })
         .finally(() => setLoading(false));
     }
-  }, [selectedTopic, accessToken]);
+  }, [selectedTopic]);
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
@@ -128,12 +155,33 @@ const SkillListPage: React.FC = () => {
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
+      setSelectedTopic(null); // Reset selected topic when grade changes
+      setLessons([]); // Clear lessons when grade changes
     }
   };
 
   const filteredTopics = topics.filter((topic) =>
     topic.topicName.toLowerCase().includes(searchText.toLowerCase())
   );
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+  const handlePracticeClick = (lessonId: string) => {
+    console.log("lessonId", lessonId);
+    // Fetch quizzes for this lesson and open the dialog
+    apiService
+      .get(`/lessons/${lessonId}/quizzes`)
+      .then((response) => {
+        console.log("response", response);
+        setQuizzes(response.data.data.quizzes);
+        setDialogOpen(true);
+      })
+      .catch((error) => console.error("Error fetching quizzes:", error));
+  };
+  const handleQuizClick = (quizId: string) => {
+    // Navigate to SkillPracticePage with the selected quizId
+    router.push(`/skill-practice/${quizId}`);
+  };
 
   return (
     <Layout>
@@ -160,12 +208,11 @@ const SkillListPage: React.FC = () => {
             Danh sách chủ điểm
           </Typography>
           <Box sx={{ display: "flex", gap: 4 }}>
-            {/* Chọn lớp học */}
             <FormControl fullWidth size="small">
               <TextField
                 select
-                value={selectedGradeName}
-                onChange={handleGradeChange}
+                value={selectedGradeName} // Giá trị lớp học hiện tại
+                onChange={handleGradeChange} // Thay đổi lớp học
                 label="Chọn lớp học"
                 sx={{ minWidth: 200, backgroundColor: "white" }}
               >
@@ -352,7 +399,7 @@ const SkillListPage: React.FC = () => {
                     lessons.map((lesson) => (
                       <Box
                         key={lesson.lessonId}
-                        onClick={() => handleLessonClick(lesson.lessonId)}
+                        // onClick={() => handleLessonClick(lesson.lessonId)}
                         sx={{
                           border: "0.5px solid #A8A8A8",
                           borderRadius: "16px",
@@ -365,14 +412,24 @@ const SkillListPage: React.FC = () => {
                           </Typography>
                         )}
                         {lesson.content && lesson.content.includes(".mp4") && (
-                          <Box>
+                          <Box
+                            sx={{ cursor: "pointer" }}
+                            onClick={() => handleLessonClick(lesson.lessonId)}
+                          >
                             <VideoThumbnail
                               videoUrl={lesson.content}
                               captureTime={60}
                             />
                           </Box>
                         )}
-                        <Box sx={{ padding: 2, backgroundColor: "white", borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px" }}>
+                        <Box
+                          sx={{
+                            padding: 2,
+                            backgroundColor: "white",
+                            borderBottomLeftRadius: "16px",
+                            borderBottomRightRadius: "16px",
+                          }}
+                        >
                           <Typography
                             fontSize="20px"
                             fontWeight={600}
@@ -389,23 +446,49 @@ const SkillListPage: React.FC = () => {
                               marginTop: 2,
                             }}
                           >
-                            <Box sx={{display: "flex", flexDirection: "column", alignItems: "center",}}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => handleLessonClick(lesson.lessonId)}
+                            >
                               <img
                                 src="/icon-video.png"
                                 width={24}
                                 height={24}
                               ></img>
-                              <Typography fontSize="16px" color="#469ADF" fontWeight={600}>
+                              <Typography
+                                fontSize="16px"
+                                color="#469ADF"
+                                fontWeight={600}
+                              >
                                 Video bài giảng
                               </Typography>
                             </Box>
-                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center"}}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                handlePracticeClick(lesson.lessonId)
+                              }
+                            >
                               <img
                                 src="/icon-quiz.png"
                                 width={24}
                                 height={24}
                               ></img>
-                              <Typography fontSize="16px" color="#469ADF" fontWeight={600}>
+                              <Typography
+                                fontSize="16px"
+                                color="#469ADF"
+                                fontWeight={600}
+                              >
                                 Thực hành
                               </Typography>
                             </Box>
@@ -419,14 +502,97 @@ const SkillListPage: React.FC = () => {
                     </Typography>
                   )}
                 </Box>
+                <Box
+                  sx={{
+                    backgroundColor: "white",
+                    display: "grid", // Sử dụng grid layout
+                    gridTemplateColumns: "repeat(2, 1fr)", // Mỗi hàng 2 cột
+                    gap: "16px", // Khoảng cách giữa các box
+                    marginTop: "16px",
+                    padding: "24px",
+                    borderRadius: "16px",
+                    border: "1px solid #A8A8A8",
+                  }}
+                >
+                  {loading ? (
+                    <CircularProgress />
+                  ) : topicQuizzes.length > 0 ? (
+                    topicQuizzes.map((quiz) => (
+                      <Box
+                        key={quiz.quizId}
+                        sx={{
+                          border: "0.5px solid #A8A8A8",
+                          borderRadius: "16px",
+                          backgroundColor: "#f9f9f9",
+                        }}
+                      >
+                        {quiz.title && (
+                          <Typography variant="body2" color="#A8A8A8">
+                            {/* {topic.content} */}
+                          </Typography>
+                        )}
+                        <img src="/quiz.png"></img>
+                        <Box
+                          sx={{
+                            padding: 2,
+                            backgroundColor: "white",
+                            borderBottomLeftRadius: "16px",
+                            borderBottomRightRadius: "16px",
+                          }}
+                        >
+                          <Typography
+                            fontSize="20px"
+                            fontWeight={600}
+                            color="#99BC4D"
+                          >
+                            {quiz.title}
+                          </Typography>
+                          <Typography fontSize="16px" fontWeight={600} color="#555">Thời gian làm bài</Typography>
+                          <Typography sx={{pb: 1}}>{quiz.quizDuration} phút</Typography>
+                          <Button fullWidth onClick={() => handleQuizClick(quiz.quizId)}>Làm bài kiểm tra</Button>
+                        </Box>
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography>No topics available</Typography>
+                  )}
+                </Box>
               </Box>
             ) : (
-              <Typography variant="h6" color="#A8A8A8" fontStyle="italic">
-                Chọn chủ điểm để xem bài học.
-              </Typography>
+              // <Typography variant="h6" color="#A8A8A8" fontStyle="italic">
+              //   Chọn chủ điểm để xem bài học.
+              // </Typography>
+              <></>
             )}
           </Box>
         </Box>
+        <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth>
+          <DialogTitle sx={{ minWidth: "400px", display: "flex" }}>
+            <Typography sx={{ flexGrow: 1, fontSize: "20px", fontWeight: 700 }}>
+              Chọn Quiz
+            </Typography>
+            <CloseIcon onClick={handleCloseDialog} />
+          </DialogTitle>
+          <DialogContent>
+            <Typography sx={{ paddingBottom: 3 }}>
+              Vui lòng chọn quiz bên dưới để luyện tập
+            </Typography>
+            {quizzes.map((quiz: any) => (
+              <Box
+                key={quiz.quizId}
+                sx={{
+                  marginBottom: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Button onClick={() => handleQuizClick(quiz.quizId)}>
+                  {quiz.title}
+                </Button>
+              </Box>
+            ))}
+          </DialogContent>
+        </Dialog>
       </Box>
     </Layout>
   );

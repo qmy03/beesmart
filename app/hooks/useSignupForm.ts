@@ -14,24 +14,27 @@ const useSignupForm = (setSnackbarMessage: (message: string | null) => void) => 
   const [passwordMismatchError, setPasswordMismatchError] = useState(false);
   const { registerUser } = useAuth(); // Get the register function
 
-  const register = async () => {
+  const register = async (data: { role: string }) => {
+    const { role } = data;
+  
     setUserNameError(!userName);
     setPasswordError(!password);
     setEmailError(!email);
     setPasswordMismatchError(password !== passwordAgain);
-
+  
     if (userName && password && email && password === passwordAgain) {
       const userData = {
         username: userName,
         email: email,
         password: password,
-        role: "SYSTEM_ADMIN", // Assuming this role is hard-coded
+        role: role, // Truyền vai trò được chọn
       };
-
-      const responseMessage = await registerUser(userData); // Lấy thông báo từ registerUser
-      setSnackbarMessage(responseMessage); // Đặt thông báo vào Snackbar
+  
+      const responseMessage = await registerUser(userData);
+      // setSnackbarMessage(responseMessage);
     }
   };
+  
 
   return {
     userName,

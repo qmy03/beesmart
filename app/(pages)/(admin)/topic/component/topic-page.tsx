@@ -20,6 +20,7 @@ import {
   IconButton,
   Snackbar,
   Alert,
+  TablePagination,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
@@ -49,6 +50,10 @@ const TopicPage = () => {
   const isSelected = (topicId: number): boolean => {
     return selected.includes(topicId); // Kiểm tra nếu topicId đã được chọn
   };
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   // Thêm state để quản lý chế độ edit và topic được chọn
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
   const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
@@ -102,12 +107,12 @@ const TopicPage = () => {
   console.log("selectedGradeId", selectedGradeId);
   console.log("selectedSemester", selectedSemester);
   useEffect(() => {
-    if (selectedGradeId && selectedSemester) {
+    if (selectedGradeName && selectedSemester) {
       setLoading(true);
       // Gọi API để lấy topics theo gradeId và semester
       apiService
         .get(
-          `/topics/grade/${selectedGradeId}/semester?semester=${selectedSemester}`,
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
           {
             // headers: {
             //   Authorization: `Bearer ${accessToken}`,
@@ -157,11 +162,11 @@ const TopicPage = () => {
   // Refresh topics list after adding a new topic
   const handleTopicAdded = () => {
     // Re-fetch topics after adding a new one
-    if (selectedGradeId && selectedSemester) {
+    if (selectedGradeName && selectedSemester) {
       setLoading(true);
       apiService
         .get(
-          `/topics/grade/${selectedGradeId}/semester?semester=${selectedSemester}`,
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -214,11 +219,11 @@ const TopicPage = () => {
       setSelected([]);
 
       // Reload topics list after delete
-      if (selectedGradeId && selectedSemester) {
+      if (selectedGradeName && selectedSemester) {
         setLoading(true);
         apiService
           .get(
-            `/topics/grade/${selectedGradeId}/semester?semester=${selectedSemester}`,
+            `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
             {
               // headers: {
               //   Authorization: `Bearer ${accessToken}`,
@@ -260,6 +265,16 @@ const TopicPage = () => {
       setOpenDelete(true); // Mở DeleteDialog
     }
   };
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
   return (
     <Layout>
       <Box
@@ -283,7 +298,7 @@ const TopicPage = () => {
             Quản lý Lớp học
           </Typography>
           {/* {editMode === "add" && ( */}
-            <Button onClick={handleOpenDialog}>Thêm mới</Button>
+          <Button onClick={handleOpenDialog}>Thêm mới</Button>
           {/* )} */}
         </Box>
 
@@ -363,95 +378,108 @@ const TopicPage = () => {
           {loading ? (
             <Typography>Đang tải...</Typography>
           ) : (
-            <TableContainer
-              sx={{
-                boxShadow: 4,
-                borderRadius: 2,
-                flex: 1,
-                maxHeight: "78vh", // Set a fixed height for the table
-                overflowY: "auto", // Enable vertical scrolling if content overflows
-              }}
-            >
-              <Table>
-                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                  <TableRow>
-                    <TableCell sx={{ width: "5%" }}>
-                      <Checkbox
-                        indeterminate={
-                          selected.length > 0 &&
-                          topics.length > 0 &&
-                          selected.length < topics.length
-                        }
-                        sx={{
-                          color: "#637381",
-                          "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                            color: "#99BC4D", // Màu cho trạng thái checked và indeterminate
-                          },
-                          "&.MuiCheckbox-indeterminate": {
-                            color: "#99BC4D", // Màu cho trạng thái indeterminate
-                          },
-                        }}
-                        checked={
-                          topics.length > 0 && selected.length === topics.length
-                        }
-                        onChange={handleSelectAllClick}
-                        defaultChecked
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell sx={{ width: "5%" }}></TableCell>
-                    <TableCell sx={{ width: "20%" }}>Mã topic</TableCell>
-                    <TableCell sx={{ width: "30%" }}>Tên topic</TableCell>
-                    {/* <TableCell>Chương</TableCell> */}
-                    {/* <TableCell sx={{ width: "40%" }}>Bài học</TableCell> */}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {topics.map((topic) => {
-                    const isItemSelected = isSelected(topic.topicId); // Kiểm tra topic hiện tại có được chọn không
-                    return (
-                      <TableRow key={topic.topicId}>
-                        <TableCell>
-                          <Checkbox
-                            size="small"
-                            checked={isItemSelected}
-                            sx={{
-                              color: "#637381",
-                              "&.Mui-checked": {
-                                color: "#99BC4D",
-                              },
-                            }}
-                            onChange={(event) =>
-                              handleCheckboxClick(event, topic.topicId)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <IconButton>
-                            <EditIcon
-                              fontSize="small"
-                              sx={{ color: "#637381", cursor: "pointer" }}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleOpenEdit(topic);
+            <>
+            <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+              <TableContainer
+                sx={{
+                  // boxShadow: 4,
+                  borderRadius: 2,
+                  flex: 1,
+                  height: "70vh", // Set a fixed height for the table
+                  overflowY: "auto", // Enable vertical scrolling if content overflows
+                }}
+              >
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell sx={{ width: "5%" }}>
+                        <Checkbox
+                          indeterminate={
+                            selected.length > 0 &&
+                            topics.length > 0 &&
+                            selected.length < topics.length
+                          }
+                          sx={{
+                            color: "#637381",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D", // Màu cho trạng thái checked và indeterminate
+                            },
+                            "&.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D", // Màu cho trạng thái indeterminate
+                            },
+                          }}
+                          checked={
+                            topics.length > 0 &&
+                            selected.length === topics.length
+                          }
+                          onChange={handleSelectAllClick}
+                          defaultChecked
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ width: "5%" }}></TableCell>
+                      <TableCell sx={{ width: "15%" }}>Thứ tự</TableCell>
+                      <TableCell sx={{ width: "75%" }}>Tên topic</TableCell>
+                      {/* <TableCell>Chương</TableCell> */}
+                      {/* <TableCell sx={{ width: "40%" }}>Bài học</TableCell> */}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {topics.map((topic, index) => {
+                      const isItemSelected = isSelected(topic.topicId); // Kiểm tra topic hiện tại có được chọn không
+                      return (
+                        <TableRow key={topic.topicId}>
+                          <TableCell>
+                            <Checkbox
+                              size="small"
+                              checked={isItemSelected}
+                              sx={{
+                                color: "#637381",
+                                "&.Mui-checked": {
+                                  color: "#99BC4D",
+                                },
                               }}
+                              onChange={(event) =>
+                                handleCheckboxClick(event, topic.topicId)
+                              }
                             />
-                          </IconButton>
-                        </TableCell>
-                        <TableCell>{topic.topicId}</TableCell>
-                        <TableCell>{topic.topicName}</TableCell>
-                        {/* <TableCell>{topic.chapter}</TableCell> */}
-                        {/* <TableCell>
-                          {topic.lessons.map((lesson) => (
-                            <div key={lesson.lessonId}>{lesson.lessonName}</div>
-                          ))}
-                        </TableCell> */}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                          </TableCell>
+                          <TableCell>
+                            <IconButton>
+                              <EditIcon
+                                fontSize="small"
+                                sx={{ color: "#637381", cursor: "pointer" }}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenEdit(topic);
+                                }}
+                              />
+                            </IconButton>
+                          </TableCell>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{topic.topicName}</TableCell>
+                          {/* <TableCell>{topic.chapter}</TableCell> */}
+                          {/* <TableCell>
+                        {topic.lessons.map((lesson) => (
+                          <div key={lesson.lessonId}>{lesson.lessonName}</div>
+                        ))}
+                      </TableCell> */}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={topics.length}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+              </Box>
+            </>
           )}
         </Box>
         <DialogPopup
