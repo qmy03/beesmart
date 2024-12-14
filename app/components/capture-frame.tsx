@@ -67,7 +67,7 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
   return (
     <Box>
       {loading ? (
-        <CircularProgress />
+        <CircularProgress size="30px"/>
       ) : thumbnail ? (
         <img
           src={thumbnail}

@@ -16,19 +16,84 @@ import {
   Snackbar,
   Alert,
   TablePagination,
+  Checkbox,
 } from "@mui/material";
+
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
-
+import DeleteDialog from "@/app/components/admin/delete-dialog";
 const UserPage = () => {
   const { accessToken } = useAuth(); // Lấy accessToken từ context
   const [users, setUsers] = useState<any[]>([]); // State để lưu danh sách người dùng
   const [loading, setLoading] = useState(false); // State để xử lý loading
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
+  const [openDelete, setOpenDelete] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
+  };
+  const handleSelectRowClick = (
+    event: React.MouseEvent<HTMLElement>, // Changed to MouseEvent
+    userId: string
+  ) => {
+    // Only trigger logic if the event is from a checkbox (not from the row)
+    if ((event.target as HTMLElement).tagName === 'INPUT') {
+      const selectedIndex = selected.indexOf(userId);
+      let newSelected: string[] = [];
+  
+      if (selectedIndex === -1) {
+        newSelected = newSelected.concat(selected, userId);
+      } else {
+        newSelected = newSelected.concat(
+          selected.slice(0, selectedIndex),
+          selected.slice(selectedIndex + 1)
+        );
+      }
+  
+      setSelected(newSelected);
+  
+      // Chỉ mở dialog nếu có ít nhất một mục được chọn
+      if (newSelected.length > 0) {
+        setOpenDelete(true);
+      } else {
+        setOpenDelete(false);
+      }
+    }
+  };
+  
+  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelected = users.map((user) => user.userId);
+      setSelected(newSelected);
+      setOpenDelete(true); // Mở dialog khi chọn tất cả
+    } else {
+      setSelected([]);
+      setOpenDelete(false); // Đóng dialog khi không chọn gì
+    }
+  };
+  
+  const handleDelete = async () => {
+    try {
+      const response = await apiService.delete("/users", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        data: selected,
+      });
+
+      setUsers(users.filter((user) => !selected.includes(user.userId)));
+      setOpenDelete(false);
+      showSnackbar(response.data.message, "success");
+    } catch (error) {
+      console.error("Error deleting users:", error);
+      showSnackbar("Error deleting users", "error");
+    }
+  };
+
+  const handleCloseDelete = () => {
+    setOpenDelete(false);
+    setSelected([]); // Optionally clear the selected users after closing
   };
 
   const handleChangeRowsPerPage = (
@@ -138,7 +203,7 @@ const UserPage = () => {
             <Typography>Đang tải...</Typography>
           ) : (
             <>
-              <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+              <Box sx={{ boxShadow: 4, borderRadius: 2, overflow: "auto" }}>
                 <TableContainer
                   sx={{
                     // boxShadow: 4,
@@ -152,7 +217,30 @@ const UserPage = () => {
                   <Table size="small">
                     <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
                       <TableRow>
-                        <TableCell>Mã người dùng</TableCell>
+                        <TableCell>
+                          <Checkbox
+                            indeterminate={
+                              selected.length > 0 &&
+                              users.length > 0 &&
+                              selected.length < users.length
+                            }
+                            sx={{
+                              color: "#637381",
+                              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                                color: "#99BC4D", // Màu cho trạng thái checked và indeterminate
+                              },
+                              "&.MuiCheckbox-indeterminate": {
+                                color: "#99BC4D", // Màu cho trạng thái indeterminate
+                              },
+                            }}
+                            checked={
+                              users.length > 0 &&
+                              selected.length === users.length
+                            }
+                            onChange={handleSelectAllClick}
+                          />
+                        </TableCell>
+                        {/* <TableCell>Mã người dùng</TableCell> */}
                         <TableCell>Tên người dùng</TableCell>
                         <TableCell>Email</TableCell>
                         <TableCell>Vai trò</TableCell>
@@ -161,28 +249,63 @@ const UserPage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.userId}>
-                          <TableCell>{user.userId}</TableCell>
-                          <TableCell>{user.username}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>{user.role}</TableCell>
-                          <TableCell>
-                            <Switch
-                              sx={{ fontSize: "small" }}
-                              checked={user.active}
-                              onChange={() =>
-                                handleStatusChange(user.userId, user.active)
+                      {users
+                        .slice(
+                          page * rowsPerPage,
+                          page * rowsPerPage + rowsPerPage
+                        )
+                        .map((user) => {
+                          const isItemSelected =
+                            selected.indexOf(user.userId) !== -1;
+                          return (
+                            <TableRow
+                              key={user.userId}
+                              hover
+                              onClick={(event) =>
+                                handleSelectRowClick(event, user.userId)
                               }
-                              name="active"
-                              color="primary"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {new Date(user.createdAt).toLocaleString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                              role="checkbox"
+                              aria-checked={isItemSelected}
+                              selected={isItemSelected}
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  sx={{
+                                    color: "#637381",
+                                    "&.Mui-checked": {
+                                      color: "#99BC4D",
+                                    },
+                                  }}
+                                  checked={isItemSelected}
+                                  onChange={(event) =>
+                                    handleSelectRowClick(event, user.userId)
+                                  }
+                                  inputProps={{
+                                    "aria-labelledby": user.userId,
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>{user.username}</TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>{user.role}</TableCell>
+                              <TableCell>
+                                <Switch
+                                  size="small"
+                                  sx={{ fontSize: "small" }}
+                                  checked={user.active}
+                                  onChange={() =>
+                                    handleStatusChange(user.userId, user.active)
+                                  }
+                                  name="active"
+                                  color="primary"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                {new Date(user.createdAt).toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -223,6 +346,12 @@ const UserPage = () => {
           {snackbarMessage} {/* Nội dung thông báo */}
         </Alert>
       </Snackbar>
+      <DeleteDialog
+        open={openDelete}
+        handleClose={handleCloseDelete}
+        quantity={selected.length} // Pass the selected length as the quantity
+        onDelete={handleDelete}
+      />
     </Layout>
   );
 };

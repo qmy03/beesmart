@@ -24,26 +24,75 @@ const HomePage: React.FC = () => {
       >
         <Box
           sx={{
-            display: "flex",
-            gap: "20px",
-            alignItems: "center",
-            padding: "40px 80px 0 80px",
+            position: "relative", // Tạo ngữ cảnh để căn chỉnh các phần tử con
+            width: "100%", // Chiếm toàn bộ chiều rộng màn hình
+            height: "100vh", // Chiếm toàn bộ chiều cao màn hình
           }}
         >
-          <Box sx={{ flex: 1 }}>
-            <Typography fontSize="48px" color="#99BC4D" fontWeight={700}>
-              Tự học trực tuyến với BeeSmart
-            </Typography>
-            <Typography fontSize="20px" color="#8A8A8A" pt="24px" pb="16px">
-              Nền tảng học toán dành cho học sinh tiểu học, giúp trẻ khám phá
-              kiến thức qua các bài học sinh động và trò chơi vui nhộn.
-            </Typography>
-            <Button onClick={handleSkillClick}>Học thử ngay</Button>
+          {/* Ảnh */}
+          <Box
+            sx={{
+              position: "absolute", // Đặt ảnh ở dưới và chiếm toàn bộ diện tích
+              top: 0,
+              left: 0,
+              width: "100%", // Chiếm toàn bộ chiều rộng
+              height: "100%", // Chiếm toàn bộ chiều cao
+            }}
+          >
+            <Image src="/hero1.png" layout="fill" objectFit="fill" alt="Hero" />
           </Box>
-          <Box sx={{ flex: 1 }}>
-            <Image src="/hero.png" width={523} height={523} alt="Hero"></Image>
+
+          {/* Text */}
+          <Box
+            sx={{
+              position: "absolute", // Đặt text lên trên ảnh
+              top: "40%", // Căn giữa theo chiều dọc
+              left: "15vw", // Căn trái
+              transform: "translateY(-50%)", // Căn giữa dọc chính xác
+              color: "#FFFFFF", // Màu chữ
+              zIndex: 1, // Đảm bảo chữ luôn hiển thị trên ảnh
+              fontWeight: 700,
+              fontSize: "48px",
+              maxWidth: "40%", // Giới hạn chiều rộng để không tràn ra ngoài
+            }}
+          >
+            Tự học trực tuyến với BeeSmart
+          </Box>
+
+          <Box
+            sx={{
+              position: "absolute", // Đặt text lên trên ảnh
+              top: "65%", // Căn theo chiều dọc dưới tiêu đề
+              left: "15vw", // Căn trái
+              transform: "translateY(-50%)", // Căn giữa dọc chính xác
+              color: "#FFFFFF", // Màu chữ
+              fontSize: "20px",
+              fontWeight: 400,
+              maxWidth: "40%", // Giới hạn chiều rộng để không tràn ra ngoài
+            }}
+          >
+            Nền tảng học toán dành cho học sinh tiểu học, giúp trẻ khám phá kiến
+            thức qua các bài học sinh động và trò chơi vui nhộn.
+          </Box>
+
+          <Box
+            sx={{
+              position: "absolute", // Đặt nút bấm lên trên ảnh
+              top: "75%", // Vị trí nút
+              left: "15vw", // Căn trái
+              zIndex: 1, // Đảm bảo nút luôn hiển thị trên ảnh
+            }}
+          >
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSkillClick}
+            >
+              Học thử ngay
+            </Button>
           </Box>
         </Box>
+
         <Box
           sx={{
             display: "flex",
@@ -61,7 +110,7 @@ const HomePage: React.FC = () => {
             pb="20px"
             textAlign="center"
           >
-            Các khóa học Toán của BeeSmart
+            Chương trình học được quan tâm nhất
           </Typography>
           <Box
             sx={{
@@ -75,8 +124,8 @@ const HomePage: React.FC = () => {
             <Box
               sx={{
                 position: "relative",
-                width: 260,
-                height: 300,
+                width: 400,
+                height: 380,
                 boxShadow: 4,
                 borderRadius: "16px",
                 cursor: "pointer",
@@ -86,59 +135,35 @@ const HomePage: React.FC = () => {
                 },
               }}
             >
-              {/* Ảnh nền */}
-              <Image
-                src="/course1.png"
-                layout="fill"
-                objectFit="cover"
-                alt="Course 1"
+              <img
+                src="/banner_2.png"
+                width={400}
+                height={225}
+                alt=""
                 style={{ borderRadius: "16px" }}
-              />
-
-              {/* Nội dung chữ và nút */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "70%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  alignItems: "center",
-                  width: "95%",
-                }}
-              >
-                {/* Dòng chữ chính */}
+              ></img>
+              <Box sx={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: 1}}>
+                <Typography
+                  sx={{
+                    fontSize: "24px",
+                    fontWeight: 700,
+                  }}
+                >
+                  Toán BeeSmart
+                </Typography>
                 <Typography
                   sx={{
                     fontSize: "20px",
-                    color: "#70CBF2",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    borderRadius: "8px",
-                    textAlign: "center",
+                    color: "#A8A8A8",
                   }}
                 >
-                  Lớp 1
+                  Lớp 1, 2, 3, 4, 5
                 </Typography>
-
-                {/* Dòng chữ phụ */}
-                <Typography
-                  sx={{
-                    fontSize: "15px",
-                    color: "#000000",
-                    marginTop: "16px",
-                    marginBottom: "10px",
-                    textAlign: "center", // Khoảng cách giữa 2 dòng
-                  }}
-                >
-                  Toán học bắt đầu từ những con số!
-                </Typography>
-
-                {/* Nút thêm */}
                 <Button
                   variant="outlined"
                   onClick={handleSkillClick}
                   sx={{
-                    // Khoảng cách với dòng chữ
+                    border: "none",
                     backgroundColor: "#70CBF2",
                     color: "#fff",
                     fontWeight: "bold",
@@ -153,329 +178,7 @@ const HomePage: React.FC = () => {
                 </Button>
               </Box>
             </Box>
-            <Box
-              sx={{
-                position: "relative",
-                width: 260,
-                height: 300,
-                boxShadow: 4,
-                borderRadius: "16px",
-                cursor: "pointer",
-                transition: "transform 0.3s ease-in-out", // Thêm transition để hiệu ứng mượt mà
-                "&:hover": {
-                  transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
-                },
-              }}
-            >
-              {/* Ảnh nền */}
-              <Image
-                src="/course2.png"
-                layout="fill"
-                objectFit="cover"
-                alt="Course 1"
-                style={{ borderRadius: "16px" }}
-              />
-
-              {/* Nội dung chữ và nút */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "70%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  alignItems: "center",
-                  width: "95%",
-                }}
-              >
-                {/* Dòng chữ chính */}
-                <Typography
-                  sx={{
-                    fontSize: "20px",
-                    color: "#94E9AB",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    borderRadius: "8px",
-                    textAlign: "center",
-                  }}
-                >
-                  Lớp 2
-                </Typography>
-
-                {/* Dòng chữ phụ */}
-                <Typography
-                  sx={{
-                    fontSize: "15px",
-                    color: "#000000",
-                    marginTop: "16px",
-                    marginBottom: "10px",
-                    textAlign: "center", // Khoảng cách giữa 2 dòng
-                  }}
-                >
-                  Cùng đếm và tính, khám phá thế giới!
-                </Typography>
-
-                {/* Nút thêm */}
-                <Button
-                  variant="outlined"
-                  sx={{
-                    // Khoảng cách với dòng chữ
-                    backgroundColor: "#70CBF2",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                    "&:hover": {
-                      backgroundColor: "#5BB0DA",
-                    },
-                  }}
-                >
-                  Khám phá ngay{" "}
-                  <KeyboardDoubleArrowRightIcon fontSize="small" />
-                </Button>
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                position: "relative",
-                width: 260,
-                height: 300,
-                boxShadow: 4,
-                borderRadius: "16px",
-                cursor: "pointer",
-                transition: "transform 0.3s ease-in-out", // Thêm transition để hiệu ứng mượt mà
-                "&:hover": {
-                  transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
-                },
-              }}
-            >
-              {/* Ảnh nền */}
-              <Image
-                src="/course3.png"
-                layout="fill"
-                objectFit="cover"
-                alt="Course 1"
-                style={{ borderRadius: "16px" }}
-              />
-
-              {/* Nội dung chữ và nút */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "70%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  alignItems: "center",
-                  width: "95%",
-                }}
-              >
-                {/* Dòng chữ chính */}
-                <Typography
-                  sx={{
-                    fontSize: "20px",
-                    color: "#F2D39A",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    borderRadius: "8px",
-                    textAlign: "center",
-                  }}
-                >
-                  Lớp 3
-                </Typography>
-
-                {/* Dòng chữ phụ */}
-                <Typography
-                  sx={{
-                    fontSize: "15px",
-                    color: "#000000",
-                    marginTop: "16px",
-                    marginBottom: "10px",
-                    textAlign: "center", // Khoảng cách giữa 2 dòng
-                  }}
-                >
-                  Phép cộng, phép trừ - kiến thức vững chắc!
-                </Typography>
-
-                {/* Nút thêm */}
-                <Button
-                  variant="outlined"
-                  onClick={handleSkillClick}
-                  sx={{
-                    // Khoảng cách với dòng chữ
-                    backgroundColor: "#70CBF2",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                    "&:hover": {
-                      backgroundColor: "#5BB0DA",
-                    },
-                  }}
-                >
-                  Khám phá ngay{" "}
-                  <KeyboardDoubleArrowRightIcon fontSize="small" />
-                </Button>
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                position: "relative",
-                width: 260,
-                height: 300,
-                boxShadow: 4,
-                borderRadius: "16px",
-                cursor: "pointer",
-                transition: "transform 0.3s ease-in-out", // Thêm transition để hiệu ứng mượt mà
-                "&:hover": {
-                  transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
-                },
-              }}
-            >
-              {/* Ảnh nền */}
-              <Image
-                src="/course4.png"
-                layout="fill"
-                objectFit="cover"
-                alt="Course 1"
-                style={{ borderRadius: "16px" }}
-              />
-
-              {/* Nội dung chữ và nút */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "70%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  alignItems: "center",
-                  width: "95%",
-                }}
-              >
-                {/* Dòng chữ chính */}
-                <Typography
-                  sx={{
-                    fontSize: "20px",
-                    color: "#FFADC5",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    borderRadius: "8px",
-                    textAlign: "center",
-                  }}
-                >
-                  Lớp 4
-                </Typography>
-
-                {/* Dòng chữ phụ */}
-                <Typography
-                  sx={{
-                    fontSize: "15px",
-                    color: "#000000",
-                    marginTop: "16px",
-                    marginBottom: "10px",
-                    textAlign: "center", // Khoảng cách giữa 2 dòng
-                  }}
-                >
-                  Nhân, chia dễ dàng - thành công dễ thấy!
-                </Typography>
-
-                {/* Nút thêm */}
-                <Button
-                  variant="outlined"
-                  onClick={handleSkillClick}
-                  sx={{
-                    // Khoảng cách với dòng chữ
-                    backgroundColor: "#70CBF2",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                    "&:hover": {
-                      backgroundColor: "#5BB0DA",
-                    },
-                  }}
-                >
-                  Khám phá ngay{" "}
-                  <KeyboardDoubleArrowRightIcon fontSize="small" />
-                </Button>
-              </Box>
-            </Box>
-            <Box
-              sx={{
-                position: "relative",
-                width: 260,
-                height: 300,
-                boxShadow: 4,
-                borderRadius: "16px",
-                cursor: "pointer",
-                transition: "transform 0.3s ease-in-out", // Thêm transition để hiệu ứng mượt mà
-                "&:hover": {
-                  transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
-                },
-              }}
-            >
-              {/* Ảnh nền */}
-              <Image
-                src="/course5.png"
-                layout="fill"
-                objectFit="cover"
-                alt="Course 1"
-                style={{ borderRadius: "16px" }}
-              />
-
-              {/* Nội dung chữ và nút */}
-              <Box
-                sx={{
-                  position: "absolute",
-                  top: "70%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  alignItems: "center",
-                  width: "95%",
-                }}
-              >
-                {/* Dòng chữ chính */}
-                <Typography
-                  sx={{
-                    fontSize: "20px",
-                    color: "#E4AD81",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    borderRadius: "8px",
-                    textAlign: "center",
-                  }}
-                >
-                  Lớp 5
-                </Typography>
-
-                {/* Dòng chữ phụ */}
-                <Typography
-                  sx={{
-                    fontSize: "15px",
-                    color: "#000000",
-                    marginTop: "16px",
-                    marginBottom: "10px",
-                    textAlign: "center", // Khoảng cách giữa 2 dòng
-                  }}
-                >
-                  Toán mở rộng - tư duy không giới hạn!
-                </Typography>
-
-                {/* Nút thêm */}
-                <Button
-                  variant="outlined"
-                  onClick={handleSkillClick}
-                  sx={{
-                    // Khoảng cách với dòng chữ
-                    backgroundColor: "#70CBF2",
-                    color: "#fff",
-                    fontWeight: "bold",
-                    borderRadius: "8px",
-                    "&:hover": {
-                      backgroundColor: "#5BB0DA",
-                    },
-                  }}
-                >
-                  Khám phá ngay{" "}
-                  <KeyboardDoubleArrowRightIcon fontSize="small" />
-                </Button>
-              </Box>
-            </Box>
+            
           </Box>
         </Box>
         <Box

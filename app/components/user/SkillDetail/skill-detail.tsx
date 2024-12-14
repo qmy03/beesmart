@@ -146,7 +146,7 @@ const SkillDetailPage = () => {
         sx={{
           display: "flex",
           flexDirection: "column",
-          padding: "40px",
+          paddingY: "80px",
           gap: "20px",
           backgroundColor: "#EFF3E6",
           alignItems: "center",
@@ -159,7 +159,7 @@ const SkillDetailPage = () => {
             flexDirection: "column",
           }}
         >
-          <video controls>
+          <video style={{width: "80vw"}} controls>
             <source src={lesson.content} type="video/mp4" />
             Your browser does not support the video tag.
           </video>
@@ -167,12 +167,21 @@ const SkillDetailPage = () => {
             sx={{
               padding: 2,
               display: "flex",
-              flexDirection: "column",
               gap: 1,
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Typography fontWeight={700}>{grade && `${grade}`}</Typography>
-            <Typography fontSize="20px">{lesson.lessonName}</Typography>
+            <Box sx={{ display: "flex", flexDirection: "column",gap: 1}}>
+              <Typography fontWeight={700}>{grade && `${grade}`}</Typography>
+              <Typography fontSize="24px">{lesson.lessonName}</Typography>
+              <Typography
+                fontSize="16px"
+                fontWeight={700}
+              >
+                Lượt xem: {lesson.viewCount}
+              </Typography>
+            </Box>
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <Button onClick={() => setDialogOpen(true)}>
                 Thực hành ngay

@@ -14,8 +14,8 @@ const useSignupForm = (setSnackbarMessage: (message: string | null) => void) => 
   const [passwordMismatchError, setPasswordMismatchError] = useState(false);
   const { registerUser } = useAuth(); // Get the register function
 
-  const register = async (data: { role: string }) => {
-    const { role } = data;
+  const register = async (data: { role: string, grade: string }) => {
+    const { role, grade } = data;
   
     setUserNameError(!userName);
     setPasswordError(!password);
@@ -28,6 +28,7 @@ const useSignupForm = (setSnackbarMessage: (message: string | null) => void) => 
         email: email,
         password: password,
         role: role, // Truyền vai trò được chọn
+        grade: grade,
       };
   
       const responseMessage = await registerUser(userData);

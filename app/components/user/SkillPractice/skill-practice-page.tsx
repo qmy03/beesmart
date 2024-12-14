@@ -231,7 +231,7 @@ const SkillPracticePage = () => {
                       };
                       setAnswers(updatedAnswers);
                     }}
-                    sx={{ width: "30%" }}
+                    sx={{ width: "30%", bgcolor: "white" }}
                     disabled={timeLeft === 0}
                   />
                 )}
@@ -252,7 +252,7 @@ const SkillPracticePage = () => {
                       )
                     }
                     disabled={timeLeft === 0} // Disable input when time is up
-                    sx={{ display: "flex", flexDirection: "row", gap: 7 }}
+                    sx={{ display: "flex", flexDirection: "row", gap: 4 }}
                   >
                     {question.options.map((option: string, index: number) => (
                       <FormControlLabel

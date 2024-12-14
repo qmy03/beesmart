@@ -259,11 +259,11 @@ const AccountPage: React.FC = () => {
           console.error("Error fetching quiz history:", error);
         }
       };
-  
+
       fetchQuizHistory();
     }
   }, [activeTab, userInfo, accessToken, page, rowsPerPage]);
-  
+
   useEffect(() => {
     const fetchGrades = async () => {
       try {
@@ -379,11 +379,13 @@ const AccountPage: React.FC = () => {
                 height: 64,
                 fontSize: 32,
                 margin: "0 auto",
+                fontWeight: 600,
+                border:"4px solid #BB9066"
               }}
             >
-              {userInfo.username[0]}
+              {userInfo.username[0].toUpperCase()}
             </Avatar>
-            <Typography variant="h6" fontWeight="bold" mt={1}>
+            <Typography fontSize="16px" fontWeight="bold" mt={1}>
               {userInfo.username}
             </Typography>
           </Box>
@@ -628,46 +630,48 @@ const AccountPage: React.FC = () => {
               >
                 Lịch sử làm bài
               </Typography>
-              <TableContainer component={Paper}>
-                <Table size="small">
-                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                    <TableRow>
-                      <TableCell>Thứ tự</TableCell>
-                      <TableCell>Tên bài kiểm tra</TableCell>
-                      <TableCell>Số câu hỏi</TableCell>
-                      <TableCell>Số câu đúng</TableCell>
-                      <TableCell>Điểm</TableCell>
-                      <TableCell>Thời gian (giây)</TableCell>
-                      <TableCell>Ngày làm</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {quizHistory.map((record, index) => (
-                      <TableRow key={record.recordId}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{record.quizName}</TableCell>
-                        <TableCell>{record.totalQuestions}</TableCell>
-                        <TableCell>{record.correctAnswers}</TableCell>
-                        <TableCell>{record.points}</TableCell>
-                        <TableCell>{record.timeSpent}</TableCell>
-                        <TableCell>
-                          {new Date(record.createdAt).toLocaleString()}
-                        </TableCell>
+              <Box component={Paper}>
+                <TableContainer  sx={{ height: "70vh" }}>
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                      <TableRow>
+                        <TableCell>Thứ tự</TableCell>
+                        <TableCell>Tên bài kiểm tra</TableCell>
+                        <TableCell>Số câu hỏi</TableCell>
+                        <TableCell>Số câu đúng</TableCell>
+                        <TableCell>Điểm</TableCell>
+                        <TableCell>Thời gian (phút)</TableCell>
+                        <TableCell>Ngày làm</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={totalItems}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                rowsPerPageOptions={[5, 10, 25]}
-                labelRowsPerPage="Rows per page"
-              />
+                    </TableHead>
+                    <TableBody>
+                      {quizHistory.map((record, index) => (
+                        <TableRow key={record.recordId}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{record.quizName}</TableCell>
+                          <TableCell>{record.totalQuestions}</TableCell>
+                          <TableCell>{record.correctAnswers}</TableCell>
+                          <TableCell>{record.points}</TableCell>
+                          <TableCell>{record.timeSpent}</TableCell>
+                          <TableCell>
+                            {new Date(record.createdAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={totalItems}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                  rowsPerPageOptions={[5, 10, 25]}
+                  labelRowsPerPage="Rows per page"
+                />
+              </Box>
             </Box>
           )}
           {activeTab === "Tạo tài khoản cho con" && (

@@ -1,6 +1,19 @@
 import React, { useEffect, useState } from "react";
 import Layout from "@/app/components/user/Home/layout";
-import { Box, CssBaseline, MenuItem, Typography } from "@mui/material";
+import {
+  Box,
+  CssBaseline,
+  MenuItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  Typography,
+} from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/hooks/AuthContext";
 import apiService from "@/app/untils/api";
@@ -18,7 +31,10 @@ const DashboardReportPage: React.FC = () => {
   const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [activeStudent, setActiveStudent] = useState<any>(null); // To track active student
   const [daysDifference, setDaysDifference] = useState<number>(0);
-
+  const [quizRecords, setQuizRecords] = useState<any[]>([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   useEffect(() => {
     // Set default date range as the past 7 days
     const today = new Date();
@@ -114,7 +130,42 @@ const DashboardReportPage: React.FC = () => {
         });
     }
   }, [activeStudent, startDate, endDate, accessToken]);
+  useEffect(() => {
+    const fetchQuizRecords = async () => {
+      try {
+        const response = await apiService.get(
+          `/statistics/user/${activeStudent.userId}/quiz-records`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            // params: { page: page + 1, limit: rowsPerPage }, // Use backend pagination params
+          }
+        );
+        console.log("response", response);
 
+        if (response.data?.status === 200) {
+          setQuizRecords(response.data.data.quizRecords);
+          setTotalItems(response.data.data.totalItems); // Assuming API returns total items
+        }
+      } catch (error) {
+        console.error("Error fetching quiz records:", error);
+      }
+    };
+
+    if (accessToken && activeStudent) {
+      fetchQuizRecords();
+    }
+  }, [accessToken, activeStudent]);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
   const handleStudentClick = (student: any) => {
     setActiveStudent(student); // Set clicked student as active
   };
@@ -148,10 +199,11 @@ const DashboardReportPage: React.FC = () => {
             Đánh giá học sinh
           </Typography>
           <TextField
-            sx={{ maxWidth: "100px" }}
+            sx={{ maxWidth: "100px", fontSize: "16px" }}
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
             label=""
+            disabled
           >
             {grades.map((grade) => (
               <MenuItem key={grade.gradeId} value={grade.gradeId}>
@@ -169,7 +221,7 @@ const DashboardReportPage: React.FC = () => {
               justifyContent: "center",
             }}
           >
-            <Typography fontSize="32px" fontWeight="bold" color="#99BC4D">
+            <Typography fontSize="32px" fontWeight="bold" color="#99BC4D" >
               {activeStudent.fullName}
             </Typography>
           </Box>
@@ -198,6 +250,7 @@ const DashboardReportPage: React.FC = () => {
                   display: "inline-block",
                   margin: "10px",
                   cursor: "pointer",
+                  paddingBottom: 4
                 }}
                 onClick={() => handleStudentClick(student)}
               >
@@ -327,6 +380,68 @@ const DashboardReportPage: React.FC = () => {
                   </Typography>
                 </Box>
               </Box>
+              <Typography
+                fontSize="20px"
+                color="#99BC4D"
+                fontWeight={600}
+                sx={{ flexGrow: 1, py: 3 }}
+              >
+                Lịch sử làm bài
+              </Typography>
+              {/* {quizRecords.length > 0 && ( */}
+                <Box sx={{ height: "70vh", boxShadow: 3, borderRadius: 3 }}>
+                  <TableContainer
+                    sx={{ borderRadius: 3, overflow: "auto", height: "60vh" }}
+                  >
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: "#FFFBF3" }}>
+                        <TableRow>
+                          <TableCell sx={{ paddingY: "16px" }}>
+                            Tên bài kiểm tra
+                          </TableCell>
+                          <TableCell>Tổng số câu hỏi</TableCell>
+                          <TableCell>Số đáp án đúng</TableCell>
+                          <TableCell>Điểm</TableCell>
+                          <TableCell>Thời gian hoàn thành</TableCell>
+                          <TableCell>Ngày</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {quizRecords && quizRecords.length > 0 ? (
+                          quizRecords.map((record, index) => (
+                            <TableRow key={index}>
+                              <TableCell sx={{ paddingY: "16px" }}>
+                                {record.quizName}
+                              </TableCell>
+                              <TableCell>{record.totalQuestions}</TableCell>
+                              <TableCell>{record.correctAnswers}</TableCell>
+                              <TableCell>{record.points}</TableCell>
+                              <TableCell>{record.timeSpent}</TableCell>
+                              <TableCell>
+                                {new Date(record.createdAt).toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} align="center" sx={{paddingY: "16px"}}>
+                              Không có dữ liệu
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <TablePagination
+                    component="div"
+                    count={totalItems}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </Box>
+              {/* )} */}
             </Box>
           </Box>
         )}

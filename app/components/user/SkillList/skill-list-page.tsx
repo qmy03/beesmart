@@ -26,7 +26,7 @@ const SkillListPage: React.FC = () => {
   const { accessToken, userInfo } = useAuth();
   const gradeUser = userInfo?.grade;
   console.log("gradeUser", gradeUser);
-
+  const [isFetching, setIsFetching] = useState(false);
   const [selectedTerm, setSelectedTerm] = useState<string>("Học kì 1");
   const [loading, setLoading] = useState(false);
   const [grades, setGrades] = useState<any[]>([]);
@@ -51,101 +51,111 @@ const SkillListPage: React.FC = () => {
 
   const handleTermChange = (termDisplay: string) => {
     setSelectedTerm(termDisplay);
-    setSelectedTopic(null); // Reset selected topic when the term changes
     setLessons([]); // Clear the lessons when the term changes
+    setSelectedTopic(null); // Clear selected topic to trigger topic fetching
   };
 
   useEffect(() => {
-    if (!userInfo) {
-      console.log("Đang chờ userInfo được load...");
-      return; // Dừng lại nếu userInfo chưa sẵn sàng
-    }
-
     setLoading(true);
+
     apiService
       .get("/grades")
       .then((response) => {
         const fetchedGrades = response.data;
         setGrades(fetchedGrades);
 
-        if (gradeUser) {
-          const userGrade = fetchedGrades.find(
-            (grades) => grades.gradeName === gradeUser
-          );
-          if (userGrade) {
-            setSelectedGradeId(userGrade.gradeId);
-            setSelectedGradeName(userGrade.gradeName);
-          }
-        } else if (fetchedGrades.length > 0) {
-          const firstGrade = fetchedGrades[0];
-          setSelectedGradeId(firstGrade.gradeId);
-          setSelectedGradeName(firstGrade.gradeName);
+        const userGrade = gradeUser
+          ? fetchedGrades.find((grade) => grade.gradeName === gradeUser)
+          : fetchedGrades[0];
+
+        if (userGrade) {
+          setSelectedGradeId(userGrade.gradeId);
+          setSelectedGradeName(userGrade.gradeName);
         }
       })
       .catch((error) => console.error("Error fetching grades:", error))
       .finally(() => setLoading(false));
-  }, [userInfo, gradeUser]); // Lắng nghe cả `userInfo` và `gradeUser`
+  }, [gradeUser, userInfo]);
 
   useEffect(() => {
-    if (selectedGradeName && selectedTerm) {
-      const termCode = termMapping[selectedTerm];
-      setLoading(true);
-      apiService
-        .get(`/topics?grade=${selectedGradeName}&semester=${selectedTerm}`)
-        .then((response) => {
-          const topicsData = response.data.data.topics;
-          console.log("topicsData", topicsData);
-          if (Array.isArray(topicsData)) {
-            setTopics(topicsData);
-            // Automatically select the first topic if none is selected
-            if (!selectedTopic && topicsData.length > 0) {
-              setSelectedTopic(topicsData[0]);
-            }
-          } else {
-            console.error("Invalid topics data:", topicsData);
-            setTopics([]);
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching topics:", error);
-          setTopics([]);
-        })
-        .finally(() => setLoading(false));
+    if (!selectedGradeName || !selectedTerm) return;
+
+    const termCode = termMapping[selectedTerm];
+    setLoading(true);
+
+    apiService
+      .get(`/topics?grade=${selectedGradeName}&semester=${selectedTerm}`)
+      .then((response) => {
+        const topicsData = response.data.data.topics || [];
+        setTopics(topicsData);
+
+        // Chỉ set topic khi chưa có topic được chọn
+        if (!selectedTopic && topicsData.length > 0) {
+          setSelectedTopic(topicsData[0]); // Set topic đầu tiên
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching topics:", error);
+        setTopics([]);
+      })
+      .finally(() => setLoading(false));
+  }, [selectedGradeName, selectedTerm]);
+  useEffect(() => {
+    if (selectedTopic && topicQuizzes.length === 0) {
+      fetchLessonsAndQuizzes(selectedTopic.topicId);
     }
-  }, [selectedGradeId, selectedTerm, accessToken]);
-  useEffect(() => {
-    if (selectedTopic) {
-      setLoading(true);
-      apiService
-        .get(`/topics/${selectedTopic.topicId}/lessons-and-quizzes`)
-        .then((response) => {
-          const lessonsData = response.data.data.lessons;
-          const quizzesData = response.data.data.quizzes;
+  }, [selectedTopic?.topicId]); // Chỉ lắng nghe sự thay đổi của `topicId`.
 
-          // Set the lessons data
-          if (Array.isArray(lessonsData)) {
-            setLessons(lessonsData);
-          } else {
-            console.error("Invalid lessons data:", lessonsData);
-            setLessons([]);
-          }
+  // Fetch lessons and quizzes when the selected topic changes
+  const fetchLessonsAndQuizzes = (topicId: string) => {
+    setLoading(true);
 
-          // Set the topic-specific quizzes (not related to lessons)
-          if (Array.isArray(quizzesData)) {
-            setTopicQuizzes(quizzesData); // Store topic quizzes separately
-          } else {
-            console.error("Invalid quizzes data:", quizzesData);
-            setTopicQuizzes([]); // Clear quizzes if the data is invalid
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching lessons and quizzes:", error);
+    apiService
+      .get(`/topics/${topicId}/lessons-and-quizzes`)
+      .then((response) => {
+        const lessonsData = response.data.data.lessons || [];
+        const quizzesData = response.data.data.quizzes || [];
+
+        // Chỉ set state nếu topic hiện tại vẫn là topicId này
+        if (selectedTopic?.topicId === topicId) {
+          setLessons(lessonsData);
+          setTopicQuizzes(quizzesData);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching lessons and quizzes:", error);
+        if (selectedTopic?.topicId === topicId) {
           setLessons([]);
-          setTopicQuizzes([]); // Clear quizzes on error
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [selectedTopic]);
+          setTopicQuizzes([]);
+        }
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    console.log("Updated topicQuizzes:", topicQuizzes);
+  }, [topicQuizzes]);
+
+  // useEffect(() => {
+  //   if (selectedTopic) {
+  //     setLoading(true);
+  //     apiService
+  //       .get(`/topics/${selectedTopic.topicId}/lessons-and-quizzes`)
+  //       .then((response) => {
+  //         const lessonsData = response.data.data.lessons;
+  //         const quizzesData = response.data.data.quizzes;
+  //         console.log("quizzesData", quizzesData);
+  //         setLessons(Array.isArray(lessonsData) ? lessonsData : []);
+  //         setTopicQuizzes(Array.isArray(quizzesData) ? quizzesData : []);
+  //       })
+  //       .catch((error) => {
+  //         console.error("Error fetching lessons and quizzes:", error);
+  //         setLessons([]);
+  //         setTopicQuizzes([]);
+  //       })
+  //       .finally(() => setLoading(false));
+  //   }
+  // }, [selectedTopic]);
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
@@ -166,6 +176,7 @@ const SkillListPage: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
+
   const handlePracticeClick = (lessonId: string) => {
     console.log("lessonId", lessonId);
     // Fetch quizzes for this lesson and open the dialog
@@ -178,6 +189,7 @@ const SkillListPage: React.FC = () => {
       })
       .catch((error) => console.error("Error fetching quizzes:", error));
   };
+
   const handleQuizClick = (quizId: string) => {
     // Navigate to SkillPracticePage with the selected quizId
     router.push(`/skill-practice/${quizId}`);
@@ -240,7 +252,7 @@ const SkillListPage: React.FC = () => {
         <Box sx={{ display: "flex", gap: "20px" }}>
           {/* Sidebar */}
           <Box
-            sx={{ width: "25%", backgroundColor: "white", borderRadius: "8px" }}
+            sx={{ width: "30%", backgroundColor: "white", borderRadius: "8px" }}
           >
             {/* Chọn học kỳ */}
             <Box
@@ -248,6 +260,7 @@ const SkillListPage: React.FC = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                fontSize: "16px",
               }}
             >
               {["Học kì 1", "Học kì 2"].map((termDisplay) => (
@@ -289,7 +302,7 @@ const SkillListPage: React.FC = () => {
               {/* Danh sách chủ điểm */}
               <Box sx={{ marginTop: "8px" }}>
                 {loading ? (
-                  <CircularProgress />
+                  <CircularProgress size="30px" />
                 ) : filteredTopics.length > 0 ? (
                   filteredTopics.map((topic, index) => (
                     <Box
@@ -323,7 +336,7 @@ const SkillListPage: React.FC = () => {
 
                       {/* Nội dung chủ đề */}
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body1" fontWeight={600}>
+                        <Typography fontSize="16px" fontWeight={600}>
                           {topic.topicName}
                         </Typography>
                         <Typography variant="body2" color="#A8A8A8">
@@ -344,7 +357,7 @@ const SkillListPage: React.FC = () => {
           </Box>
 
           {/* Lessons Box */}
-          <Box sx={{ width: "75%" }}>
+          <Box sx={{ width: "70%" }}>
             {selectedTopic ? (
               <Box sx={{ gap: 4 }}>
                 {/* Box tiêu đề chủ điểm */}
@@ -365,6 +378,19 @@ const SkillListPage: React.FC = () => {
                     </Typography>
                   </Box>
                   <Divider />
+                  <Box sx={{display: "flex", gap: 4}}><Typography
+                    fontSize={16}
+                    fontStyle="italic"
+                    color="#A8A8A8"
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                      paddingTop: "16px",
+                    }}
+                  >
+                    Bài học: {selectedTopic.lessons.length}
+                  </Typography>
                   <Typography
                     fontSize={16}
                     fontStyle="italic"
@@ -373,11 +399,11 @@ const SkillListPage: React.FC = () => {
                       display: "flex",
                       gap: 2,
                       alignItems: "center",
-                      padding: "16px",
+                      paddingTop: "16px",
                     }}
                   >
-                    Bài học: {lessons.length}
-                  </Typography>
+                    Bài kiểm tra: {topicQuizzes.length}
+                  </Typography></Box>
                 </Box>
 
                 {/* Box danh sách bài học */}
@@ -394,11 +420,11 @@ const SkillListPage: React.FC = () => {
                   }}
                 >
                   {loading ? (
-                    <CircularProgress />
-                  ) : lessons.length > 0 ? (
-                    lessons.map((lesson) => (
+                    <CircularProgress size="30px" />
+                  ) : selectedTopic.lessons.length > 0 ? (
+                    selectedTopic.lessons.map((lessonsData: any) => (
                       <Box
-                        key={lesson.lessonId}
+                        key={lessonsData.lessonId}
                         // onClick={() => handleLessonClick(lesson.lessonId)}
                         sx={{
                           border: "0.5px solid #A8A8A8",
@@ -406,22 +432,25 @@ const SkillListPage: React.FC = () => {
                           backgroundColor: "#f9f9f9",
                         }}
                       >
-                        {lesson.content && (
+                        {lessonsData.content && (
                           <Typography variant="body2" color="#A8A8A8">
                             {/* {lesson.content} */}
                           </Typography>
                         )}
-                        {lesson.content && lesson.content.includes(".mp4") && (
-                          <Box
-                            sx={{ cursor: "pointer" }}
-                            onClick={() => handleLessonClick(lesson.lessonId)}
-                          >
-                            <VideoThumbnail
-                              videoUrl={lesson.content}
-                              captureTime={60}
-                            />
-                          </Box>
-                        )}
+                        {lessonsData.content &&
+                          lessonsData.content.includes(".mp4") && (
+                            <Box
+                              sx={{ cursor: "pointer" }}
+                              onClick={() =>
+                                handleLessonClick(lessonsData.lessonId)
+                              }
+                            >
+                              <VideoThumbnail
+                                videoUrl={lessonsData.content}
+                                captureTime={60}
+                              />
+                            </Box>
+                          )}
                         <Box
                           sx={{
                             padding: 2,
@@ -435,7 +464,7 @@ const SkillListPage: React.FC = () => {
                             fontWeight={600}
                             color="#99BC4D"
                           >
-                            {lesson.lessonName}
+                            {lessonsData.lessonName}
                           </Typography>
                           <Box
                             sx={{
@@ -453,7 +482,9 @@ const SkillListPage: React.FC = () => {
                                 alignItems: "center",
                                 cursor: "pointer",
                               }}
-                              onClick={() => handleLessonClick(lesson.lessonId)}
+                              onClick={() =>
+                                handleLessonClick(lessonsData.lessonId)
+                              }
                             >
                               <img
                                 src="/icon-video.png"
@@ -476,7 +507,7 @@ const SkillListPage: React.FC = () => {
                                 cursor: "pointer",
                               }}
                               onClick={() =>
-                                handlePracticeClick(lesson.lessonId)
+                                handlePracticeClick(lessonsData.lessonId)
                               }
                             >
                               <img
@@ -515,22 +546,17 @@ const SkillListPage: React.FC = () => {
                   }}
                 >
                   {loading ? (
-                    <CircularProgress />
-                  ) : topicQuizzes.length > 0 ? (
-                    topicQuizzes.map((quiz) => (
+                    <CircularProgress size="30px" />
+                  ) : topicQuizzes && topicQuizzes.length > 0 ? (
+                    topicQuizzes.map((quizzesData: any) => (
                       <Box
-                        key={quiz.quizId}
+                        key={quizzesData.quizId}
                         sx={{
                           border: "0.5px solid #A8A8A8",
                           borderRadius: "16px",
                           backgroundColor: "#f9f9f9",
                         }}
                       >
-                        {quiz.title && (
-                          <Typography variant="body2" color="#A8A8A8">
-                            {/* {topic.content} */}
-                          </Typography>
-                        )}
                         <img src="/quiz.png"></img>
                         <Box
                           sx={{
@@ -545,11 +571,24 @@ const SkillListPage: React.FC = () => {
                             fontWeight={600}
                             color="#99BC4D"
                           >
-                            {quiz.title}
+                            {quizzesData.title}
                           </Typography>
-                          <Typography fontSize="16px" fontWeight={600} color="#555">Thời gian làm bài</Typography>
-                          <Typography sx={{pb: 1}}>{quiz.quizDuration} phút</Typography>
-                          <Button fullWidth onClick={() => handleQuizClick(quiz.quizId)}>Làm bài kiểm tra</Button>
+                          <Typography
+                            fontSize="16px"
+                            fontWeight={600}
+                            color="#555"
+                          >
+                            Thời gian làm bài
+                          </Typography>
+                          <Typography sx={{ pb: 1 }}>
+                            {quizzesData.quizDuration} phút
+                          </Typography>
+                          <Button
+                            fullWidth
+                            onClick={() => handleQuizClick(quizzesData.quizId)}
+                          >
+                            Làm bài kiểm tra
+                          </Button>
                         </Box>
                       </Box>
                     ))
@@ -577,17 +616,17 @@ const SkillListPage: React.FC = () => {
             <Typography sx={{ paddingBottom: 3 }}>
               Vui lòng chọn quiz bên dưới để luyện tập
             </Typography>
-            {quizzes.map((quiz: any) => (
+            {quizzes.map((quizzesData: any) => (
               <Box
-                key={quiz.quizId}
+                key={quizzesData.quizId}
                 sx={{
                   marginBottom: "10px",
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
-                <Button onClick={() => handleQuizClick(quiz.quizId)}>
-                  {quiz.title}
+                <Button onClick={() => handleQuizClick(quizzesData.quizId)}>
+                  {quizzesData.title}
                 </Button>
               </Box>
             ))}
