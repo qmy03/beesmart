@@ -46,7 +46,7 @@ const Footer = () => {
           Quy định chung
         </Link>
         <Link
-          onClick={() => router.push("/priavcy-policy")}
+          onClick={() => router.push("/privacy-policy")}
           sx={{
             display: "block",
             color: "#555",

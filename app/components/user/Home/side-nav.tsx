@@ -428,7 +428,7 @@ const SideNav: React.FC = () => {
             fullWidth
             variant="text"
             sx={{ textTransform: "none", color: "white" }}
-            onClick={() => handleNavigation("/free-resources")}
+            onClick={() => handleNavigation("/document")}
           >
             Tài liệu miễn phí
           </Button>
@@ -437,7 +437,7 @@ const SideNav: React.FC = () => {
             fullWidth
             variant="text"
             sx={{ textTransform: "none", color: "white" }}
-            onClick={() => handleNavigation("/about")}
+            onClick={() => handleNavigation("/about-us")}
           >
             Về chúng tôi
           </Button>

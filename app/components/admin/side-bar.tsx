@@ -149,7 +149,7 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`bg-[#FFFBF3] text-black h-screen flex flex-col ${isCollapsed ? "w-13" : "w-64"} transition-all duration-300`}
+      className={`bg-[#FFFBF3] text-black h-screen flex flex-col ${isCollapsed ? "w-13" : "w-56"} transition-all duration-300 text-base`}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4">

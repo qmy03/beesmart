@@ -415,7 +415,7 @@ const LessonPage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Quản lý Lớp học
+            Quản lý Bài học
           </Typography>
           <Button
             onClick={() => {
@@ -516,7 +516,7 @@ const LessonPage = () => {
                     borderRadius: 2,
                     flex: 1,
                     height: "70vh",
-                    width: "76vw", // Set a fixed height for the table
+                    // width: "76vw", // Set a fixed height for the table
                     overflow: "auto", // Enable vertical scrolling if content overflows
                   }}
                 >

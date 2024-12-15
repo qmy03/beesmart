@@ -18,6 +18,7 @@ import {
   IconButton,
   Select,
   MenuItem,
+  InputAdornment,
 } from "@mui/material";
 import KeyboardBackspaceIcon from "@mui/icons-material/KeyboardBackspace";
 import EditIcon from "@mui/icons-material/Edit";
@@ -32,6 +33,7 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import TextField from "../../textfield";
 import { useRouter, usePathname } from "next/navigation";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 const AccountPage: React.FC = () => {
   const [grades, setGrades] = useState<any[]>([]);
   const [studentInfo, setStudentInfo] = useState({
@@ -58,6 +60,20 @@ const AccountPage: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0); // Tổng số phần tử trong dữ liệu
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -355,10 +371,11 @@ const AccountPage: React.FC = () => {
         sx={{
           display: "flex",
           flexDirection: { xs: "column", md: "row" },
-          gap: 3,
-          padding: 3,
+          gap: 4,
+          padding: 7,
           bgcolor: "#f9f9f9",
           minHeight: "100vh",
+          flex: 1,
         }}
       >
         {/* Box bên trái */}
@@ -367,7 +384,7 @@ const AccountPage: React.FC = () => {
             flex: 1,
             bgcolor: "white",
             padding: 2,
-            boxShadow: 1,
+            boxShadow: 4,
             borderRadius: 2,
           }}
         >
@@ -385,12 +402,15 @@ const AccountPage: React.FC = () => {
             >
               {userInfo.username[0].toUpperCase()}
             </Avatar>
-            <Typography fontSize="16px" fontWeight="bold" mt={1}>
+            <Typography fontSize="20px" fontWeight="bold" mt={1}>
               {userInfo.username}
             </Typography>
+            <Typography fontSize="16px" color="#A8A8A8" mt={1}>
+              {userInfo.grade}
+            </Typography>
           </Box>
-          <Divider />
-          <Box sx={{ mt: 2 }}>
+          <Divider sx={{ borderWidth: 1.5 }}/>
+          <Box sx={{ mt: 3 }}>
             <Button
               fullWidth
               startIcon={<AccountCircleIcon />}
@@ -461,6 +481,7 @@ const AccountPage: React.FC = () => {
                 color: "red",
                 textTransform: "none",
               }}
+              // onClick={logoutUser()}
             >
               Đăng xuất
             </Button>
@@ -470,10 +491,10 @@ const AccountPage: React.FC = () => {
         {/* Box bên phải */}
         <Box
           sx={{
-            flex: 3,
+            flex: 4,
             bgcolor: "white",
             padding: 3,
-            boxShadow: 1,
+            boxShadow: 4,
             borderRadius: 2,
           }}
         >
@@ -566,6 +587,7 @@ const AccountPage: React.FC = () => {
                     >
                       Thông tin cá nhân
                     </Typography>
+                    
                     <Box
                       sx={{
                         border: "1px solid #A8A8A8",
@@ -581,11 +603,13 @@ const AccountPage: React.FC = () => {
                       <EditIcon fontSize="small" sx={{ marginLeft: 1 }} />
                     </Box>
                   </Box>
+                  {/* <Divider sx={{pt: 1}}/> */}
                   <Box
                     sx={{
                       display: "grid",
                       gridTemplateColumns: "150px 1fr",
                       gap: 2,
+                      pt: 3,
                     }}
                   >
                     <Typography>Họ tên:</Typography>
@@ -631,7 +655,7 @@ const AccountPage: React.FC = () => {
                 Lịch sử làm bài
               </Typography>
               <Box component={Paper}>
-                <TableContainer  sx={{ height: "70vh" }}>
+                <TableContainer  sx={{ height: "58vh" }}>
                   <Table size="small">
                     <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
                       <TableRow>
@@ -794,9 +818,18 @@ const AccountPage: React.FC = () => {
                   </Typography>
                   <TextField
                     label="Nhập mật khẩu hiện tại"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={togglePasswordVisibility}>
+                            {showPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Box>
                 <Box sx={{ mb: 2 }}>
@@ -806,9 +839,18 @@ const AccountPage: React.FC = () => {
 
                   <TextField
                     label="Nhập mật khẩu mới"
-                    type="password"
+                    type={showNewPassword ? "text" : "password"}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={toggleNewPasswordVisibility}>
+                            {showNewPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Box>
                 <Box sx={{ mb: 2 }}>
@@ -817,7 +859,7 @@ const AccountPage: React.FC = () => {
                   </Typography>
                   <TextField
                     label="Nhập lại mật khẩu mới"
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     error={!!errorConfirmPassword}
@@ -828,6 +870,15 @@ const AccountPage: React.FC = () => {
                         fontSize: "14px",
                         paddingY: "2px",
                       },
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={toggleConfirmPasswordVisibility} >
+                            {showConfirmPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Box>

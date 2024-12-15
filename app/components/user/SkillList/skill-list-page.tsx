@@ -88,7 +88,7 @@ const SkillListPage: React.FC = () => {
       .then((response) => {
         const topicsData = response.data.data.topics || [];
         setTopics(topicsData);
-
+        console.log("quizz", topicsData)
         // Chỉ set topic khi chưa có topic được chọn
         if (!selectedTopic && topicsData.length > 0) {
           setSelectedTopic(topicsData[0]); // Set topic đầu tiên
@@ -402,7 +402,7 @@ const SkillListPage: React.FC = () => {
                       paddingTop: "16px",
                     }}
                   >
-                    Bài kiểm tra: {topicQuizzes.length}
+                    Bài kiểm tra: {selectedTopic.quizzes.length}
                   </Typography></Box>
                 </Box>
 
@@ -547,8 +547,8 @@ const SkillListPage: React.FC = () => {
                 >
                   {loading ? (
                     <CircularProgress size="30px" />
-                  ) : topicQuizzes && topicQuizzes.length > 0 ? (
-                    topicQuizzes.map((quizzesData: any) => (
+                  ) : selectedTopic.quizzes.length > 0 ? (
+                    selectedTopic.quizzes.map((quizzesData: any) => (
                       <Box
                         key={quizzesData.quizId}
                         sx={{

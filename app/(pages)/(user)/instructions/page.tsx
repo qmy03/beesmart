@@ -1,5 +1,5 @@
 "use client";
-import HomePage from "@/app/components/user/Home/home-page";
+import HomePage from "./component/home-page";
 import { AuthProvider } from "@/app/hooks/AuthContext";
 
 export default function Home() {

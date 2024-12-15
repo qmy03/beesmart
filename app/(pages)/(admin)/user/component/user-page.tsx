@@ -185,7 +185,7 @@ const UserPage = () => {
         <Box
           sx={{
             display: "flex",
-            padding: "4px 8px",
+            padding: "12px 8px",
             alignItems: "center",
             boxShadow: 4,
             borderRadius: "8px",
@@ -194,7 +194,7 @@ const UserPage = () => {
           <Typography fontWeight={700} flexGrow={1}>
             Quản lý Người dùng
           </Typography>
-          <Button>Thêm mới</Button>
+          {/* <Button>Thêm mới</Button> */}
         </Box>
 
         {/* Bảng danh sách người dùng */}
@@ -210,7 +210,7 @@ const UserPage = () => {
                     borderRadius: 2,
                     flex: 1,
                     height: "80vh",
-                    width: "76vw", // Set a fixed height for the table
+                    // width: "76vw", // Set a fixed height for the table
                     overflow: "auto",
                   }}
                 >

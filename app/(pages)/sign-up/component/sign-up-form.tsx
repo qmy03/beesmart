@@ -23,6 +23,9 @@ import Person4Icon from "@mui/icons-material/Person4";
 import FaceIcon from "@mui/icons-material/Face";
 import apiService from "@/app/untils/api";
 const SignUpForm: React.FC = () => {
+  const [showResendDialog, setShowResendDialog] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0); // Thời gian đếm ngược (giây)
+
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -62,6 +65,28 @@ const SignUpForm: React.FC = () => {
   const togglePasswordAgainVisibility = () => {
     setShowPasswordAgain(!showPasswordAgain);
   };
+  const handleResendEmail = async (email: string) => {
+    try {
+      await apiService.post(`/auth/resend-confirm-email?email=${email}`);
+      setSnackbarMessage("Gửi lại email xác thực thành công!");
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
+      setShowResendDialog(false);
+      setResendCooldown(180); // Đếm ngược 3 phút
+    } catch (error) {
+      setSnackbarMessage("Có lỗi xảy ra khi gửi lại email xác thực!");
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
+    }
+  };
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer); // Dọn dẹp timer khi component unmount
+    }
+  }, [resendCooldown]);
 
   useEffect(() => {
     const fetchGrades = async () => {
@@ -79,13 +104,18 @@ const SignUpForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const selectedGradeObj = grades.find(grade => grade.gradeId === selectedGrade); // Find the grade object by gradeId
+    const selectedGradeObj = grades.find(
+      (grade) => grade.gradeId === selectedGrade
+    ); // Find the grade object by gradeId
     const body = {
       username: userName,
       email: email,
       password: password,
       role: role,
-      grade: role === "STUDENT" && selectedGradeObj ? selectedGradeObj.gradeName : "", // Send gradeName if role is STUDENT
+      grade:
+        role === "STUDENT" && selectedGradeObj
+          ? selectedGradeObj.gradeName
+          : "", // Send gradeName if role is STUDENT
     };
     register(body);
   };
@@ -402,6 +432,66 @@ const SignUpForm: React.FC = () => {
                     Đăng nhập ngay
                   </Link>
                 </Typography>
+                <div className="mt-3 flex flex-col items-center justify-center gap-1">
+                  {resendCooldown > 0 ? (
+                    <Typography>
+                      Bạn có thể gửi lại email sau{" "}
+                      <strong>{resendCooldown}s</strong>.
+                    </Typography>
+                  ) : (
+                    <Typography>
+                      Bạn chưa nhận mail xác thực?{" "}
+                      <span
+                        onClick={() => setShowResendDialog(true)}
+                        style={{
+                          color: "blue",
+                          cursor: "pointer",
+                          textDecoration: "underline",
+                          
+                        }}
+                      >
+                        Bấm vào đây
+                      </span>
+                    </Typography>
+                  )}
+
+                  {/* Dialog nhập email */}
+                  {showResendDialog && (
+                    <div className="dialog-container">
+                      <div className="dialog-content">
+                        <Typography>
+                          Nhập email của bạn để gửi lại xác thực:
+                        </Typography>
+                        <TextField
+                          label="Email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          fullWidth
+                        />
+                        <Box
+                          mt={2}
+                          display="flex"
+                          justifyContent="space-between"
+                        >
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleResendEmail(email)}
+                          >
+                            Gửi lại
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="secondary"
+                            onClick={() => setShowResendDialog(false)}
+                          >
+                            Hủy
+                          </Button>
+                        </Box>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -112,6 +112,8 @@ const StatisticHomeworkHistory = () => {
           sx={{
             display: "flex",
             paddingX: "12px",
+            paddingY: 0,
+            margin:0,
             alignItems: "center",
             boxShadow: 4,
             borderRadius: "8px",

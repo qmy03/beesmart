@@ -295,7 +295,7 @@ const TopicPage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Quản lý Lớp học
+            Quản lý Chủ điểm
           </Typography>
           {/* {editMode === "add" && ( */}
           <Button onClick={handleOpenDialog}>Thêm mới</Button>
