@@ -20,11 +20,11 @@ interface DialogPopupProps {
   selectedGradeId: string;
   selectedSemester: string;
   selectedLessonId: string; // Use this prop for lesson fetching
-
+  selectedGradeName: string;
 }
 
 const DialogPopup: React.FC<
-  DialogPopupProps & { type: "add" | "edit"; topic?: any; lesson?: any, topicId?: any }
+  DialogPopupProps & { type: "add" | "edit"; topic?: any; lesson?: any, topicId?: any, gradeName?: any}
 > = ({
   open,
   onClose,
@@ -36,6 +36,7 @@ const DialogPopup: React.FC<
   topic,
   lesson,
   topicId,
+  selectedGradeName
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
   const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
@@ -69,11 +70,13 @@ console.log(topicId)
   }, [lesson, accessToken]); // Re-run when selectedLessonId changes
 
   // Fetch available topics when selectedGradeId or selectedSemester changes
+  console.log("Fetching topics with:", selectedGradeName, selectedSemester);
   useEffect(() => {
-    if (selectedGradeId && selectedSemester) {
+    if (selectedGradeName && selectedSemester) {
+      console.log("Fetching topics with:", selectedGradeName, selectedSemester);
       apiService
         .get(
-          `/topics/grade/${selectedGradeId}/semester?semester=${selectedSemester}`,
+          `/topics?semester=${selectedSemester}&&grade=${selectedGradeName}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
@@ -91,7 +94,7 @@ console.log(topicId)
           console.error("Error fetching topics:", error);
         });
     }
-  }, [selectedGradeId, selectedSemester, accessToken]);
+  }, [selectedGradeName, selectedSemester, accessToken]);
   
   console.log("ABC", topic);
   const handleSubmit = () => {

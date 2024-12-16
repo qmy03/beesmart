@@ -647,6 +647,7 @@ const LessonPage = () => {
         topic={selectedTopic} // Dữ liệu topic khi sửa
         lesson={selectedLessonId} // Dữ liệu lesson khi sửa
         topicId={selectedTopicId} // Dữ liệu topicId khi sửa
+        selectedGradeName={selectedGradeName}
       />
       <DeleteDialog
         open={openDelete}
