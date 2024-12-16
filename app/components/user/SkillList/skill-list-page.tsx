@@ -56,26 +56,28 @@ const SkillListPage: React.FC = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-
-    apiService
-      .get("/grades")
-      .then((response) => {
-        const fetchedGrades = response.data;
-        setGrades(fetchedGrades);
-
-        const userGrade = gradeUser
-          ? fetchedGrades.find((grade) => grade.gradeName === gradeUser)
-          : fetchedGrades[0];
-
-        if (userGrade) {
-          setSelectedGradeId(userGrade.gradeId);
-          setSelectedGradeName(userGrade.gradeName);
-        }
-      })
-      .catch((error) => console.error("Error fetching grades:", error))
-      .finally(() => setLoading(false));
-  }, [gradeUser, userInfo]);
+    apiService.get("/grades").then((response) => {
+      setGrades(response.data);
+    });
+  }, []);
+  
+  useEffect(() => {
+    if (!grades.length) return;
+    if (userInfo?.grade) {
+      const userGrade = grades.find((grade) => grade.gradeName === userInfo.grade);
+      if (userGrade) {
+        setSelectedGradeId(userGrade.gradeId);
+        setSelectedGradeName(userGrade.gradeName);
+      } else {
+        setSelectedGradeId(grades[0]?.gradeId);
+        setSelectedGradeName(grades[0]?.gradeName);
+      }
+    } else {
+      setSelectedGradeId(grades[0]?.gradeId);
+      setSelectedGradeName(grades[0]?.gradeName);
+    }
+  }, [userInfo, grades]);
+  
 
   useEffect(() => {
     if (!selectedGradeName || !selectedTerm) return;
