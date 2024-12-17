@@ -190,9 +190,10 @@ const LoginForm = () => {
           paddingY: 3,
           alignItems: "center",
           backgroundColor: "#EFF3E6",
+          height: "100%",
         }}
       >
-        <form className="pt-3 w-[40vw] space-y-3" onSubmit={handleLogin}>
+        <form className=" w-[40vw] space-y-3" onSubmit={handleLogin}>
           <div className="flex-1 rounded-lg bg-white px-6 pb-7 pt-4 shadow-lg">
             <div className="flex flex-col items-center gap-2">
               <Typography fontSize="28px" className="mb-3 text-l font-bold">

@@ -29,9 +29,6 @@ import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 import QuestionDialog from "./question-dialog";
-
-import ClearIcon from "@mui/icons-material/Clear";
-import CheckIcon from "@mui/icons-material/Check";
 const QuizPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -63,17 +60,6 @@ const QuizPage = () => {
     new Set()
   );
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
-  // const handleAnswerSubmit = (questionId: string, correctAnswer: any) => {
-  //   const userAnswer = userAnswers[questionId];
-  //   const isCorrect = userAnswer === correctAnswer;
-
-  //   const message = isCorrect ? "Đúng rồi!" : "Sai rồi!";
-  //   const severity: "success" | "error" = isCorrect ? "success" : "error"; // Set severity based on correctness
-
-  //   setSnackbarMessage(message);
-  //   setSeverity(severity);
-  //   setSnackbarOpen(true); // Open Snackbar
-  // };
   const handleInputChange = (questionId: string, answer: any) => {
     setUserAnswers((prev) => ({
       ...prev,
@@ -440,18 +426,29 @@ const QuizPage = () => {
       }
     });
   };
-
+  const handleOpenAddDialog = () => {
+    setSelectedQuiz(null);  // Reset selected quiz to ensure no previous quiz is selected.
+    setDialogType("add");   // Set the dialogType to "add" explicitly.
+    setOpenDialog(true);    // Open the dialog.
+  };
+  
   const handleQuizUpdated = (updatedQuiz: any) => {
     if (dialogType === "add") {
+      // When adding a new quiz, we don’t want to merge with any previous quiz data.
       setQuizzes((prev) => [...prev, updatedQuiz]);
+      setSelectedQuiz(null); // Reset selected quiz after adding
+      setDialogType(null);    // Reset dialogType
     } else if (dialogType === "edit") {
       setQuizzes((prev) =>
         prev.map((quiz) =>
           quiz.quizId === updatedQuiz.quizId ? updatedQuiz : quiz
         )
       );
+      setDialogType(null); // Reset dialogType after editing
     }
   };
+  
+  
 
   const handleEditQuiz = (quiz: any) => {
     setSelectedQuiz(quiz);
@@ -497,8 +494,9 @@ const QuizPage = () => {
         console.error("Error creating question:", error);
 
         // Hiển thị lỗi trong Snackbar
-        setSnackbarMessage("Thêm câu hỏi thất bại!");
+        setSnackbarMessage("Thêm câu hỏi thành công!");
         setSnackbarOpen(true);
+        setOpenQuestionDialog(false);
 
         setLoading(false);
       });
@@ -526,7 +524,7 @@ const QuizPage = () => {
           <Typography fontWeight={700} flexGrow={1}>
             Quản lý Lớp học
           </Typography>
-          <Button onClick={() => setOpenDialog(true)}>Thêm mới</Button>
+          <Button onClick={handleOpenAddDialog}>Thêm mới</Button>
         </Box>
 
         {/* Chọn lớp học và học kỳ */}

@@ -15,7 +15,7 @@ interface AuthContextType {
   logoutUser: () => void;
   accessToken: string | null;
   refreshToken: string | null;
-  userInfo: { username: string; role: string; grade: string } | null;
+  userInfo: { username: string; role: string; grade: string; userId: string } | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     username: string;
     role: string;
     grade: string;
+    userId: string;
   } | null>(null); // New state for user info
   const router = useRouter();
 
@@ -98,8 +99,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         password,
       });
       if (response.status === 200) {
-        const { accessToken, refreshToken, role, grade } = response.data.data;
-        const userInfo = { username, role, grade }; // Thêm grade vào userInfo
+        const { accessToken, refreshToken, role, grade, userId } = response.data.data;
+        const userInfo = { username, role, grade, userId }; // Thêm grade vào userInfo
         console.log("userInfoLogin", userInfo);
         setAccessToken(accessToken);
         setRefreshToken(refreshToken);

@@ -246,6 +246,11 @@ const AccountPage: React.FC = () => {
   const id = userInfo?.userId;
   console.log(id);
   // Fetch lịch sử làm bài với phân trang
+  const formatTimeSpent = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60); // Get the minutes
+    const seconds = timeInSeconds % 60; // Get the remaining seconds
+    return `${minutes}' ${seconds}s`; // Return formatted time
+  };
   useEffect(() => {
     if (activeTab === "Lịch sử làm bài" && userInfo?.userId) {
       const fetchQuizHistory = async () => {
@@ -397,7 +402,7 @@ const AccountPage: React.FC = () => {
                 fontSize: 32,
                 margin: "0 auto",
                 fontWeight: 600,
-                border:"4px solid #BB9066"
+                border: "4px solid #BB9066",
               }}
             >
               {userInfo.username[0].toUpperCase()}
@@ -409,7 +414,7 @@ const AccountPage: React.FC = () => {
               {userInfo.grade}
             </Typography>
           </Box>
-          <Divider sx={{ borderWidth: 1.5 }}/>
+          <Divider sx={{ borderWidth: 1.5 }} />
           <Box sx={{ mt: 3 }}>
             <Button
               fullWidth
@@ -587,7 +592,7 @@ const AccountPage: React.FC = () => {
                     >
                       Thông tin cá nhân
                     </Typography>
-                    
+
                     <Box
                       sx={{
                         border: "1px solid #A8A8A8",
@@ -655,7 +660,7 @@ const AccountPage: React.FC = () => {
                 Lịch sử làm bài
               </Typography>
               <Box component={Paper}>
-                <TableContainer  sx={{ height: "58vh" }}>
+                <TableContainer sx={{ height: "58vh" }}>
                   <Table size="small">
                     <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
                       <TableRow>
@@ -676,7 +681,11 @@ const AccountPage: React.FC = () => {
                           <TableCell>{record.totalQuestions}</TableCell>
                           <TableCell>{record.correctAnswers}</TableCell>
                           <TableCell>{record.points}</TableCell>
-                          <TableCell>{record.timeSpent}</TableCell>
+                          <TableCell>
+                            {record.timeSpent
+                              ? formatTimeSpent(record.timeSpent)
+                              : "0' 0s"}
+                          </TableCell>
                           <TableCell>
                             {new Date(record.createdAt).toLocaleString()}
                           </TableCell>
@@ -825,7 +834,17 @@ const AccountPage: React.FC = () => {
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton onClick={togglePasswordVisibility}>
-                            {showPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                            {showPassword ? (
+                              <VisibilityOff
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            ) : (
+                              <Visibility
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            )}
                           </IconButton>
                         </InputAdornment>
                       ),
@@ -846,7 +865,17 @@ const AccountPage: React.FC = () => {
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton onClick={toggleNewPasswordVisibility}>
-                            {showNewPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                            {showNewPassword ? (
+                              <VisibilityOff
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            ) : (
+                              <Visibility
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            )}
                           </IconButton>
                         </InputAdornment>
                       ),
@@ -874,8 +903,18 @@ const AccountPage: React.FC = () => {
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton onClick={toggleConfirmPasswordVisibility} >
-                            {showConfirmPassword ? <VisibilityOff fontSize="small" sx={{color: "#99BC4D"}}/> : <Visibility fontSize="small" sx={{color: "#99BC4D"}}/>}
+                          <IconButton onClick={toggleConfirmPasswordVisibility}>
+                            {showConfirmPassword ? (
+                              <VisibilityOff
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            ) : (
+                              <Visibility
+                                fontSize="small"
+                                sx={{ color: "#99BC4D" }}
+                              />
+                            )}
                           </IconButton>
                         </InputAdornment>
                       ),

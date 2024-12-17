@@ -21,7 +21,8 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import TextField from "@/app/components/textfield";
 
 const DashboardReportPage: React.FC = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, userInfo } = useAuth();
+  console.log("userInfo", userInfo?.userId);
   const router = useRouter();
   const [students, setStudents] = useState<any[]>([]);
   const [startDate, setStartDate] = useState<string>("");
@@ -76,21 +77,27 @@ const DashboardReportPage: React.FC = () => {
 
   useEffect(() => {
     if (accessToken) {
-      apiService
-        .get("/users/parent/students", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        .then((response) => {
-          if (response.data && response.data.status === 200) {
-            setStudents(response.data.data);
-            setActiveStudent(response.data.data[0]); // Set the first student as active by default
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching students:", error);
-        });
+      if (userInfo?.role === "PARENT") {
+        // Nếu role là PARENT, lấy danh sách học sinh
+        apiService
+          .get("/users/parent/students", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+          .then((response) => {
+            if (response.data && response.data.status === 200) {
+              setStudents(response.data.data);
+              setActiveStudent(response.data.data[0]); // Set student đầu tiên là active
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching students:", error);
+          });
+      } else {
+        // Nếu role không phải PARENT, setActiveStudent là userInfo.userId
+        setActiveStudent({ userId: userInfo?.userId });
+      }
     }
-  }, [accessToken]);
+  }, [accessToken, userInfo?.role, userInfo?.userId]);
 
   const formatDateForBackend = (date: string) => {
     const [year, month, day] = date.split("-");
@@ -99,8 +106,12 @@ const DashboardReportPage: React.FC = () => {
 
   useEffect(() => {
     // Set the selected grade when the active student changes
-    if (activeStudent) {
+    if (activeStudent && userInfo?.role === "PARENT") {
       setSelectedGrade(activeStudent.grade); // Update the selected grade based on the active student
+    } else {
+      if (userInfo?.grade) {
+        setSelectedGrade(userInfo?.grade);
+      }
     }
   }, [activeStudent]);
 
@@ -130,6 +141,13 @@ const DashboardReportPage: React.FC = () => {
         });
     }
   }, [activeStudent, startDate, endDate, accessToken]);
+  // Add this helper function to format timeSpent in minutes and seconds
+  const formatTimeSpent = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60); // Get the minutes
+    const seconds = timeInSeconds % 60; // Get the remaining seconds
+    return `${minutes}' ${seconds}s`; // Return formatted time
+  };
+
   useEffect(() => {
     const fetchQuizRecords = async () => {
       try {
@@ -137,13 +155,20 @@ const DashboardReportPage: React.FC = () => {
           `/statistics/user/${activeStudent.userId}/quiz-records`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
-            // params: { page: page + 1, limit: rowsPerPage }, // Use backend pagination params
           }
         );
         console.log("response", response);
 
         if (response.data?.status === 200) {
-          setQuizRecords(response.data.data.quizRecords);
+          // Format the timeSpent for each record
+          const formattedRecords = response.data.data.quizRecords.map(
+            (record) => ({
+              ...record,
+              timeSpentFormatted: formatTimeSpent(record.timeSpent),
+            })
+          );
+
+          setQuizRecords(formattedRecords);
           setTotalItems(response.data.data.totalItems); // Assuming API returns total items
         }
       } catch (error) {
@@ -179,6 +204,7 @@ const DashboardReportPage: React.FC = () => {
           flexDirection: "column",
           gap: "20px",
           backgroundColor: "#EFF3E6",
+          height: "100%",
         }}
       >
         <Box
@@ -221,19 +247,30 @@ const DashboardReportPage: React.FC = () => {
               justifyContent: "center",
             }}
           >
-            <Typography fontSize="32px" fontWeight="bold" color="#99BC4D" >
+            <Typography fontSize="32px" fontWeight="bold" color="#99BC4D">
               {activeStudent.fullName}
             </Typography>
           </Box>
         )}
-        <Typography
-          fontSize="20px"
-          color="#000000"
-          fontWeight={700}
-          textAlign="center"
+        <Box
+          sx={{
+            border: "1px solid #A8A8A8",
+            marginX: "350px",
+            paddingY: "8px",
+            borderRadius: 6,
+            alignItems: "center",
+            backgroundColor: "#99BC4D",
+          }}
         >
-          Đánh giá chung
-        </Typography>
+          <Typography
+            fontSize="20px"
+            color="#000000"
+            fontWeight={700}
+            textAlign="center"
+          >
+            Đánh giá chung
+          </Typography>
+        </Box>
 
         <Box
           sx={{
@@ -250,7 +287,7 @@ const DashboardReportPage: React.FC = () => {
                   display: "inline-block",
                   margin: "10px",
                   cursor: "pointer",
-                  paddingBottom: 4
+                  paddingBottom: 4,
                 }}
                 onClick={() => handleStudentClick(student)}
               >
@@ -276,7 +313,8 @@ const DashboardReportPage: React.FC = () => {
               </div>
             ))
           ) : (
-            <p>No students found.</p>
+            // <p>No students found.</p>
+            <></>
           )}
         </Box>
 
@@ -306,12 +344,12 @@ const DashboardReportPage: React.FC = () => {
                 }}
               >
                 <Typography
-                  fontSize="20px"
+                  fontSize="26px"
                   color="#99BC4D"
                   fontWeight={600}
                   sx={{ flexGrow: 1 }}
                 >
-                  Trong {daysDifference} ngày qua
+                  Trong {daysDifference} ngày qua...
                 </Typography>
                 <Box
                   sx={{
@@ -372,7 +410,11 @@ const DashboardReportPage: React.FC = () => {
                   <Box sx={{ display: "flex" }}>
                     <img src="/icon_clock.png" width={50} height={50} />
                     <Typography fontSize="35px">
-                      {studentStats.timeSpentDoingQuizzes}
+                      <Typography fontSize="35px">
+                        {studentStats.timeSpentDoingQuizzes
+                          ? formatTimeSpent(studentStats.timeSpentDoingQuizzes)
+                          : "0' 0s"}
+                      </Typography>
                     </Typography>
                   </Box>
                   <Typography color="#000000" fontWeight={600} sx={{ pl: 6.5 }}>
@@ -389,58 +431,62 @@ const DashboardReportPage: React.FC = () => {
                 Lịch sử làm bài
               </Typography>
               {/* {quizRecords.length > 0 && ( */}
-                <Box sx={{ height: "70vh", boxShadow: 3, borderRadius: 3 }}>
-                  <TableContainer
-                    sx={{ borderRadius: 3, overflow: "auto", height: "60vh" }}
-                  >
-                    <Table size="small">
-                      <TableHead sx={{ bgcolor: "#FFFBF3" }}>
-                        <TableRow>
-                          <TableCell sx={{ paddingY: "16px" }}>
-                            Tên bài kiểm tra
-                          </TableCell>
-                          <TableCell>Tổng số câu hỏi</TableCell>
-                          <TableCell>Số đáp án đúng</TableCell>
-                          <TableCell>Điểm</TableCell>
-                          <TableCell>Thời gian hoàn thành</TableCell>
-                          <TableCell>Ngày</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {quizRecords && quizRecords.length > 0 ? (
-                          quizRecords.map((record, index) => (
-                            <TableRow key={index}>
-                              <TableCell sx={{ paddingY: "16px" }}>
-                                {record.quizName}
-                              </TableCell>
-                              <TableCell>{record.totalQuestions}</TableCell>
-                              <TableCell>{record.correctAnswers}</TableCell>
-                              <TableCell>{record.points}</TableCell>
-                              <TableCell>{record.timeSpent}</TableCell>
-                              <TableCell>
-                                {new Date(record.createdAt).toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={6} align="center" sx={{paddingY: "16px"}}>
-                              Không có dữ liệu
+              <Box sx={{ height: "70vh", boxShadow: 3, borderRadius: 3 }}>
+                <TableContainer
+                  sx={{ borderRadius: 3, overflow: "auto", height: "60vh" }}
+                >
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: "#FFFBF3" }}>
+                      <TableRow>
+                        <TableCell sx={{ paddingY: "16px" }}>
+                          Tên bài kiểm tra
+                        </TableCell>
+                        <TableCell>Tổng số câu hỏi</TableCell>
+                        <TableCell>Số đáp án đúng</TableCell>
+                        <TableCell>Điểm</TableCell>
+                        <TableCell>Thời gian hoàn thành</TableCell>
+                        <TableCell>Ngày</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {quizRecords && quizRecords.length > 0 ? (
+                        quizRecords.map((record, index) => (
+                          <TableRow key={index}>
+                            <TableCell sx={{ paddingY: "16px" }}>
+                              {record.quizName}
+                            </TableCell>
+                            <TableCell>{record.totalQuestions}</TableCell>
+                            <TableCell>{record.correctAnswers}</TableCell>
+                            <TableCell>{record.points}</TableCell>
+                            <TableCell>{record.timeSpentFormatted}</TableCell>
+                            <TableCell>
+                              {new Date(record.createdAt).toLocaleString()}
                             </TableCell>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                  <TablePagination
-                    component="div"
-                    count={totalItems}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                  />
-                </Box>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            align="center"
+                            sx={{ paddingY: "16px" }}
+                          >
+                            Không có dữ liệu
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={totalItems}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+              </Box>
               {/* )} */}
             </Box>
           </Box>

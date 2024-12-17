@@ -423,7 +423,14 @@ const SideNav: React.FC = () => {
           >
             Vào học
           </Button>
-
+          <Button
+            fullWidth
+            variant="text"
+            sx={{ textTransform: "none", color: "white" }}
+            onClick={() => handleNavigation("/dashboard-report")}
+          >
+            Đánh giá
+          </Button>
           <Button
             fullWidth
             variant="text"
