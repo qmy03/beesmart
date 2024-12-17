@@ -52,7 +52,7 @@ const AccountPage: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const [userInfo, setUserInfo] = useState<any | null>(null); // Lưu thông tin người dùng
-  const { accessToken } = useAuth(); // Lấy accessToken từ context
+  const { accessToken, logoutUser } = useAuth(); // Lấy accessToken từ context
   // const [activeTab, setActiveTab] = useState("Thông tin cá nhân"); // Tab hiện tại
   const [quizHistory, setQuizHistory] = useState<any[]>([]); // Lịch sử làm bài
   const [page, setPage] = useState(0); // Trang hiện tại
@@ -481,7 +481,7 @@ const AccountPage: React.FC = () => {
                 color: "red",
                 textTransform: "none",
               }}
-              // onClick={logoutUser()}
+              onClick={logoutUser}
             >
               Đăng xuất
             </Button>
