@@ -167,28 +167,21 @@ const LessonPage = () => {
   console.log("selectedSemester", selectedSemester);
   useEffect(() => {
     if (selectedGradeName && selectedSemester) {
-      setLoading(true);
-      // Gọi API để lấy topics theo gradeId và semester
-      apiService
-        .get(
-          `/topics?grade=${selectedGradeName}&&semester=${selectedSemester}`,
-          {
-            // headers: {
-            //   Authorization: `Bearer ${accessToken}`,
-            // },
-          }
-        )
-        .then((response) => {
-          console.log("response", response);
-          setTopics(response.data.data.topics); // Lưu danh sách topics vào state
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching topics:", error);
-          setLoading(false);
-        });
+      fetchTopics();
     }
-  }, [selectedGradeId, selectedSemester, accessToken]); // Chạy lại khi gradeId hoặc semester thay đổi
+  }, [selectedGradeId, selectedSemester, accessToken]);
+  
+  const fetchTopics = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.get(`/topics?grade=${selectedGradeName}&&semester=${selectedSemester}`);
+      setTopics(response.data.data.topics);
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+    } finally {
+      setLoading(false);
+    }
+  }; // Chạy lại khi gradeId hoặc semester thay đổi
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
@@ -358,6 +351,7 @@ const LessonPage = () => {
         handleSnackbarOpen("Lessons deleted successfully", "success");
         setSelected([]); // Clear selected lessons
         setOpenDelete(false); // Close the delete dialog
+        await fetchTopics();
       }
     } catch (error) {
       console.error("Failed to delete lessons:", error);
