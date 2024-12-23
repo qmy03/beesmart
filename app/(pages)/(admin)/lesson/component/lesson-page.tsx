@@ -21,6 +21,7 @@ import {
   Snackbar,
   Alert,
   TablePagination,
+  InputAdornment,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
@@ -28,6 +29,7 @@ import theme from "@/app/components/theme";
 import TextField from "@/app/components/textfield";
 import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
+import CloseIcon from "@mui/icons-material/close";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 
 const LessonPage = () => {
@@ -44,7 +46,8 @@ const LessonPage = () => {
     {}
   );
   const isTopicExpanded = (topicId: number) => expandedRows.has(topicId);
-
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   // Thêm state quản lý snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false); // Trạng thái mở/đóng Snackbar
   const [snackbarMessage, setSnackbarMessage] = useState(""); // Nội dung thông báo
@@ -54,7 +57,12 @@ const LessonPage = () => {
   const [openDelete, setOpenDelete] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
-
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchKeyword);
+    }, 300); // Delay 300ms
+    return () => clearTimeout(handler);
+  }, [searchKeyword]);
   const getTotalLessonsCount = () => {
     let totalLessons = 0;
 
@@ -71,14 +79,27 @@ const LessonPage = () => {
 
   const handleChangePage = (event: unknown, newPage: number) => {
     console.log("Changing to page:", newPage); // Add logging
-    setPage(newPage);
+
+    // Ensure newPage doesn't exceed the total pages
+    const totalPages = Math.ceil(topics.length / rowsPerPage);
+    if (newPage < totalPages) {
+      setPage(newPage);
+    } else {
+      setPage(totalPages - 1); // Set to last page if next page is out of bounds
+    }
   };
 
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0); // Reset to the first page when rows per page changes
+    const newRowsPerPage = parseInt(event.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
+    setPage(0); // Reset to the first page when rows per page change
+
+    // If the number of rows exceeds 10, automatically go to the next page
+    if (newRowsPerPage === 10 && topics.length > 10) {
+      setPage(1); // Move to next page
+    }
   };
 
   // Pagination
@@ -101,6 +122,9 @@ const LessonPage = () => {
     setSnackbarSeverity(severity); // Đặt loại thông báo
     setSnackbarOpen(true); // Mở Snackbar
   };
+  useEffect(() => {
+    fetchTopics();
+  }, [selectedGradeId, selectedSemester, accessToken, debouncedSearch]);
 
   // Hàm đóng Snackbar
   const handleSnackbarClose = () => {
@@ -141,11 +165,7 @@ const LessonPage = () => {
     if (accessToken) {
       setLoading(true);
       apiService
-        .get("/grades", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
+        .get("/grades")
         .then((response) => {
           const fetchedGrades = response.data;
           setGrades(fetchedGrades); // Lưu danh sách lớp học vào state
@@ -170,11 +190,13 @@ const LessonPage = () => {
       fetchTopics();
     }
   }, [selectedGradeId, selectedSemester, accessToken]);
-  
+
   const fetchTopics = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(`/topics?grade=${selectedGradeName}&&semester=${selectedSemester}`);
+      const response = await apiService.get(
+        `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}`
+      );
       setTopics(response.data.data.topics);
     } catch (error) {
       console.error("Error fetching topics:", error);
@@ -215,16 +237,11 @@ const LessonPage = () => {
       setLoading(true);
       apiService
         .get(
-          `/topics?grade=${selectedGradeName}&&semester=${selectedSemester}`,
-          {
-            // headers: {
-            //   Authorization: `Bearer ${accessToken}`,
-            // },
-          }
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&page=${page}&search=${debouncedSearch}`
         )
         .then((response) => {
           setTopics(response.data.data.topics);
-          handleSnackbarOpen(response.data.message, "success");
+          // handleSnackbarOpen(response.data.message, "success");
           setLoading(false);
         })
         .catch((error) => {
@@ -305,28 +322,13 @@ const LessonPage = () => {
       return updatedState;
     });
 
-    // Update selected lessons based on individual lesson selection
     setSelected((prevSelected) => {
       if (isChecked) {
-        return [...new Set([...prevSelected, lessonId])]; // Add lesson to selected
+        return [...new Set([...prevSelected, lessonId])];
       } else {
-        return prevSelected.filter((id) => id !== lessonId); // Remove lesson from selected
+        return prevSelected.filter((id) => id !== lessonId);
       }
     });
-  };
-
-  // Update handleSelectAllClick to also handle all lesson selections
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const isChecked = event.target.checked;
-    if (isChecked) {
-      // Select all topics and their lessons
-      const allLessons = topics.flatMap((topic) =>
-        topic.lessons.map((lesson) => lesson.lessonId)
-      );
-      setSelected(allLessons);
-    } else {
-      setSelected([]); // Clear all selections
-    }
   };
 
   // Update the number of selected lessons for deletion
@@ -348,7 +350,7 @@ const LessonPage = () => {
         },
       });
       if (response.status === 200) {
-        handleSnackbarOpen("Lessons deleted successfully", "success");
+        handleSnackbarOpen(response.data.message, "success");
         setSelected([]); // Clear selected lessons
         setOpenDelete(false); // Close the delete dialog
         await fetchTopics();
@@ -491,51 +493,71 @@ const LessonPage = () => {
             </TextField>
           </FormControl>
         </Box>
-
-        {/* Bảng danh sách topic */}
+        <TextField
+          sx={{
+            marginY: 1,
+            bgcolor: "#FFF",
+            borderRadius: "4px",
+          }}
+          label="Tìm kiếm"
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                {searchKeyword && (
+                  <IconButton onClick={() => setSearchKeyword("")} edge="end">
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                )}
+              </InputAdornment>
+            ),
+          }}
+        />
         <Box>
-          {loading ? (
-            <Typography>Đang tải...</Typography>
-          ) : (
-            <>
-              <Box
+          <>
+            <Box
+              sx={{
+                boxShadow: 4,
+                borderRadius: 2,
+              }}
+            >
+              <TableContainer
                 sx={{
-                  boxShadow: 4,
+                  // boxShadow: 4,
                   borderRadius: 2,
+                  flex: 1,
+                  height: "60vh",
+                  // width: "76vw", // Set a fixed height for the table
+                  overflow: "auto", // Enable vertical scrolling if content overflows
                 }}
               >
-                <TableContainer
-                  sx={{
-                    // boxShadow: 4,
-                    borderRadius: 2,
-                    flex: 1,
-                    height: "70vh",
-                    // width: "76vw", // Set a fixed height for the table
-                    overflow: "auto", // Enable vertical scrolling if content overflows
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                      <TableRow>
-                        <TableCell sx={{ width: "5%" }}>
-                          <IconButton></IconButton>
-                        </TableCell>
-                        <TableCell sx={{ width: "5%" }}></TableCell>
-                        <TableCell sx={{ width: "30%", padding: "16px 0" }}>
-                          Tên chủ điểm
-                        </TableCell>
-                        <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
-                        <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
-                        {/* <TableCell sx={{ width: "25%" }}></TableCell> */}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {paginatedTopics.map((topic) => (
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell sx={{ width: "5%" }}>
+                        <IconButton></IconButton>
+                      </TableCell>
+                      <TableCell sx={{ width: "5%" }}></TableCell>
+                      <TableCell sx={{ width: "30%", paddingY: "12px" }}>
+                        Tên chủ điểm
+                      </TableCell>
+                      <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
+                      <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
+                      {/* <TableCell sx={{ width: "25%" }}></TableCell> */}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow></TableRow>
+                    ) : (
+                      paginatedTopics.map((topic) => (
                         <>
                           {/* Topic row */}
                           <TableRow key={topic.topicId}>
                             <TableCell>
                               <Checkbox
+                                sx={{ p: 0, m: 0 }}
                                 size="small"
                                 checked={
                                   checkedState[topic.topicId]?.size ===
@@ -576,6 +598,7 @@ const LessonPage = () => {
                               <TableRow key={lesson.lessonId}>
                                 <TableCell>
                                   <Checkbox
+                                    sx={{ p: 0, m: 0 }}
                                     size="small"
                                     checked={
                                       checkedState[topic.topicId]?.has(
@@ -613,21 +636,22 @@ const LessonPage = () => {
                               </TableRow>
                             ))}
                         </>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={getTotalLessonsCount()}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-              </Box>
-            </>
-          )}
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={getTotalLessonsCount()}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Box>
+          </>
+          {/* )} */}
         </Box>
       </Box>
       <DialogPopup
@@ -642,6 +666,10 @@ const LessonPage = () => {
         lesson={selectedLessonId} // Dữ liệu lesson khi sửa
         topicId={selectedTopicId} // Dữ liệu topicId khi sửa
         selectedGradeName={selectedGradeName}
+        onSuccess={(message: string) => {
+          handleSnackbarOpen(message, "success");
+          handleTopicAdded(); // Làm mới danh sách topics
+        }}
       />
       <DeleteDialog
         open={openDelete}

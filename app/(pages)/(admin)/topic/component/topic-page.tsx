@@ -47,16 +47,25 @@ const TopicPage = () => {
     "success"
   ); // Loại thông báo (success/error)
   const [openDelete, setOpenDelete] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const isSelected = (topicId: number): boolean => {
     return selected.includes(topicId); // Kiểm tra nếu topicId đã được chọn
   };
   // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Thêm state để quản lý chế độ edit và topic được chọn
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
   const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchKeyword);
+    }, 300); // Delay 300ms
+    return () => clearTimeout(handler);
+  }, [searchKeyword]);
   // Hàm mở Snackbar
   const handleSnackbarOpen = (
     message: string,
@@ -112,7 +121,7 @@ const TopicPage = () => {
       // Gọi API để lấy topics theo gradeId và semester
       apiService
         .get(
-          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}`,
           {
             // headers: {
             //   Authorization: `Bearer ${accessToken}`,
@@ -122,6 +131,7 @@ const TopicPage = () => {
         .then((response) => {
           console.log("response", response);
           setTopics(response.data.data.topics); // Lưu danh sách topics vào state
+          setTotalItems(response.data.data.totalItems);
           setLoading(false);
         })
         .catch((error) => {
@@ -129,7 +139,7 @@ const TopicPage = () => {
           setLoading(false);
         });
     }
-  }, [selectedGradeId, selectedSemester, accessToken]); // Chạy lại khi gradeId hoặc semester thay đổi
+  }, [selectedGradeId, selectedSemester, accessToken, debouncedSearch]); // Chạy lại khi gradeId hoặc semester thay đổi
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
@@ -158,6 +168,25 @@ const TopicPage = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
   };
+  useEffect(() => {
+    if (selectedGradeName && selectedSemester) {
+      setLoading(true);
+      apiService
+        .get(
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&page=${page}`
+        )
+        .then((response) => {
+          setTopics(response.data.data.topics); // Set topics data
+          // Set total items and total pages for pagination
+          setTotalItems(response.data.data.totalItems);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching topics:", error);
+          setLoading(false);
+        });
+    }
+  }, [selectedGradeName, selectedSemester, page, rowsPerPage, accessToken]);
 
   // Refresh topics list after adding a new topic
   const handleTopicAdded = () => {
@@ -166,16 +195,12 @@ const TopicPage = () => {
       setLoading(true);
       apiService
         .get(
-          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&page=${page}`
         )
         .then((response) => {
           setTopics(response.data.data.topics);
-          handleSnackbarOpen(response.data.message, "success");
+          setTotalItems(response.data.data.totalItems);
+          // handleSnackbarOpen(response.data.message, "success");
           setLoading(false);
         })
         .catch((error) => {
@@ -223,15 +248,11 @@ const TopicPage = () => {
         setLoading(true);
         apiService
           .get(
-            `/topics?grade=${selectedGradeName}&semester=${selectedSemester}`,
-            {
-              // headers: {
-              //   Authorization: `Bearer ${accessToken}`,
-              // },
-            }
+            `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&page=${page}`
           )
           .then((response) => {
             setTopics(response.data.data.topics); // Update topics state
+            setTotalItems(response.data.data.totalItems);
             setLoading(false);
           })
           .catch((error) => {
@@ -375,58 +396,98 @@ const TopicPage = () => {
 
         {/* Bảng danh sách topic */}
         <Box>
-          {loading ? (
-            <Typography>Đang tải...</Typography>
-          ) : (
-            <>
-            <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
-              <TableContainer
-                sx={{
-                  // boxShadow: 4,
-                  borderRadius: 2,
-                  flex: 1,
-                  height: "70vh", // Set a fixed height for the table
-                  overflowY: "auto", // Enable vertical scrolling if content overflows
-                }}
-              >
-                <Table size="small">
-                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+          <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+            <TableContainer
+              sx={{
+                borderRadius: 2,
+                flex: 1,
+                height: "70vh", // Set a fixed height for the table
+                overflowY: "auto", // Enable vertical scrolling if content overflows
+              }}
+            >
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                  <TableRow>
+                    <TableCell sx={{ width: "5%", border: "none" }}>
+                      <Checkbox
+                        indeterminate={
+                          selected.length > 0 &&
+                          topics.length > 0 &&
+                          selected.length < topics.length
+                        }
+                        sx={{
+                          color: "#637381",
+                          "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                            color: "#99BC4D",
+                          },
+                          p: 0,
+                          ml: 1.5,
+                        }}
+                        checked={
+                          topics.length > 0 && selected.length === topics.length
+                        }
+                        onChange={handleSelectAllClick}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell
+                      sx={{ width: "10%", border: "none" }}
+                    ></TableCell>
+                    <TableCell sx={{ width: "15%", border: "none" }}>
+                      Thứ tự
+                    </TableCell>
+                    <TableCell sx={{ width: "70%", border: "none" }}>
+                      Tên chủ điểm
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell sx={{ width: "5%" }}></TableCell>
+                    <TableCell sx={{ width: "10%" }}></TableCell>
+                    <TableCell sx={{ width: "15%" }}>
+                      <TextField
+                        sx={{
+                          p: 0,
+                          m: 0,
+                          bgcolor: "#EAEDF0",
+                          borderRadius: "4px",
+                        }}
+                        disabled
+                      ></TextField>
+                    </TableCell>
+                    <TableCell sx={{ width: "70%" }}>
+                      <TextField
+                        sx={{
+                          p: 0,
+                          m: 0,
+                          bgcolor: "#FFF",
+                          borderRadius: "4px",
+                        }}
+                        placeholder="Tìm kiếm..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                      ></TextField>
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    // Hiển thị thông báo "Đang tải dữ liệu..." khi dữ liệu đang được tải
                     <TableRow>
-                      <TableCell sx={{ width: "5%" }}>
-                        <Checkbox
-                          indeterminate={
-                            selected.length > 0 &&
-                            topics.length > 0 &&
-                            selected.length < topics.length
-                          }
-                          sx={{
-                            color: "#637381",
-                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                              color: "#99BC4D", // Màu cho trạng thái checked và indeterminate
-                            },
-                            "&.MuiCheckbox-indeterminate": {
-                              color: "#99BC4D", // Màu cho trạng thái indeterminate
-                            },
-                          }}
-                          checked={
-                            topics.length > 0 &&
-                            selected.length === topics.length
-                          }
-                          onChange={handleSelectAllClick}
-                          defaultChecked
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell sx={{ width: "5%" }}></TableCell>
-                      <TableCell sx={{ width: "15%" }}>Thứ tự</TableCell>
-                      <TableCell sx={{ width: "75%" }}>Tên topic</TableCell>
-                      {/* <TableCell>Chương</TableCell> */}
-                      {/* <TableCell sx={{ width: "40%" }}>Bài học</TableCell> */}
+                      {/* <TableCell colSpan={4} align="center">
+                        Đang tải dữ liệu...
+                      </TableCell> */}
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {topics.map((topic, index) => {
-                      const isItemSelected = isSelected(topic.topicId); // Kiểm tra topic hiện tại có được chọn không
+                  ) : topics.length === 0 ? (
+                    // Hiển thị thông báo "Không có dữ liệu để hiển thị" khi không có dữ liệu
+                    <TableRow>
+                      {/* <TableCell colSpan={4} align="center">
+                        Không có dữ liệu để hiển thị
+                      </TableCell> */}
+                    </TableRow>
+                  ) : (
+                    // Hiển thị danh sách dữ liệu nếu có
+                    topics.map((topic, index) => {
+                      const isItemSelected = isSelected(topic.topicId);
                       return (
                         <TableRow key={topic.topicId}>
                           <TableCell>
@@ -435,9 +496,9 @@ const TopicPage = () => {
                               checked={isItemSelected}
                               sx={{
                                 color: "#637381",
-                                "&.Mui-checked": {
-                                  color: "#99BC4D",
-                                },
+                                "&.Mui-checked": { color: "#99BC4D" },
+                                p: 0,
+                                ml: 1.5,
                               }}
                               onChange={(event) =>
                                 handleCheckboxClick(event, topic.topicId)
@@ -458,30 +519,25 @@ const TopicPage = () => {
                           </TableCell>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{topic.topicName}</TableCell>
-                          {/* <TableCell>{topic.chapter}</TableCell> */}
-                          {/* <TableCell>
-                        {topic.lessons.map((lesson) => (
-                          <div key={lesson.lessonId}>{lesson.lessonName}</div>
-                        ))}
-                      </TableCell> */}
                         </TableRow>
                       );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={topics.length}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-              </Box>
-            </>
-          )}
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={totalItems} // Total number of items (use the state we set from API response)
+              page={page}
+              onPageChange={handleChangePage} // Function to handle page change
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage} // Function to handle change in number of rows per page
+              rowsPerPageOptions={[10, 25, 50]} // Options for number of rows per page
+            />
+          </Box>
         </Box>
+
         <DialogPopup
           open={openDialog}
           onClose={handleCloseDialog}
@@ -491,6 +547,10 @@ const TopicPage = () => {
           selectedSemester={selectedSemester}
           type={editMode} // "add" hoặc "edit"
           topic={selectedTopic} // Dữ liệu topic khi sửa
+          onSuccess={(message: string) => {
+            handleSnackbarOpen(message, "success");
+            handleTopicAdded(); // Làm mới danh sách topics
+          }}
         />
       </Box>
       <DeleteDialog

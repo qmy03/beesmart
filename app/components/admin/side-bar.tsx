@@ -39,9 +39,14 @@ const Sidebar: React.FC = () => {
   // console.log("AaaaccessToken", accessToken);
   // console.log("userInfo", userInfo);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const navigateTo = (path: string) => {
+  const navigateTo = (path: string, parentMenuName?: string) => {
     router.push(path);
+    // Nếu có parentMenuName, đảm bảo menu cha vẫn mở
+    if (parentMenuName && !openMenus.includes(parentMenuName)) {
+      setOpenMenus((prevOpenMenus) => [...prevOpenMenus, parentMenuName]);
+    }
   };
+  
   const handleUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -123,21 +128,37 @@ const Sidebar: React.FC = () => {
   ];
 
   // Automatically expand the "Dashboard" menu if the current path is inside its submenu
+  // useEffect(() => {
+  //   if (
+  //     pathname.startsWith("/grade") ||
+  //     pathname.startsWith("/topic") ||
+  //     pathname.startsWith("/lesson")
+  //   ) {
+  //     setOpenMenus((prevOpenMenus) => {
+  //       // Ensure "Dashboard" is open when on its subpages
+  //       if (!prevOpenMenus.includes("Dashboard")) {
+  //         return [...prevOpenMenus, "Dashboard"];
+  //       }
+  //       return prevOpenMenus;
+  //     });
+  //   }
+  // }, [pathname]);
   useEffect(() => {
-    if (
-      pathname.startsWith("/grade") ||
-      pathname.startsWith("/topic") ||
-      pathname.startsWith("/lesson")
-    ) {
-      setOpenMenus((prevOpenMenus) => {
-        // Ensure "Dashboard" is open when on its subpages
-        if (!prevOpenMenus.includes("Dashboard")) {
-          return [...prevOpenMenus, "Dashboard"];
-        }
-        return prevOpenMenus;
-      });
-    }
+    // Khi route thay đổi, tự động mở menu cha của route hiện tại nếu chưa mở
+    menuList.forEach((menu) => {
+      if (
+        menu.subMenu &&
+        menu.subMenu.some((subMenuItem) => pathname.startsWith(subMenuItem.path))
+      ) {
+        setOpenMenus((prevOpenMenus) =>
+          prevOpenMenus.includes(menu.name)
+            ? prevOpenMenus
+            : [...prevOpenMenus, menu.name]
+        );
+      }
+    });
   }, [pathname]);
+  
 
   const toggleMenu = (menuName: string) => {
     setOpenMenus((prevOpenMenus) =>
@@ -211,7 +232,7 @@ const Sidebar: React.FC = () => {
                       <li
                         key={subIndex}
                         className={`cursor-pointer p-2 ${pathname === subMenuItem.path ? "bg-[#99BC4D]" : "hover:bg-[#99BC4D]"}`}
-                        onClick={() => navigateTo(subMenuItem.path)}
+                        onClick={() => navigateTo(subMenuItem.path, menu.name)}
                       >
                         <div className="flex items-center">
                           {subMenuItem.icon && (

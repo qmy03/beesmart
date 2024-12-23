@@ -12,6 +12,7 @@ interface DialogPopupProps {
   accessToken: string;
   selectedGradeId: string;
   selectedSemester: string;
+  onSuccess: () => string;
 }
 
 const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: any }> = ({
@@ -23,6 +24,7 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
   selectedSemester,
   type,
   topic,
+  onSuccess
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
   const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
@@ -49,6 +51,10 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
         })
         .then((response) => {
           console.log("Topic added:", response);
+          if (response.status === 200) {
+            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onClose(); // Đóng dialog sau khi thành công
+          }
           onTopicAdded();
           onClose();
         })
@@ -63,6 +69,10 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
         })
         .then((response) => {
           console.log("Topic updated:", response);
+          if (response.status === 200) {
+            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onClose(); // Đóng dialog sau khi thành công
+          }
           onTopicAdded();
           onClose();
         })

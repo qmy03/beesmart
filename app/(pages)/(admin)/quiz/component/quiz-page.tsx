@@ -29,11 +29,13 @@ import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 import QuestionDialog from "./question-dialog";
+import EditQuestionDialog from "./multi-select-dialog";
 const QuizPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [severity, setSeverity] = useState<"success" | "error">("success");
   const { accessToken } = useAuth();
+
   console.log(accessToken);
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
@@ -47,18 +49,29 @@ const QuizPage = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [openQuestionDialog, setOpenQuestionDialog] = useState(false);
+  const [editQuestionDialog, setEditQuestionDialog] = useState(false);
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(
+    new Set()
+  );
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalItemsQ, setTotalItemsQ] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+
   const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Record<string, any[]>>({});
+  // const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState<
     Record<string, boolean>
   >({});
   const [dialogType, setDialogType] = useState<"add" | "edit">("add");
   const [editQuizData, setEditQuizData] = useState<any | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<any | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<any | null>(null);
   const [selectedQuizzes, setSelectedQuizzes] = useState<Set<string>>(
     new Set()
   );
+
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
   const handleInputChange = (questionId: string, answer: any) => {
     setUserAnswers((prev) => ({
@@ -69,6 +82,7 @@ const QuizPage = () => {
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
   const handleCheckboxChange = (quizId: string) => {
     const updatedSelectedQuizzes = new Set(selectedQuizzes);
     if (updatedSelectedQuizzes.has(quizId)) {
@@ -79,6 +93,18 @@ const QuizPage = () => {
       setOpenDeleteDialog(true); // Open delete dialog
     }
     setSelectedQuizzes(updatedSelectedQuizzes);
+  };
+
+  const handleCheckboxQChange = (questionId: string) => {
+    const updatedSelectedQuestions = new Set(selectedQuestions); // Create a copy of the current selectedQuestions
+    if (updatedSelectedQuestions.has(questionId)) {
+      updatedSelectedQuestions.delete(questionId); // Remove if already selected
+    } else {
+      updatedSelectedQuestions.add(questionId); // Add if not selected
+      setQuestionToDelete(questionId);
+      setOpenDeleteDialog(true);
+    }
+    setSelectedQuestions(updatedSelectedQuestions); // Update state with the new array
   };
 
   const handleDeleteQuiz = () => {
@@ -96,7 +122,7 @@ const QuizPage = () => {
         setQuizzes(
           quizzes.filter((quiz) => !quizIdsToDelete.includes(quiz.quizId))
         );
-        setSnackbarMessage("Quizzes deleted successfully!");
+        setSnackbarMessage("Xóa quiz thành công!");
         setSeverity("success");
         setSnackbarOpen(true);
       })
@@ -111,6 +137,10 @@ const QuizPage = () => {
   const handleDeleteDialogClose = () => {
     setOpenDeleteDialog(false);
     setQuizToDelete(null); // Reset quiz to delete when dialog is closed
+  };
+  const handleDeleteQDialogClose = () => {
+    setOpenDeleteDialog(false);
+    setQuestionToDelete(null); // Reset quiz to delete when dialog is closed
   };
 
   useEffect(() => {
@@ -201,6 +231,8 @@ const QuizPage = () => {
         .then((response) => {
           console.log(response);
           const quizzes = response.data.data.quizzes;
+          console.log(response.data.data.totalItems);
+          setTotalItems(response.data.data.totalItems);
           setQuizzes(quizzes);
           setLoading(false);
         })
@@ -215,6 +247,7 @@ const QuizPage = () => {
         .then((response) => {
           console.log("RRRRRRR", response);
           const quizzes = response.data.data.quizzes;
+          setTotalItems(response.data.data.totalItems);
           setQuizzes(quizzes);
           setLoading(false);
         })
@@ -224,36 +257,62 @@ const QuizPage = () => {
         });
     }
   }, [selectedLessonId, selectedTopicId]);
-  const handleExpandQuiz = (quizId: string) => {
+
+  const handleExpandQuiz = (quizId: string, page: number = 0) => {
     console.log("Expanding quiz ID:", quizId);
 
+    // Kiểm tra nếu quiz đã mở và chỉ thay đổi trang mà không gọi lại API
+    if (expandedQuizId === quizId && page === currentPage) {
+      return; // Không làm gì cả nếu quiz đã mở và đang ở trang hiện tại
+    }
+
+    // Giữ quiz đã mở và chỉ thay đổi trang
     if (expandedQuizId === quizId) {
-      setExpandedQuizId(null);
+      setSelectedQuizId(quizId);
     } else {
+      // Mở quiz mới
       setExpandedQuizId(quizId);
-      setSelectedQuizId(quizId); // Ensure the selected quiz ID is set when expanding a quiz
+      setSelectedQuizId(quizId);
+    }
 
-      // Check if the quiz data is available and if not, fetch the quiz questions
-      if (!questions[quizId] && quizzes.length > 0) {
-        setLoadingQuestions((prev) => ({ ...prev, [quizId]: true }));
+    // Fetch câu hỏi cho trang mới
+    setLoadingQuestions((prev) => ({ ...prev, [quizId]: true }));
+    apiService
+      .get(`/quizzes/${quizId}/questions?page=${page}`)
+      .then((response) => {
+        const fetchedQuestions = response.data.data.questions;
+        setTotalItemsQ(response.data.data.totalItems);
+        setQuestions((prev) => ({ ...prev, [quizId]: fetchedQuestions }));
+        setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
+      })
+      .catch((error) => {
+        console.error("Error fetching questions:", error);
+        setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
+      });
+  };
 
-        // Assuming the `selectedQuizId` is set correctly, fetch questions for the quiz
-        apiService
-          .get(`/quizzes/${quizId}/questions`)
-          .then((response) => {
-            console.log("responseQuizTopic", response);
-            const fetchedQuestions = response.data.data.questions;
-            console.log("quiz response", fetchedQuestions);
-            setQuestions((prev) => ({ ...prev, [quizId]: fetchedQuestions }));
-            setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
-          })
-          .catch((error) => {
-            console.error("Error fetching questions:", error);
-            setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
-          });
-      }
+  const handleNextPage = () => {
+    const newPage = currentPage + 1;
+    setCurrentPage(newPage);
+
+    // Re-fetch questions cho trang kế tiếp mà không thay đổi quiz
+    if (selectedQuizId) {
+      console.log("Navigating to next page:", newPage);
+      handleExpandQuiz(selectedQuizId, newPage);
     }
   };
+
+  const handlePreviousPage = () => {
+    const newPage = currentPage - 1;
+    setCurrentPage(newPage);
+
+    // Re-fetch questions cho trang trước đó mà không thay đổi quiz
+    if (selectedQuizId) {
+      console.log("Navigating to previous page:", newPage);
+      handleExpandQuiz(selectedQuizId, newPage);
+    }
+  };
+
   const handleAnswerSubmit = (questionId: string, correctAnswer: any) => {
     let userAnswer = userAnswers[questionId];
 
@@ -287,10 +346,10 @@ const QuizPage = () => {
     // Show Snackbar based on answer correctness
     if (isCorrect) {
       setSeverity("success");
-      setSnackbarMessage("Correct!");
+      setSnackbarMessage("Đúng rồi!");
     } else {
       setSeverity("error");
-      setSnackbarMessage("Incorrect. Try again!");
+      setSnackbarMessage("Sai rồi. Thử lại!");
     }
 
     // Log the result
@@ -299,19 +358,82 @@ const QuizPage = () => {
     );
     setSnackbarOpen(true);
   };
+  const handleDeleteQuestions = () => {
+    if (!selectedQuestions?.size) return;
+
+    const questionIdsToDelete = Array.from(selectedQuestions);
+    console.log("Selected Questions: ", questionIdsToDelete);
+
+    apiService
+      .delete("/questions", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        data: questionIdsToDelete,
+      })
+      .then(() => {
+        setSnackbarMessage("Xóa câu hỏi thành công!");
+        setSeverity("success");
+        setSnackbarOpen(true);
+
+        // Reset selectedQuestions to clear the selection
+        setSelectedQuestions(new Set());
+
+        // After deletion, fetch the updated list of questions for the selected quiz
+        if (selectedQuizId) {
+          apiService
+            .get(`/quizzes/${selectedQuizId}/questions`)
+            .then((response) => {
+              const fetchedQuestions = response.data.data.questions;
+              setQuestions((prev) => ({
+                ...prev,
+                [selectedQuizId]: fetchedQuestions,
+              }));
+            })
+            .catch((error) => {
+              console.error("Error fetching updated questions:", error);
+              setSnackbarMessage("Error fetching updated questions.");
+              setSeverity("error");
+              setSnackbarOpen(true);
+            });
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Xóa câu hỏi thất bại!",
+          error.response?.data || error.message
+        );
+        setSnackbarMessage("Error deleting quizzes.");
+        setSeverity("error");
+        setSnackbarOpen(true);
+      });
+  };
 
   const renderQuestions = (questions: any[]) => {
     return questions.map((question, index) => {
       const correctAnswer = question.correctAnswer;
-      const questionNumber = index + 1; 
+      const questionNumber = index + 1;
       switch (question.questionType) {
         case "MULTI_SELECT":
           return (
             <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                margin: "16px 32px",
+              }}
               key={question.questionId}
             >
-              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
+              <Typography fontWeight={600}>
+                <Checkbox
+                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  onChange={() => handleCheckboxQChange(question.questionId)}
+                />{" "}
+                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
+                {`${question.content}`}{" "}
+                <IconButton onClick={() => handleEditQuestion(question)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Typography>
               {question.image && (
                 <img
                   src={question.image}
@@ -320,7 +442,10 @@ const QuizPage = () => {
                 />
               )}
               {question.options.map((option, idx) => (
-                <Box key={idx} sx={{ display: "flex", gap: 2 }}>
+                <Box
+                  key={idx}
+                  sx={{ display: "flex", gap: 2, marginX: "32px" }}
+                >
                   <input
                     type="checkbox"
                     value={option}
@@ -342,6 +467,7 @@ const QuizPage = () => {
                     question.correctAnswers
                   )
                 }
+                sx={{ maxWidth: "200px" }}
               >
                 Submit
               </Button>
@@ -351,10 +477,25 @@ const QuizPage = () => {
         case "MULTIPLE_CHOICE":
           return (
             <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, marginY: 4 }}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                margin: "16px 32px",
+              }}
               key={question.questionId}
             >
-              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
+              <Typography fontWeight={600}>
+                <Checkbox
+                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  onChange={() => handleCheckboxQChange(question.questionId)}
+                />{" "}
+                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
+                {`${question.content}`}{" "}
+                <IconButton onClick={() => handleEditQuestion(question)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Typography>
               {question.image && (
                 <img
                   src={question.image}
@@ -364,7 +505,7 @@ const QuizPage = () => {
               )}
               {question.options.map((option, idx) => (
                 <div key={idx}>
-                  <Box sx={{ display: "flex", gap: 1 }}>
+                  <Box sx={{ display: "flex", gap: 1, marginX: "32px" }}>
                     <input
                       type="radio"
                       name={question.questionId}
@@ -384,6 +525,7 @@ const QuizPage = () => {
                     question.correctAnswer
                   )
                 }
+                sx={{ maxWidth: "100px" }}
               >
                 Submit
               </Button>
@@ -392,9 +534,27 @@ const QuizPage = () => {
 
         case "FILL_IN_THE_BLANK":
           return (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, marginY: 4 }} key={question.questionId}>
-              <Typography fontWeight={600}>{`Câu hỏi ${questionNumber}: ${question.content}`}</Typography>
-              <Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                margin: "16px 32px",
+              }}
+              key={question.questionId}
+            >
+              <Typography fontWeight={600}>
+                <Checkbox
+                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  onChange={() => handleCheckboxQChange(question.questionId)}
+                />{" "}
+                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
+                {`${question.content}`}{" "}
+                <IconButton onClick={() => handleEditQuestion(question)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Typography>
+              <Box sx={{ marginX: "32px" }}>
                 <TextField
                   sx={{ width: "100px" }}
                   type="text"
@@ -415,6 +575,7 @@ const QuizPage = () => {
                 onClick={() =>
                   handleAnswerSubmit(question.questionId, question.answers)
                 }
+                sx={{ maxWidth: "100px" }}
               >
                 Submit
               </Button>
@@ -427,17 +588,16 @@ const QuizPage = () => {
     });
   };
   const handleOpenAddDialog = () => {
-    setSelectedQuiz(null);  // Reset selected quiz to ensure no previous quiz is selected.
-    setDialogType("add");   // Set the dialogType to "add" explicitly.
-    setOpenDialog(true);    // Open the dialog.
+    setSelectedQuiz(null); // Reset selected quiz to ensure no previous quiz is selected.
+    setDialogType("add"); // Set the dialogType to "add" explicitly.
+    setOpenDialog(true); // Open the dialog.
   };
-  
   const handleQuizUpdated = (updatedQuiz: any) => {
     if (dialogType === "add") {
       // When adding a new quiz, we don’t want to merge with any previous quiz data.
       setQuizzes((prev) => [...prev, updatedQuiz]);
       setSelectedQuiz(null); // Reset selected quiz after adding
-      setDialogType(null);    // Reset dialogType
+      setDialogType(null); // Reset dialogType
     } else if (dialogType === "edit") {
       setQuizzes((prev) =>
         prev.map((quiz) =>
@@ -447,14 +607,67 @@ const QuizPage = () => {
       setDialogType(null); // Reset dialogType after editing
     }
   };
-  
-  
 
   const handleEditQuiz = (quiz: any) => {
     setSelectedQuiz(quiz);
     setDialogType("edit");
     setOpenDialog(true);
   };
+  // const handleEditQuestion = (question: any) => {
+  //   setSelectedQuiz(quiz);
+  //   setDialogType("edit");
+  //   setOpenDialog(true);
+  // };
+  const handleEditQuestion = (question: any) => {
+    setSelectedQuestion(question);
+
+    console.log("question", question.questionId);
+    console.log("questionType", question.questionType);
+    // setDialog("edit");
+    setEditQuestionDialog(true);
+  };
+  const handleQuestionUpdated = (updatedQuestion: any) => {
+    if (selectedQuizId) {
+      setQuizzes((prevQuizzes) =>
+        prevQuizzes.map((quiz) => {
+          if (quiz.quizId === selectedQuizId) {
+            return {
+              ...quiz,
+              // Check if quiz.questions is defined before calling .map()
+              questions: Array.isArray(quiz.questions)
+                ? quiz.questions.map((question) =>
+                    question.questionId === updatedQuestion.questionId
+                      ? updatedQuestion // Replace the old question with the updated one
+                      : question
+                  )
+                : [], // If quiz.questions is not an array, return an empty array
+            };
+          }
+          return quiz;
+        })
+      );
+    }
+
+    // Fetch updated questions for the selected quiz
+    apiService
+      .get(`/quizzes/${selectedQuizId}/questions`)
+      .then((response) => {
+        const fetchedQuestions = response.data.data.questions;
+        setQuestions((prev) => ({
+          ...prev,
+          [selectedQuizId]: fetchedQuestions,
+        }));
+      })
+      .catch((error) => {
+        console.error("Error fetching updated questions:", error);
+      });
+
+    // Notify the user about the update
+    setSnackbarMessage("Cập nhật câu hỏi thành công!");
+    setSeverity("success");
+    setSnackbarOpen(true);
+  };
+
   const handleCreateQuestion = (questionData: any) => {
     if (!selectedQuizId) {
       console.error("No quiz selected");
@@ -470,34 +683,55 @@ const QuizPage = () => {
         },
       })
       .then((response) => {
+        console.log("responseQ", response);
         const newQuestion = response.data.data;
 
-        // Cập nhật câu hỏi vào quiz tương ứng
-        const updatedQuizzes = quizzes.map((quiz) => {
+        // Log the selectedQuizId to confirm it's correct
+        console.log("selectedQuizId", selectedQuizId);
+
+        // Update the questions for the selected quiz
+        const updatedQuiz = quizzes.map((quiz) => {
           if (quiz.quizId === selectedQuizId) {
-            return { ...quiz, questions: [...quiz.questions, newQuestion] };
+            return {
+              ...quiz,
+              // Ensure that quiz.questions is an array
+              questions: Array.isArray(quiz.questions)
+                ? [...quiz.questions, newQuestion]
+                : [newQuestion],
+            };
           }
           return quiz;
         });
 
-        setQuizzes(updatedQuizzes);
+        // Log the updated quizzes array
+        console.log("updatedQuizzes", updatedQuiz);
+        setQuizzes(updatedQuiz); // Make sure state is updated
 
-        // Hiển thị Snackbar
+        // Fetch updated questions for the selected quiz
+        apiService
+          .get(`/quizzes/${selectedQuizId}/questions`)
+          .then((response) => {
+            const fetchedQuestions = response.data.data.questions;
+            setQuestions((prev) => ({
+              ...prev,
+              [selectedQuizId]: fetchedQuestions,
+            }));
+          })
+          .catch((error) => {
+            console.error("Error fetching updated questions:", error);
+          });
+
         setSnackbarMessage(response.data.message || "Thêm câu hỏi thành công!");
         setSnackbarOpen(true);
-
-        // Đóng dialog
         setOpenQuestionDialog(false);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Error creating question:", error);
 
-        // Hiển thị lỗi trong Snackbar
-        setSnackbarMessage("Thêm câu hỏi thành công!");
+        setSnackbarMessage("ERR!");
         setSnackbarOpen(true);
         setOpenQuestionDialog(false);
-
         setLoading(false);
       });
   };
@@ -522,7 +756,7 @@ const QuizPage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Quản lý Lớp học
+            Quản lý Bài tập
           </Typography>
           <Button onClick={handleOpenAddDialog}>Thêm mới</Button>
         </Box>
@@ -630,7 +864,12 @@ const QuizPage = () => {
           </FormControl>
         </Box>
         <Box sx={{ marginTop: 2 }}>
-          <Typography variant="h6">Danh sách Quiz</Typography>
+          <Box sx={{ display: "flex" }}>
+            <Typography variant="h6" sx={{ flex: 1 }}>
+              Danh sách Bài tập
+            </Typography>
+            <Typography>Tổng số: {totalItems}</Typography>
+          </Box>
           {quizzes.map((quiz) => (
             <Box
               key={quiz.quizId}
@@ -647,6 +886,7 @@ const QuizPage = () => {
                   display: "flex",
                   // justifyContent: "space-between",
                   alignItems: "center",
+                  border: "1px solid #CCC",
                 }}
               >
                 <Box
@@ -659,6 +899,7 @@ const QuizPage = () => {
                   }}
                 >
                   <Checkbox
+                    checked={selectedQuizzes.has(quiz.quizId)}
                     onChange={() => handleCheckboxChange(quiz.quizId)} // Trigger checkbox change
                   />
                   <Typography fontWeight={600}>{quiz.title}</Typography>
@@ -685,15 +926,41 @@ const QuizPage = () => {
               </Box>
 
               {/* Render questions if the quiz is expanded */}
-              {expandedQuizId === quiz.quizId && (
-                <Box sx={{ marginTop: 2 }}>
-                  {loadingQuestions[quiz.quizId] ? (
-                    <CircularProgress />
-                  ) : (
-                    renderQuestions(questions[selectedQuizId] || [])
-                  )}
-                </Box>
-              )}
+              {/* {expandedQuizId === quiz.quizId && ( */}
+              {expandedQuizId &&
+                expandedQuizId === quiz.quizId &&
+                questions[expandedQuizId] && (
+                  <Box sx={{ border: "1px solid #CCC" }}>
+                    {loadingQuestions[quiz.quizId] ? (
+                      <CircularProgress size="30px" sx={{ color: "#99BC4D" }} />
+                    ) : (
+                      renderQuestions(questions[selectedQuizId] || [])
+                    )}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 2,
+                        margin: 2,
+                      }}
+                    >
+                      <Button
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 0 || loading}
+                      >
+                        Trang trước
+                      </Button>
+                      <Button
+                        onClick={handleNextPage}
+                        disabled={
+                          totalItemsQ <= (currentPage + 1) * 10 || loading
+                        }
+                      >
+                        Trang sau
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
             </Box>
           ))}
         </Box>
@@ -713,12 +980,31 @@ const QuizPage = () => {
           onClose={() => setOpenQuestionDialog(false)}
           onSave={handleCreateQuestion}
         />
+        <EditQuestionDialog
+          open={editQuestionDialog}
+          onClose={() => setEditQuestionDialog(false)}
+          onSave={handleQuestionUpdated}
+          question={selectedQuestion?.questionId}
+          type={selectedQuestion?.questionType}
+        />
         <DeleteDialog
           open={openDeleteDialog}
-          handleClose={handleDeleteDialogClose}
-          onDelete={handleDeleteQuiz}
-          quantity={selectedQuizzes.size}
+          handleClose={handleDeleteDialogClose || handleDeleteQDialogClose}
+          onDelete={() => {
+            if (selectedQuestions.size > 0) {
+              handleDeleteQuestions(); // Xóa câu hỏi
+            } else if (selectedQuizzes.size > 0) {
+              handleDeleteQuiz(); // Xóa bài kiểm tra
+            }
+          }}
+          quantity={
+            selectedQuestions.size > 0
+              ? selectedQuestions.size
+              : selectedQuizzes.size
+          } // Hiển thị số lượng câu hỏi hoặc bài kiểm tra
+          type={selectedQuestions.size > 0 ? "question" : "quiz"} // Xác định loại (question hoặc quiz) để xử lý
         />
+
         <Snackbar
           open={snackbarOpen}
           autoHideDuration={3000}

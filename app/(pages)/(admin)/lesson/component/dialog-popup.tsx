@@ -21,10 +21,17 @@ interface DialogPopupProps {
   selectedSemester: string;
   selectedLessonId: string; // Use this prop for lesson fetching
   selectedGradeName: string;
+  onSuccess: () => void;
 }
 
 const DialogPopup: React.FC<
-  DialogPopupProps & { type: "add" | "edit"; topic?: any; lesson?: any, topicId?: any, gradeName?: any}
+  DialogPopupProps & {
+    type: "add" | "edit";
+    topic?: any;
+    lesson?: any;
+    topicId?: any;
+    gradeName?: any;
+  }
 > = ({
   open,
   onClose,
@@ -36,7 +43,8 @@ const DialogPopup: React.FC<
   topic,
   lesson,
   topicId,
-  selectedGradeName
+  selectedGradeName,
+  onSuccess,
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
   const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
@@ -46,7 +54,7 @@ const DialogPopup: React.FC<
     topic?.topicId || ""
   );
   const [availableTopics, setAvailableTopics] = useState<any[]>([]);
-console.log(topicId)
+  console.log(topicId);
   // Fetch lesson data when the selectedLessonId changes
   useEffect(() => {
     if (lesson) {
@@ -95,7 +103,7 @@ console.log(topicId)
         });
     }
   }, [selectedGradeName, selectedSemester, accessToken]);
-  
+
   console.log("ABC", topic);
   const handleSubmit = () => {
     const body = {
@@ -104,7 +112,6 @@ console.log(topicId)
       description: description,
       content: content,
     };
-    
 
     if (type === "add") {
       apiService
@@ -113,6 +120,11 @@ console.log(topicId)
         })
         .then((response) => {
           console.log("Lesson added:", response);
+          if (response.status === 201) {
+
+            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onClose(); // Đóng dialog sau khi thành công
+          }
           onTopicAdded();
           onClose();
         })
@@ -126,6 +138,10 @@ console.log(topicId)
         })
         .then((response) => {
           console.log("Lesson updated:", response);
+          if (response.status === 200) {
+            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onClose(); // Đóng dialog sau khi thành công
+          }
           onTopicAdded();
           onClose();
         })
