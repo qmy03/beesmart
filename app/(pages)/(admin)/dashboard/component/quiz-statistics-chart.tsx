@@ -5,13 +5,15 @@ import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 const COLORS = ["#1877f2", "#ff5630", "#ffab00", "#5119b7", "#22C55E"];
 
 const QuizStatisticsChart = () => {
-    const {accessToken} = useAuth();
-    const [quizStatistics, setQuizStatistics] = useState<{ [key: string]: number }>({});
+  // const {accessToken} = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const [quizStatistics, setQuizStatistics] = useState<{
+    [key: string]: number;
+  }>({});
   const chartData = Object.keys(quizStatistics).map((key) => ({
     label: key,
     value: quizStatistics[key],
   }));
-
 
   useEffect(() => {
     const fetchQuizStatistics = async () => {
@@ -27,9 +29,9 @@ const QuizStatisticsChart = () => {
               },
             }
           );
-  
+
           const data = await response.json();
-  
+
           if (data.status === 200) {
             const processedData = {
               "Lớp 1": data.data["Lớp 1"] || 0,
@@ -38,7 +40,7 @@ const QuizStatisticsChart = () => {
               "Lớp 4": data.data["Lớp 4"] || 0,
               "Lớp 5": data.data["Lớp 5"] || 0,
             };
-  
+
             setQuizStatistics(processedData);
           } else {
             console.error("Failed to fetch quiz statistics:", data.message);
@@ -50,10 +52,10 @@ const QuizStatisticsChart = () => {
         console.error("Error fetching quiz statistics:", error);
       }
     };
-  
+
     fetchQuizStatistics();
   }, [accessToken]);
-  
+
   return (
     <PieChart width={400} height={400}>
       <Pie

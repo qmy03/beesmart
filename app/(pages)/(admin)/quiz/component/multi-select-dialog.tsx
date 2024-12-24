@@ -626,7 +626,7 @@ const EditQuestionDialog: React.FC<QuestionDialogProps> = ({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Thêm Câu hỏi Mới
+          Chỉnh sửa câu hỏi
         </Typography>
         <Close onClick={onClose} fontSize="small" sx={{ cursor: "pointer" }} />
       </DialogTitle>

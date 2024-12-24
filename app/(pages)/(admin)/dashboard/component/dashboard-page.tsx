@@ -7,7 +7,7 @@ import LessonViewsBarChart from "./lesson-view-bar-chart";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ClassIcon from "@mui/icons-material/Class";
 import PlayLessonIcon from "@mui/icons-material/PlayLesson";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/AuthContext";
 import apiService from "@/app/untils/api";
 import QuizStatisticsChart from "./quiz-statistics-chart";
@@ -23,92 +23,29 @@ interface SummaryDataItem {
 }
 
 const DashboardPage = () => {
+  // const { accessToken } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
   >([]);
   const [quizAverageData, setQuizAverageData] = useState<
-  { date: string; averages: { [key: string]: number } }[]
->([]);
+    { date: string; averages: { [key: string]: number } }[]
+  >([]);
   const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
-  const { accessToken } = useAuth(); // Lấy accessToken từ context hoặc nơi lưu trữ
+  useEffect(() => {
+    console.log("Access Token:", accessToken); // Add this line for debugging
+    if (accessToken) {
+      // API calls go here
+    } else {
+      console.error("Access token is missing");
+    }
+  }, [accessToken]);
   const currentMonth = new Date().getMonth() + 1; // getMonth() trả về tháng từ 0-11, do đó cần cộng thêm 1
   const currentYear = new Date().getFullYear(); // Lấy năm hiện tại
   useEffect(() => {
-    const fetchQuizAverageData = async () => {
-      try {
-        if (accessToken) {
-          const averageResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-          const averageData = await averageResponse.json();
-          if (averageData.status === 200) {
-            const chartData = Object.keys(averageData.data).map((date) => {
-              const averages = averageData.data[date];
-              return {
-                date,
-                averages,
-              };
-            });
-            setQuizAverageData(chartData);
-          }
-        } else {
-          console.error("Access token is missing");
-        }
-      } catch (error) {
-        console.error("Error fetching average data:", error);
-      }
-    };
-
-    fetchQuizAverageData();
-  }, [accessToken]);
-  useEffect(() => {
     const fetchData = async () => {
       try {
         if (accessToken) {
-          const lessonResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-          const lessonData = await lessonResponse.json();
-          if (lessonData.status === 200) {
-            const chartData = Object.keys(lessonData.data).map((date) => {
-              const dayData = lessonData.data[date];
-              return {
-                date,
-                ...dayData, // Lưu từng lớp riêng biệt
-              };
-            });
-            setLessonViewData(chartData);
-          }
-        } else {
-          console.error("Access token is missing");
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, [accessToken]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (accessToken) {
-          // Fetch total number of users with accessToken
           const userResponse = await fetch("http://localhost:8080/api/users", {
             method: "GET",
             headers: {
@@ -172,6 +109,76 @@ const DashboardPage = () => {
     fetchData();
   }, [accessToken]); // Hook sẽ chạy lại mỗi khi accessToken thay đổi
 
+  useEffect(() => {
+    const fetchQuizAverageData = async () => {
+      try {
+        if (accessToken) {
+          const averageResponse = await fetch(
+            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+          const averageData = await averageResponse.json();
+          if (averageData.status === 200) {
+            const chartData = Object.keys(averageData.data).map((date) => {
+              const averages = averageData.data[date];
+              return { date, averages };
+            });
+            setQuizAverageData(chartData);
+          } else {
+            console.error("Failed to fetch data:", averageData.message);
+          }
+        } else {
+          console.error("Access token is missing");
+        }
+      } catch (error) {
+        console.error("Error fetching average data:", error);
+      }
+    };
+
+    fetchQuizAverageData();
+  }, [accessToken]);
+  useEffect(() => {
+    const fetchDataRecord = async () => {
+      try {
+        if (accessToken) {
+          const lessonResponse = await fetch(
+            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+          const lessonData = await lessonResponse.json();
+          if (lessonData.status === 200) {
+            const chartData = Object.keys(lessonData.data).map((date) => {
+              const dayData = lessonData.data[date];
+              return {
+                date,
+                ...dayData, // Lưu từng lớp riêng biệt
+              };
+            });
+            setLessonViewData(chartData);
+          }
+        } else {
+          console.error("Access token is missing");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchDataRecord();
+  }, [accessToken]);
+
   return (
     <Layout>
       <Box
@@ -221,8 +228,18 @@ const DashboardPage = () => {
             year={currentYear}
           />
         </Box>
-        <Card variant="outlined" sx={{marginBottom: 4,borderRadius: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: 3 }}>
-          <Typography fontWeight={700} fontSize="20px" >
+        <Card
+          variant="outlined"
+          sx={{
+            marginBottom: 4,
+            borderRadius: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: 3,
+          }}
+        >
+          <Typography fontWeight={700} fontSize="20px">
             Tỉ lệ phần trăm làm bài quiz theo từng lớp
           </Typography>
           <QuizStatisticsChart />

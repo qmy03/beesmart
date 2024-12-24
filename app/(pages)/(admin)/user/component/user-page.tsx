@@ -34,11 +34,11 @@ const UserPage = () => {
     setPage(newPage);
   };
   const handleSelectRowClick = (
-    event: React.MouseEvent<HTMLElement>, // Changed to MouseEvent
+    event: React.MouseEvent<HTMLElement>,
     userId: string
   ) => {
-    // Only trigger logic if the event is from a checkbox (not from the row)
-    if ((event.target as HTMLElement).tagName === 'INPUT') {
+    // Kiểm tra nếu sự kiện đến từ checkbox (input[type="checkbox"])
+    if ((event.target as HTMLElement).closest('input[type="checkbox"]')) {
       const selectedIndex = selected.indexOf(userId);
       let newSelected: string[] = [];
   
@@ -261,9 +261,6 @@ const UserPage = () => {
                             <TableRow
                               key={user.userId}
                               hover
-                              onClick={(event) =>
-                                handleSelectRowClick(event, user.userId)
-                              }
                               role="checkbox"
                               aria-checked={isItemSelected}
                               selected={isItemSelected}
