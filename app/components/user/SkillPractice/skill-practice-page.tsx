@@ -911,28 +911,199 @@ const SkillPracticePage = () => {
 
       {/* Dialog for quiz results */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-        <DialogTitle fontSize="24px">
-          Chúc mừng bạn đã hoàn thành Bài luyện tập!
-        </DialogTitle>
-        <DialogContent>
-          <Typography>Số điểm: {quizResult?.points || 0}/10</Typography>
-          <Typography>
-            Số câu đúng: {quizResult?.correctAnswers || 0}/
-            {quizResult?.totalQuestions || 0}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setDialogOpen(false);
-              router.push(`/skill-list`);
+        {dialogOpen && quizResult && (
+          <Box
+            sx={{
+              padding: "20px",
+              maxWidth: "1000px",
+              margin: "0 auto",
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
             }}
-            sx={{textTransform: "none", ":hover": {backgroundColor: "#99BC4D"}, color: "#FFF", marginRight: 2}}
-            variant="contained"
           >
-            Hoàn thành
-          </Button>
-        </DialogActions>
+            <Typography variant="h4" fontWeight={600} textAlign="center" gutterBottom>
+              Kết quả bài quiz
+            </Typography>
+            <Typography>Số điểm: {quizResult.points}/10</Typography>
+            <Typography>
+              Số câu đúng: {quizResult.correctAnswers}/{quizResult.totalQuestions}
+            </Typography>
+
+            <Divider sx={{ my: 2 }} />
+
+            {quizResult.questions.map((question: any, index: number) => (
+              <Box
+                key={index}
+                sx={{
+                  marginBottom: "16px",
+                  padding: "12px",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  backgroundColor: "#f9f9f9",
+                }}
+              >
+                <Typography variant="h6" fontWeight={700}>
+                  Câu {index + 1}: {question.content}
+                </Typography>
+
+                {question.image && (
+                  <img
+                    src={question.image}
+                    alt="Question"
+                    style={{
+                      maxWidth: "100%",
+                      marginTop: "10px",
+                      marginBottom: "10px",
+                      borderRadius: "5px",
+                    }}
+                  />
+                )}
+
+                {/* Multiple Choice Questions */}
+                {question.options && question.options.length > 0 && !question.correctAnswers && (
+                  question.options.map((option: string, optIndex: number) => {
+                    const isCorrect = question.correctAnswer === option; // For multiple choice, check against `correctAnswer`
+                    const isUserAnswer = question.userAnswer === option; // Check if the user selected this option
+
+                    return (
+                      <Typography
+                        key={optIndex}
+                        sx={{
+                          padding: "4px 8px",
+                          marginBottom: "4px",
+                          borderRadius: "5px",
+                          backgroundColor:
+                            isCorrect
+                              ? "#99BC4D" // Green for correct answers
+                              : isUserAnswer
+                              ? "#FFCCCB" // Red for incorrect user answers
+                              : "transparent", // No background for other options
+                          textDecoration:
+                            isUserAnswer && !isCorrect ? "line-through" : "none", // Strike-through for wrong answers
+                        }}
+                      >
+                        {option}
+                      </Typography>
+                    );
+                  })
+                )}
+
+                {/* Multi-Select Questions */}
+                {question.correctAnswers && question.correctAnswers.length > 0 && question.options && question.options.length > 0 && (
+                  <Box>
+                    {[...new Set(question.options)].map((option: string, optIndex: number) => {
+                      const isCorrect = question.correctAnswers.includes(option); // Check if the option is correct
+                      const isUserAnswer = question.answers?.includes(option); // Check if the user selected this option
+                      const isIncorrectUserAnswer = isUserAnswer && !isCorrect; // If user selected an incorrect answer
+
+                      return (
+                        <Typography
+                          key={optIndex}
+                          sx={{
+                            padding: "4px 8px",
+                            marginBottom: "4px",
+                            borderRadius: "5px",
+                            backgroundColor:
+                              isCorrect
+                                ? "#99BC4D" // Green for correct answers
+                                : isIncorrectUserAnswer
+                                ? "#FFCCCB" // Red for incorrect user answers
+                                : "transparent",
+                            textDecoration:
+                              isIncorrectUserAnswer ? "line-through" : "none", // Strike-through for wrong answers
+                          }}
+                        >
+                          {option}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                {/* Fill-in-the-Blank Questions */}
+                {!question.options && question.correctAnswers && (
+                  <Box>
+                    {question.correctAnswers.map((correctAnswer: string, ansIndex: number) => {
+                      const isCorrect = question.userAnswer?.toLowerCase() === correctAnswer.toLowerCase(); // Compare with correct answers
+                      const isIncorrectUserAnswer = question.userAnswer && !isCorrect; // If the user answer is wrong
+
+                      return (
+                        <Typography
+                          key={ansIndex}
+                          sx={{
+                            padding: "4px 8px",
+                            marginBottom: "4px",
+                            borderRadius: "5px",
+                            backgroundColor:
+                              isCorrect
+                                ? "#99BC4D" // Green for correct answers
+                                : isIncorrectUserAnswer
+                                ? "#FFCCCB" // Red for incorrect user answers
+                                : "transparent",
+                            textDecoration:
+                              isIncorrectUserAnswer ? "line-through" : "none", // Strike-through for wrong answers
+                          }}
+                        >
+                          {correctAnswer}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                {/* Display answers only if the answer is incorrect */}
+                {!question.correct && (
+                  <Box sx={{ marginTop: "12px" }}>
+                    <Typography variant="body1" fontWeight={600}>
+                      Câu trả lời của bạn:
+                    </Typography>
+                    <Typography
+                      sx={{
+                        padding: "4px 8px",
+                        backgroundColor: "#FFCCCB",
+                        borderRadius: "5px",
+                      }}
+                    >
+                      {question.answers ? question.answers.join(", ") : question.userAnswer}
+                    </Typography>
+
+                    <Typography variant="body1" fontWeight={600} sx={{ marginTop: "8px" }}>
+                      Câu trả lời đúng:
+                    </Typography>
+                    <Typography
+                      sx={{
+                        padding: "4px 8px",
+                        backgroundColor: "#99BC4D",
+                        borderRadius: "5px",
+                      }}
+                    >
+                      {question.correctAnswers ? question.correctAnswers.join(", ") : question.correctAnswer}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Typography
+                  sx={{
+                    fontWeight: "bold",
+                    color: question.correct ? "green" : "red",
+                  }}
+                >
+                  {question.correct ? "Đúng" : "Sai"}
+                </Typography>
+              </Box>
+            ))}
+
+            <Button
+              variant="contained"
+              color="primary"
+              sx={{ marginTop: "20px", textTransform: "none" }}
+              onClick={() => router.push(`/skill-list`)}
+            >
+              Hoàn thành
+            </Button>
+          </Box>
+        )}
       </Dialog>
     </Layout>
   );
