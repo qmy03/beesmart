@@ -26,6 +26,7 @@ const StatisticHomeworkHistory = () => {
   const [selectedUser, setSelectedUser] = useState(""); // Người dùng được chọn
   const [quizRecords, setQuizRecords] = useState<any[]>([]); // Lịch sử làm bài kiểm tra
   const [loading, setLoading] = useState(false); // Xử lý trạng thái loading
+  const [totalItems, setTotalItems] = useState(0); // Tổng số mục từ API
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -34,7 +35,7 @@ const StatisticHomeworkHistory = () => {
   );
 
   const [page, setPage] = useState(0); // Trạng thái trang hiện tại
-  const [rowsPerPage, setRowsPerPage] = useState(5); // Số dòng mỗi trang
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng mỗi trang
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false); // Đóng Snackbar
@@ -80,18 +81,21 @@ const StatisticHomeworkHistory = () => {
     }
   }, [accessToken]);
 
-  // Lấy danh sách lịch sử làm bài của user được chọn
   useEffect(() => {
+    console.log("Fetching data for page:", page); // Log chính xác page hiện tại
     if (selectedUser) {
       setLoading(true);
       apiService
-        .get(`/statistics/user/${selectedUser}/quiz-records`, {
+        .get(`/statistics/user/${selectedUser}/quiz-records?page=${page}`, {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
+            Authorization: `Bearer ${accessToken}`,
           },
         })
         .then((response) => {
-          setQuizRecords(response.data.data.quizRecords); // Lưu lịch sử làm bài
+          console.log("Data fetched:", response.data);
+          const data = response.data.data;
+          setQuizRecords(data.quizRecords);
+          setTotalItems(data.totalItems);
           setLoading(false);
         })
         .catch((error) => {
@@ -99,10 +103,15 @@ const StatisticHomeworkHistory = () => {
           setLoading(false);
         });
     }
-  }, [selectedUser, accessToken]);
-
+  }, [selectedUser, accessToken, page]);
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60); // Calculate minutes
+    const remainingSeconds = seconds % 60; // Calculate remaining seconds
+    return `${minutes}'${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}s`;
+  };
   const handleUserChange = (event: React.ChangeEvent<{ value: unknown }>) => {
-    setSelectedUser(event.target.value as string); // Cập nhật user được chọn
+    setSelectedUser(event.target.value as string);
+    setPage(0); // Đặt lại trang về 0 khi thay đổi người dùng
   };
 
   return (
@@ -113,7 +122,7 @@ const StatisticHomeworkHistory = () => {
             display: "flex",
             paddingX: "12px",
             paddingY: 0,
-            margin:0,
+            margin: 0,
             alignItems: "center",
             boxShadow: 4,
             borderRadius: "8px",
@@ -136,75 +145,74 @@ const StatisticHomeworkHistory = () => {
             ))}
           </TextField>
         </Box>
-
-        {/* Bảng lịch sử làm bài */}
         <Box sx={{ marginTop: 2 }}>
-          {loading ? (
-            <Typography>Đang tải...</Typography>
-          ) : (
-            <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
-              <TableContainer
-                sx={{
-                  // boxShadow: 4,
-                  borderRadius: 2,
-                  height: "75vh",
-                  overflow: "auto",
-                }}
-              >
-                <Table size="small">
-                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+          <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+            <TableContainer
+              sx={{
+                borderRadius: 2,
+                height: "75vh",
+                overflow: "auto",
+              }}
+            >
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                  <TableRow>
+                    <TableCell sx={{ width: "35%", padding: "16px" }}>
+                      Tên bài kiểm tra
+                    </TableCell>
+                    <TableCell sx={{ width: "15%" }}>Tổng câu hỏi</TableCell>
+                    <TableCell sx={{ width: "15%" }}>Đáp án đúng</TableCell>
+                    <TableCell sx={{ width: "5%" }}>Điểm</TableCell>
+                    <TableCell sx={{ width: "15%" }}>
+                      Thời gian làm bài
+                    </TableCell>
+                    <TableCell sx={{ width: "15%" }}>Ngày làm bài</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
                     <TableRow>
-                      <TableCell sx={{ width: "35%", padding: "16px" }}>
-                        Tên bài kiểm tra
+                      <TableCell colSpan={6} align="center">
+                        Đang tải dữ liệu...
                       </TableCell>
-                      <TableCell sx={{ width: "15%" }}>Tổng câu hỏi</TableCell>
-                      <TableCell sx={{ width: "15%" }}>Đáp án đúng</TableCell>
-                      <TableCell sx={{ width: "5%" }}>Điểm</TableCell>
-                      <TableCell sx={{ width: "15%" }}>
-                        Thời gian làm bài
-                      </TableCell>
-                      <TableCell sx={{ width: "15%" }}>Ngày làm bài</TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {quizRecords.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          Không có dữ liệu
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      quizRecords
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((record) => (
-                          <TableRow key={record.recordId}>
-                            <TableCell>{record.quizName}</TableCell>
-                            <TableCell>{record.totalQuestions}</TableCell>
-                            <TableCell>{record.correctAnswers}</TableCell>
-                            <TableCell>{record.points}</TableCell>
-                            <TableCell>{record.timeSpent}</TableCell>
-                            <TableCell>
-                              {new Date(record.createdAt).toLocaleString()}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={quizRecords.length} // Tổng số mục
-                page={page} // Trang hiện tại
-                onPageChange={handleChangePage} // Xử lý thay đổi trang
-                rowsPerPage={rowsPerPage} // Số dòng mỗi trang
-                onRowsPerPageChange={handleChangeRowsPerPage} // Xử lý thay đổi số dòng mỗi trang
-              />
-            </Box>
-          )}
+                  ) : quizRecords.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        Không có dữ liệu
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    quizRecords
+                      // .slice(
+                      //   page * rowsPerPage,
+                      //   page * rowsPerPage + rowsPerPage
+                      // )
+                      .map((record) => (
+                        <TableRow key={record.recordId}>
+                          <TableCell>{record.quizName}</TableCell>
+                          <TableCell>{record.totalQuestions}</TableCell>
+                          <TableCell>{record.correctAnswers}</TableCell>
+                          <TableCell>{record.points}</TableCell>
+                          <TableCell>{formatTime(record.timeSpent)}</TableCell>
+                          <TableCell>
+                            {new Date(record.createdAt).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={totalItems}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Box>
         </Box>
       </Box>
 

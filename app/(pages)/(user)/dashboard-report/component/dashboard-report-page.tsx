@@ -152,15 +152,12 @@ const DashboardReportPage: React.FC = () => {
     const fetchQuizRecords = async () => {
       try {
         const response = await apiService.get(
-          `/statistics/user/${activeStudent.userId}/quiz-records`,
+          `/statistics/user/${activeStudent.userId}/quiz-records?page=${page}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
         );
-        console.log("response", response);
-
         if (response.data?.status === 200) {
-          // Format the timeSpent for each record
           const formattedRecords = response.data.data.quizRecords.map(
             (record) => ({
               ...record,
@@ -169,7 +166,7 @@ const DashboardReportPage: React.FC = () => {
           );
 
           setQuizRecords(formattedRecords);
-          setTotalItems(response.data.data.totalItems); // Assuming API returns total items
+          setTotalItems(response.data.data.totalItems);
         }
       } catch (error) {
         console.error("Error fetching quiz records:", error);
@@ -179,7 +176,7 @@ const DashboardReportPage: React.FC = () => {
     if (accessToken && activeStudent) {
       fetchQuizRecords();
     }
-  }, [accessToken, activeStudent]);
+  }, [accessToken, activeStudent, page, rowsPerPage]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -193,6 +190,7 @@ const DashboardReportPage: React.FC = () => {
   };
   const handleStudentClick = (student: any) => {
     setActiveStudent(student); // Set clicked student as active
+    setPage(0);
   };
 
   return (

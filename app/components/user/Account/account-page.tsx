@@ -56,7 +56,7 @@ const AccountPage: React.FC = () => {
   // const [activeTab, setActiveTab] = useState("Thông tin cá nhân"); // Tab hiện tại
   const [quizHistory, setQuizHistory] = useState<any[]>([]); // Lịch sử làm bài
   const [page, setPage] = useState(0); // Trang hiện tại
-  const [rowsPerPage, setRowsPerPage] = useState(5); // Số dòng mỗi trang
+  const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng mỗi trang
   const [totalItems, setTotalItems] = useState(0); // Tổng số phần tử trong dữ liệu
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

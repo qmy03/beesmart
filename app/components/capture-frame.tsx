@@ -76,7 +76,7 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
           style={{ borderTopLeftRadius: "16px", borderTopRightRadius: "16px", objectFit: "cover" }}
         />
       ) : (
-        <Typography color="error">Không thể tạo ảnh bìa từ video.</Typography>
+        <Typography color="error"></Typography>
       )}
     </Box>
   );

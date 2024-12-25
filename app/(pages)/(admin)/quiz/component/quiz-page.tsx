@@ -387,6 +387,7 @@ const QuizPage = () => {
                 ...prev,
                 [selectedQuizId]: fetchedQuestions,
               }));
+              setTotalItemsQ(response.data.data.totalItems);
             })
             .catch((error) => {
               console.error("Error fetching updated questions:", error);
@@ -657,6 +658,7 @@ const QuizPage = () => {
           ...prev,
           [selectedQuizId]: fetchedQuestions,
         }));
+        setTotalItemsQ(response.data.data.totalItems);
       })
       .catch((error) => {
         console.error("Error fetching updated questions:", error);
@@ -716,6 +718,7 @@ const QuizPage = () => {
               ...prev,
               [selectedQuizId]: fetchedQuestions,
             }));
+            setTotalItemsQ(response.data.data.totalItems);
           })
           .catch((error) => {
             console.error("Error fetching updated questions:", error);
@@ -906,6 +909,11 @@ const QuizPage = () => {
                   <IconButton onClick={() => handleEditQuiz(quiz)}>
                     <EditIcon fontSize="small" />
                   </IconButton>
+                  {expandedQuizId === quiz.quizId && (
+                    <Typography fontWeight={600} sx={{ paddingLeft: 9 }}>
+                      Tổng số: {totalItemsQ}
+                    </Typography>
+                  )}
                 </Box>
                 {expandedQuizId === quiz.quizId && (
                   <Button
