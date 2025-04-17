@@ -21,6 +21,9 @@ interface DialogPopupProps {
   selectedSemester: string;
   selectedLessonId: string; // Use this prop for lesson fetching
   selectedGradeName: string;
+  selectedSubjectName: string;
+  selectedBookName: string;
+  
   onSuccess: () => void;
 }
 
@@ -44,6 +47,8 @@ const DialogPopup: React.FC<
   lesson,
   topicId,
   selectedGradeName,
+  selectedSubjectName,
+  selectedBookName,
   onSuccess,
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
@@ -78,18 +83,19 @@ const DialogPopup: React.FC<
   }, [lesson, accessToken]); // Re-run when selectedLessonId changes
 
   // Fetch available topics when selectedGradeId or selectedSemester changes
-  console.log("Fetching topics with:", selectedGradeName, selectedSemester);
+  console.log("Fetching topics with:", selectedGradeName, selectedSemester, selectedSubjectName, selectedBookName);
   useEffect(() => {
-    if (selectedGradeName && selectedSemester) {
+    if (selectedGradeName && selectedSemester && selectedSubjectName && selectedBookName) {
       console.log("Fetching topics with:", selectedGradeName, selectedSemester);
       apiService
         .get(
-          `/topics?semester=${selectedSemester}&&grade=${selectedGradeName}`,
+          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&subject=${selectedSubjectName}&bookType=${selectedBookName}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
         )
         .then((response) => {
+          console.log("response", response.data.data);
           const fetchedTopics = response.data.data.topics;
           console.log("fetchedTopics", fetchedTopics);
           if (Array.isArray(fetchedTopics)) {
@@ -102,7 +108,7 @@ const DialogPopup: React.FC<
           console.error("Error fetching topics:", error);
         });
     }
-  }, [selectedGradeName, selectedSemester, accessToken]);
+  }, [selectedGradeName, selectedSemester, accessToken, selectedBookName, selectedSubjectName]);
 
   console.log("ABC", topic);
   const handleSubmit = () => {

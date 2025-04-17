@@ -360,6 +360,8 @@ const Sidebar: React.FC = () => {
       name: "Quản lý bài học",
       icon: <PlayLessonIcon fontSize="small" />,
       subMenu: [
+        { name: "Môn học", path: "/subject", icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
+        { name: "Loại sách", path: "/book-type", icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
         { name: "Lớp học", path: "/grade", icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
         { name: "Chủ điểm", path: "/topic", icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
         { name: "Bài học", path: "/lesson", icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} /> },
@@ -423,7 +425,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Menu */}
-      <nav className="flex-1">
+      <nav className="flex-1 overflow-y-auto">
         <ul className="mt-4">
           {menuList.map((menu, index) => (
             <li key={index} className="p-2">

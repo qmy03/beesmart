@@ -12,6 +12,8 @@ interface DialogPopupProps {
   accessToken: string;
   selectedGradeId: string;
   selectedSemester: string;
+  selectedBookId: string;
+  selectedSubjectId: string;
   onSuccess: () => string;
 }
 
@@ -22,6 +24,8 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
   accessToken,
   selectedGradeId,
   selectedSemester,
+  selectedBookId,
+  selectedSubjectId,
   type,
   topic,
   onSuccess
@@ -46,7 +50,7 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
     if (type === "add") {
       // Thêm mới topic
       apiService
-        .post(`/topics/grade/${selectedGradeId}`, body, {
+        .post(`/topics/grade/${selectedGradeId}/subject/${selectedSubjectId}/bookType/${selectedBookId}`, body, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
@@ -86,7 +90,7 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
     <Dialog open={open} onClose={onClose}>
       <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          {type === "add" ? "Thêm Chủ Đề Mới" : "Chỉnh Sửa Chủ Đề"}
+          {type === "add" ? "Thêm Chủ điểm mới" : "Chỉnh Sửa Chủ điểm"}
         </Typography>
         <Close onClick={onClose} fontSize="small" sx={{ cursor: "pointer" }} />
       </DialogTitle>

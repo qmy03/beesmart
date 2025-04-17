@@ -15,6 +15,7 @@ import {
   Checkbox,
   Snackbar,
   Alert,
+  InputAdornment,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
@@ -22,46 +23,48 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import Layout from "@/app/components/admin/layout";
 import { Button } from "@/app/components/button";
 import TextField from "@/app/components/textfield";
-import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
+import CloseIcon from "@mui/icons-material/close";
+import SearchIcon from "@mui/icons-material/Search";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 const GradePage = () => {
-  const { accessToken } = useAuth();
-  const [grades, setGrades] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const { accessToken } = useAuth(); 
+  const [bookTypes, setBookTypes] = useState<any[]>([]); 
+  const [loading, setLoading] = useState(false); 
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
-  );
-  const [openDialog, setOpenDialog] = useState(false);
-  const [newGradeName, setNewGradeName] = useState("");
-  const [error, setError] = useState("");
+  ); 
+
+  const [page, setPage] = useState(0); 
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const [openDialog, setOpenDialog] = useState(false); 
+  const [newBookTypeName, setNewBookTypeName] = useState(""); 
+  const [error, setError] = useState(""); 
   const [openDelete, setOpenDelete] = useState(false);
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedGrade, setSelectedGrade] = useState<any | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [selectedBook, setSelectedBook] = useState<any | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false); 
+  const [snackbarMessage, setSnackbarMessage] = useState(""); 
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
 
-  const fetchGrades = (query = "") => {
+  const fetchBookTypes = (query = "") => {
     if (accessToken) {
       setLoading(true);
 
-      const requestBody = query ? { gradeName: query } : {};
+      const requestBody = query ? { bookName: query } : {};
 
       apiService
-        .get("/grades", {
+        .get("/book-types", {
           headers: { Authorization: `Bearer ${accessToken}` },
-          params: query ? { gradeName: query } : undefined,
+          params: query ? { bookName: query } : undefined,
         })
         .then((response) => {
-          console.log("Fetched grades:", response.data.data.grades);
-          setGrades(response.data.data.grades);
+          setBookTypes(response.data.data.bookTypes);
           setLoading(false);
         })
         .catch((error) => {
@@ -73,7 +76,7 @@ const GradePage = () => {
 
   useEffect(() => {
     if (accessToken) {
-      fetchGrades();
+      fetchBookTypes();
     }
   }, [accessToken]);
 
@@ -86,28 +89,11 @@ const GradePage = () => {
     }
 
     const timeout = setTimeout(() => {
-      fetchGrades(value);
-    }, 500);
+      fetchBookTypes(value);
+    }, 500); 
 
     setSearchTimeout(timeout as unknown as NodeJS.Timeout);
   };
-  useEffect(() => {
-    if (accessToken) {
-      setLoading(true);
-      apiService
-        .get("/grades", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        .then((response) => {
-          setGrades(response.data.data.grades);
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setLoading(false);
-        });
-    }
-  }, [accessToken]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -117,26 +103,27 @@ const GradePage = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
+    setPage(0); 
   };
 
   const handleOpenDialog = () => {
     setEditMode("add");
-    setSelectedGrade(null);
-    setNewGradeName("");
+    setSelectedBook(null);
+    setNewBookTypeName("");
     setError("");
     setOpenDialog(true);
   };
+  
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewGradeName("");
+    setNewBookTypeName("");
     setError("");
   };
 
-  const handleSaveGrade = () => {
-    if (!newGradeName.trim()) {
-      setError("Tên môn học không được để trống!");
+  const handleSaveBook = () => {
+    if (!newBookTypeName.trim()) {
+      setError("Tên Loại sách không được để trống!");
       return;
     }
 
@@ -145,34 +132,30 @@ const GradePage = () => {
     const apiCall =
       editMode === "edit"
         ? apiService.put(
-            `/grades/${selectedGrade.gradeId}`,
-            { gradeName: newGradeName.trim() },
+            `/book-types/${selectedBook.bookId}`,
+            { bookName: newBookTypeName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )
         : apiService.post(
-            "/grades",
-            { gradeName: newGradeName.trim() },
+            "/book-types",
+            { bookName: newBookTypeName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           );
 
     apiCall
       .then(() => {
-        return apiService.get("/grades", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        return fetchBookTypes(searchTerm);
       })
-      .then((response) => {
-        setGrades(response.data.data.grades);
+      .then(() => {
         setSnackbarMessage(
           editMode === "edit"
-            ? "Cập nhật môn học thành công!"
-            : "Thêm môn học mới thành công!"
+            ? "Cập nhật loại sách thành công!"
+            : "Thêm loại sách mới thành công!"
         );
         setSnackbarSeverity("success");
         setSnackbarOpen(true);
         handleCloseDialog();
       })
-
       .catch((error) => {
         console.error("Error saving subject:", error);
         setError(
@@ -181,61 +164,64 @@ const GradePage = () => {
       })
       .finally(() => setLoading(false));
   };
-  const handleDeleteSubjects = () => {
+
+  const handleDeleteBooks = () => {
     if (selected.length === 0) return;
 
     setLoading(true);
     apiService
-      .delete("/grades", {
-        data: selected,
+      .delete("/book-types", {
+        data: selected, 
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then(() => {
-        return apiService.get("/grades", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        return fetchBookTypes(searchTerm);
       })
-      .then((response) => {
-        setGrades(response.data.data.grades);
+      .then(() => {
         setSelected([]);
         setOpenDelete(false);
-        setSnackbarMessage("Xóa môn học thành công!");
+        setSnackbarMessage("Xóa loại sách thành công!");
         setSnackbarSeverity("success");
         setSnackbarOpen(true);
-        handleCloseDialog();
       })
       .catch((error) => {
-        console.error("Error deleting subjects:", error);
+        console.error("Error deleting books:", error);
+        setSnackbarMessage("Lỗi khi xóa loại sách!");
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       })
       .finally(() => setLoading(false));
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (grades.length > 0) {
+    if (bookTypes.length > 0) {
       if (event.target.checked) {
-        const newSelected = grades.map((grade) => grade.gradeId);
+        const newSelected = bookTypes.map((bookType) => bookType.bookId);
         setSelected(newSelected);
         setOpenDelete(true);
       } else {
         setSelected([]);
-        setOpenDelete(false);
+        setOpenDelete(false); 
       }
     }
   };
-  const handleOpenEdit = (grade: any) => {
+
+  const handleOpenEdit = (bookType: any) => {
     setEditMode("edit");
-    setSelectedGrade(grade);
+    setSelectedBook(bookType);
     setError("");
     setOpenDialog(true);
 
+    console.log("bookType", bookType);
     // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/grades/${grade.gradeId}`, {
+      .get(`/book-types/${bookType.bookId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
-        const { gradeName } = response.data.data;
-        setNewGradeName(gradeName); // set vào TextField
+        console.log("responseBT", response);
+        const { bookName } = response.data.data;
+        setNewBookTypeName(bookName); // set vào TextField
       })
       .catch((error) => {
         console.error("Error fetching grade detail:", error);
@@ -245,23 +231,25 @@ const GradePage = () => {
 
   const handleCheckboxClick = (
     event: React.ChangeEvent<HTMLInputElement>,
-    gradeId: number
+    bookId: number
   ) => {
     const updatedSelected = event.target.checked
-      ? [...selected, gradeId]
-      : selected.filter((id) => id !== gradeId);
+      ? [...selected, bookId]
+      : selected.filter((id) => id !== bookId); 
 
     setSelected(updatedSelected);
 
     if (updatedSelected.length === 0) {
       setOpenDelete(false);
     } else {
-      setOpenDelete(true);
+      setOpenDelete(true); 
     }
   };
+
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
+
   return (
     <Layout>
       <Box
@@ -270,7 +258,7 @@ const GradePage = () => {
           flexDirection: "column",
           padding: "0 10px",
           gap: 2,
-          height: "100%",
+          height: "100%", 
         }}
       >
         <Box
@@ -283,125 +271,124 @@ const GradePage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Quản lý Lớp học
+            Quản lý Loại sách
           </Typography>
           <Button onClick={handleOpenDialog}>Thêm mới</Button>
         </Box>
-
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            flexGrow: 1,
+            flexGrow: 1, 
             minHeight: 0,
           }}
         >
           {loading ? (
             <Typography>Đang tải...</Typography>
           ) : (
-            <>
-              <Box
+            <Box
+              sx={{
+                boxShadow: 4,
+                borderRadius: 2,
+                display: "flex",
+                flexDirection: "column",
+                height: "100%", 
+                mb: 1,
+              }}
+            >
+              <TableContainer
                 sx={{
-                  boxShadow: 4,
-                  borderRadius: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100%",
-                  mb: 1,
+                  borderRadius: "8px 8px 0 0",
+                  flexGrow: 1, 
+                  overflow: "auto",
                 }}
               >
-                <TableContainer
-                  sx={{
-                    borderRadius: "8px 8px 0 0",
-                    flexGrow: 1,
-                    overflow: "auto",
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell width="5%" sx={{ border: "none" }}></TableCell>
+                      <TableCell width="5%" sx={{ border: "none" }}></TableCell>
+                      <TableCell width="20%" sx={{ border: "none" }}>
+                        Số thứ tự
+                      </TableCell>
+                      <TableCell width="70%" sx={{ border: "none" }}>
+                        Loại sách
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Checkbox
+                          indeterminate={
+                            selected.length > 0 &&
+                            bookTypes.length > 0 &&
+                            selected.length < bookTypes.length
+                          }
+                          sx={{
+                            color: "#637381",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                            p: 0,
+                            ml: 1.5,
+                          }}
+                          checked={
+                            bookTypes.length > 0 &&
+                            selected.length === bookTypes.length
+                          }
+                          onChange={handleSelectAllClick}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>
+                        {" "}
+                        <TextField
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#EAEDF0",
+                            borderRadius: "4px",
+                          }}
+                          disabled
+                        ></TextField>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder="Tìm kiếm..."
+                          value={searchTerm}
+                          onChange={handleSearchChange}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {bookTypes.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          width="5%"
-                          sx={{ border: "none" }}
-                        ></TableCell>
-                        <TableCell
-                          width="5%"
-                          sx={{ border: "none" }}
-                        ></TableCell>
-                        <TableCell width="20%" sx={{ border: "none" }}>
-                          Số thứ tự
-                        </TableCell>
-                        <TableCell width="80%" sx={{ border: "none" }}>
-                          Lớp
+                        <TableCell colSpan={4} align="center">
+                          Không tìm thấy dữ liệu
                         </TableCell>
                       </TableRow>
-                      <TableRow>
-                        <TableCell>
-                          <Checkbox
-                            indeterminate={
-                              selected.length > 0 &&
-                              grades.length > 0 &&
-                              selected.length < grades.length
-                            }
-                            sx={{
-                              color: "#637381",
-                              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D",
-                              },
-                              p: 0,
-                              ml: 1.5,
-                            }}
-                            checked={
-                              grades.length > 0 &&
-                              selected.length === grades.length
-                            }
-                            onChange={handleSelectAllClick}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>
-                          {" "}
-                          <TextField
-                            sx={{
-                              p: 0,
-                              m: 0,
-                              bgcolor: "#EAEDF0",
-                              borderRadius: "4px",
-                            }}
-                            disabled
-                          ></TextField>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            sx={{
-                              p: 0,
-                              m: 0,
-                              bgcolor: "#FFF",
-                              borderRadius: "4px",
-                            }}
-                            placeholder="Tìm kiếm..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {grades
+                    ) : (
+                      bookTypes
                         .slice(
                           page * rowsPerPage,
                           page * rowsPerPage + rowsPerPage
                         )
-                        .map((grade, index) => {
+                        .map((bookType, index) => {
                           const isItemSelected = selected.includes(
-                            grade.gradeId
+                            bookType.bookId
                           );
 
                           return (
-                            <TableRow key={grade.gradeId}>
-                              <TableCell sx={{ paddingY: "12px" }}>
+                            <TableRow key={bookType.bookId}>
+                              <TableCell sx={{ paddingY: "12px"}}>
                                 <Checkbox
                                   size="small"
                                   checked={isItemSelected}
@@ -412,7 +399,7 @@ const GradePage = () => {
                                     ml: 1.5,
                                   }}
                                   onChange={(event) =>
-                                    handleCheckboxClick(event, grade.gradeId)
+                                    handleCheckboxClick(event, bookType.bookId)
                                   }
                                 />
                               </TableCell>
@@ -422,54 +409,55 @@ const GradePage = () => {
                                   sx={{ color: "#637381", cursor: "pointer" }}
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    handleOpenEdit(grade);
+                                    handleOpenEdit(bookType);
                                   }}
                                 />
                               </TableCell>
                               <TableCell>
                                 {page * rowsPerPage + index + 1}
                               </TableCell>
-                              <TableCell>{grade.gradeName}</TableCell>
+                              <TableCell>{bookType.bookName}</TableCell>
                             </TableRow>
                           );
-                        })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={grades.length}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-              </Box>
-            </>
+                        })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={bookTypes.length}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Box>
           )}
         </Box>
 
         <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>
           <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
-            {" "}
             <Typography fontSize="24px" fontWeight={600} sx={{ flexGrow: 1 }}>
-              {editMode === "edit" ? "Chỉnh sửa lớp học" : "Thêm mới lớp học"}
+              {editMode === "edit"
+                ? "Chỉnh sửa loại sách"
+                : "Thêm mới loại sách"}
             </Typography>
             <CloseIcon fontSize="small" onClick={handleCloseDialog} />
           </DialogTitle>
           <DialogContent>
             <TextField
-              label="Tên lớp"
+              label="Tên loại sách"
               fullWidth
-              value={newGradeName}
-              onChange={(e) => setNewGradeName(e.target.value)}
+              value={newBookTypeName}
+              onChange={(e) => setNewBookTypeName(e.target.value)}
               error={!!error}
               helperText={error}
               margin="normal"
             />
           </DialogContent>
           <DialogActions sx={{ marginRight: 2 }}>
-            <Button onClick={handleSaveGrade} color="primary">
+            <Button onClick={handleSaveBook} color="primary">
               {editMode === "edit" ? "Lưu" : "Thêm mới"}
             </Button>
           </DialogActions>
@@ -479,17 +467,17 @@ const GradePage = () => {
         open={openDelete}
         handleClose={() => setOpenDelete(false)}
         quantity={selected.length}
-        onDelete={handleDeleteSubjects}
+        onDelete={handleDeleteBooks}
       />
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={3000} 
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }} 
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarSeverity}
+          severity={snackbarSeverity} 
           sx={{ width: "100%" }}
         >
           {snackbarMessage}

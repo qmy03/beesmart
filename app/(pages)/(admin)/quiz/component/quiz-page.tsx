@@ -149,7 +149,7 @@ const QuizPage = () => {
       apiService
         .get("/grades")
         .then((response) => {
-          const fetchedGrades = response.data;
+          const fetchedGrades = response.data.data.grades;
           setGrades(fetchedGrades);
           if (fetchedGrades.length > 0) {
             const firstGrade = fetchedGrades[0];

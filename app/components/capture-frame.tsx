@@ -73,7 +73,7 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = ({
           src={thumbnail}
           alt={altText}
           width="100%"
-          style={{ borderTopLeftRadius: "16px", borderTopRightRadius: "16px", objectFit: "cover" }}
+          style={{ borderTopLeftRadius: "8px", borderTopRightRadius: "8px", objectFit: "cover" }}
         />
       ) : (
         <Typography color="error"></Typography>

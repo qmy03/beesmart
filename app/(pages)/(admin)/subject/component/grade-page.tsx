@@ -25,43 +25,43 @@ import TextField from "@/app/components/textfield";
 import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
-const GradePage = () => {
+const SubjectPage = () => {
   const { accessToken } = useAuth();
-  const [grades, setGrades] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<readonly number[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selected, setSelected] = useState<readonly number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
     null
   );
+
   const [openDialog, setOpenDialog] = useState(false);
-  const [newGradeName, setNewGradeName] = useState("");
+  const [newSubjectName, setNewSubjectName] = useState("");
   const [error, setError] = useState("");
   const [openDelete, setOpenDelete] = useState(false);
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedGrade, setSelectedGrade] = useState<any | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<any | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
 
-  const fetchGrades = (query = "") => {
+  const fetchSubjects = (query = "") => {
     if (accessToken) {
       setLoading(true);
 
-      const requestBody = query ? { gradeName: query } : {};
+      const requestBody = query ? { bookName: query } : {};
 
       apiService
-        .get("/grades", {
+        .get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
-          params: query ? { gradeName: query } : undefined,
+          params: query ? { subjectName: query } : undefined,
         })
         .then((response) => {
-          console.log("Fetched grades:", response.data.data.grades);
-          setGrades(response.data.data.grades);
+          setSubjects(response.data.data.subjects);
           setLoading(false);
         })
         .catch((error) => {
@@ -73,7 +73,7 @@ const GradePage = () => {
 
   useEffect(() => {
     if (accessToken) {
-      fetchGrades();
+      fetchSubjects();
     }
   }, [accessToken]);
 
@@ -86,20 +86,22 @@ const GradePage = () => {
     }
 
     const timeout = setTimeout(() => {
-      fetchGrades(value);
+      fetchSubjects(value);
     }, 500);
 
     setSearchTimeout(timeout as unknown as NodeJS.Timeout);
   };
+
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
       apiService
-        .get("/grades", {
+        .get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
-          setGrades(response.data.data.grades);
+          console.log("AAAAAAAAAA", response.data);
+          setSubjects(response.data.data.subjects);
           setLoading(false);
         })
         .catch((error) => {
@@ -122,20 +124,19 @@ const GradePage = () => {
 
   const handleOpenDialog = () => {
     setEditMode("add");
-    setSelectedGrade(null);
-    setNewGradeName("");
+    setSelectedSubject(null);
+    setNewSubjectName("");
     setError("");
     setOpenDialog(true);
   };
-
   const handleCloseDialog = () => {
     setOpenDialog(false);
-    setNewGradeName("");
+    setNewSubjectName("");
     setError("");
   };
 
-  const handleSaveGrade = () => {
-    if (!newGradeName.trim()) {
+  const handleSaveSubject = () => {
+    if (!newSubjectName.trim()) {
       setError("Tên môn học không được để trống!");
       return;
     }
@@ -145,24 +146,24 @@ const GradePage = () => {
     const apiCall =
       editMode === "edit"
         ? apiService.put(
-            `/grades/${selectedGrade.gradeId}`,
-            { gradeName: newGradeName.trim() },
+            `/subjects/${selectedSubject.subjectId}`,
+            { subjectName: newSubjectName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )
         : apiService.post(
-            "/grades",
-            { gradeName: newGradeName.trim() },
+            "/subjects",
+            { subjectName: newSubjectName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           );
 
     apiCall
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
       .then((response) => {
-        setGrades(response.data.data.grades);
+        setSubjects(response.data.data.subjects);
         setSnackbarMessage(
           editMode === "edit"
             ? "Cập nhật môn học thành công!"
@@ -186,17 +187,17 @@ const GradePage = () => {
 
     setLoading(true);
     apiService
-      .delete("/grades", {
-        data: selected,
+      .delete("/subjects", {
+        data: selected, // Gửi mảng subjectIds
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
       .then((response) => {
-        setGrades(response.data.data.grades);
+        setSubjects(response.data.data.subjects);
         setSelected([]);
         setOpenDelete(false);
         setSnackbarMessage("Xóa môn học thành công!");
@@ -211,9 +212,9 @@ const GradePage = () => {
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (grades.length > 0) {
+    if (subjects.length > 0) {
       if (event.target.checked) {
-        const newSelected = grades.map((grade) => grade.gradeId);
+        const newSelected = subjects.map((subject) => subject.subjectId);
         setSelected(newSelected);
         setOpenDelete(true);
       } else {
@@ -222,34 +223,33 @@ const GradePage = () => {
       }
     }
   };
-  const handleOpenEdit = (grade: any) => {
+  const handleOpenEdit = (subject: any) => {
     setEditMode("edit");
-    setSelectedGrade(grade);
+    setSelectedSubject(subject);
     setError("");
     setOpenDialog(true);
 
     // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/grades/${grade.gradeId}`, {
+      .get(`/subjects/${subject.subjectId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
-        const { gradeName } = response.data.data;
-        setNewGradeName(gradeName); // set vào TextField
+        const { subjectName } = response.data.data;
+        setNewSubjectName(subjectName); // set vào TextField
       })
       .catch((error) => {
         console.error("Error fetching grade detail:", error);
         setError("Không thể lấy thông tin lớp học.");
       });
   };
-
   const handleCheckboxClick = (
     event: React.ChangeEvent<HTMLInputElement>,
-    gradeId: number
+    subjectId: number
   ) => {
     const updatedSelected = event.target.checked
-      ? [...selected, gradeId]
-      : selected.filter((id) => id !== gradeId);
+      ? [...selected, subjectId]
+      : selected.filter((id) => id !== subjectId);
 
     setSelected(updatedSelected);
 
@@ -283,7 +283,7 @@ const GradePage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Quản lý Lớp học
+            Quản lý Môn học
           </Typography>
           <Button onClick={handleOpenDialog}>Thêm mới</Button>
         </Box>
@@ -332,7 +332,7 @@ const GradePage = () => {
                           Số thứ tự
                         </TableCell>
                         <TableCell width="80%" sx={{ border: "none" }}>
-                          Lớp
+                          Môn học
                         </TableCell>
                       </TableRow>
                       <TableRow>
@@ -340,8 +340,8 @@ const GradePage = () => {
                           <Checkbox
                             indeterminate={
                               selected.length > 0 &&
-                              grades.length > 0 &&
-                              selected.length < grades.length
+                              subjects.length > 0 &&
+                              selected.length < subjects.length
                             }
                             sx={{
                               color: "#637381",
@@ -352,8 +352,8 @@ const GradePage = () => {
                               ml: 1.5,
                             }}
                             checked={
-                              grades.length > 0 &&
-                              selected.length === grades.length
+                              subjects.length > 0 &&
+                              selected.length === subjects.length
                             }
                             onChange={handleSelectAllClick}
                             size="small"
@@ -389,18 +389,18 @@ const GradePage = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {grades
+                      {subjects
                         .slice(
                           page * rowsPerPage,
                           page * rowsPerPage + rowsPerPage
                         )
-                        .map((grade, index) => {
+                        .map((subject, index) => {
                           const isItemSelected = selected.includes(
-                            grade.gradeId
+                            subject.subjectId
                           );
 
                           return (
-                            <TableRow key={grade.gradeId}>
+                            <TableRow key={subject.subjectId}>
                               <TableCell sx={{ paddingY: "12px" }}>
                                 <Checkbox
                                   size="small"
@@ -412,7 +412,10 @@ const GradePage = () => {
                                     ml: 1.5,
                                   }}
                                   onChange={(event) =>
-                                    handleCheckboxClick(event, grade.gradeId)
+                                    handleCheckboxClick(
+                                      event,
+                                      subject.subjectId
+                                    )
                                   }
                                 />
                               </TableCell>
@@ -422,14 +425,14 @@ const GradePage = () => {
                                   sx={{ color: "#637381", cursor: "pointer" }}
                                   onClick={(event) => {
                                     event.stopPropagation();
-                                    handleOpenEdit(grade);
+                                    handleOpenEdit(subject);
                                   }}
                                 />
                               </TableCell>
                               <TableCell>
                                 {page * rowsPerPage + index + 1}
                               </TableCell>
-                              <TableCell>{grade.gradeName}</TableCell>
+                              <TableCell>{subject.subjectName}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -438,7 +441,7 @@ const GradePage = () => {
                 </TableContainer>
                 <TablePagination
                   component="div"
-                  count={grades.length}
+                  count={subjects.length}
                   page={page}
                   onPageChange={handleChangePage}
                   rowsPerPage={rowsPerPage}
@@ -451,25 +454,24 @@ const GradePage = () => {
 
         <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>
           <DialogTitle sx={{ display: "flex", alignItems: "center" }}>
-            {" "}
             <Typography fontSize="24px" fontWeight={600} sx={{ flexGrow: 1 }}>
-              {editMode === "edit" ? "Chỉnh sửa lớp học" : "Thêm mới lớp học"}
+              {editMode === "edit" ? "Chỉnh sửa môn học" : "Thêm mới môn học"}
             </Typography>
             <CloseIcon fontSize="small" onClick={handleCloseDialog} />
           </DialogTitle>
           <DialogContent>
             <TextField
-              label="Tên lớp"
+              label="Tên môn học"
               fullWidth
-              value={newGradeName}
-              onChange={(e) => setNewGradeName(e.target.value)}
+              value={newSubjectName}
+              onChange={(e) => setNewSubjectName(e.target.value)}
               error={!!error}
               helperText={error}
               margin="normal"
             />
           </DialogContent>
           <DialogActions sx={{ marginRight: 2 }}>
-            <Button onClick={handleSaveGrade} color="primary">
+            <Button onClick={handleSaveSubject} color="primary">
               {editMode === "edit" ? "Lưu" : "Thêm mới"}
             </Button>
           </DialogActions>
@@ -499,4 +501,4 @@ const GradePage = () => {
   );
 };
 
-export default GradePage;
+export default SubjectPage;

@@ -20,7 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (
         <>
         <ThemeProvider theme={theme}>
-            <Box sx={{ display: 'flex' , height: '100vh', flexDirection: 'column'}}>
+            <Box sx={{ display: 'flex' , height: '100%', flexDirection: 'column'}}>
                 <CssBaseline />
                 <SideNav  />
                 <Box
