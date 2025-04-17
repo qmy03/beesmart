@@ -63,26 +63,26 @@ const SkillListPage: React.FC = () => {
 
   useEffect(() => {
     apiService.get("/grades").then((response) => {
-      setGrades(response.data);
+      setGrades(response.data.data.grades);
     });
   }, []);
 
   useEffect(() => {
     apiService.get("/subjects").then((response) => {
-      setSubjects(response.data);
-      if (response.data && response.data.length > 0) {
-        setSelectedSubjectId(response.data[0].subjectId);
-        setSelectedSubjectName(response.data[0].subjectName);
+      setSubjects(response.data.data.subjects);
+      if (response.data.data.subjects && response.data.data.subjects.length > 0) {
+        setSelectedSubjectId(response.data.data.subjects[0].subjectId);
+        setSelectedSubjectName(response.data.data.subjects[0].subjectName);
       }
     });
   }, []);
 
   useEffect(() => {
     apiService.get("/book-types").then((response) => {
-      setBookTypes(response.data);
-      if (response.data && response.data.length > 0) {
-        setSelectedBookTypeId(response.data[0].bookId);
-        setSelectedBookTypeName(response.data[0].bookName);
+      setBookTypes(response.data.data.bookTypes);
+      if (response.data.data.bookTypes && response.data.data.bookTypes.length > 0) {
+        setSelectedBookTypeId(response.data.data.bookTypes[0].bookId);
+        setSelectedBookTypeName(response.data.data.bookTypes[0].bookName);
       }
     });
   }, []);
@@ -195,6 +195,10 @@ const SkillListPage: React.FC = () => {
         return "/literature.png";
       case "Toán Tiếng Anh":
         return "/calculator.png";
+      case "Tự nhiên và xã hội":
+        return "/nature_and_society.png";
+        case "Tin học":
+        return "/it.png";
       default:
         return "/subject-default.png"; // Default image
     }
@@ -277,8 +281,8 @@ const SkillListPage: React.FC = () => {
           sx={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "10px",
-            padding: "10px",
+            gap: 3.5,
+            padding: 2,
           }}
         >
           {subjects.map((subject) => (
@@ -304,9 +308,9 @@ const SkillListPage: React.FC = () => {
             >
               <img
                 src={getSubjectImage(subject.subjectName)}
-                alt={subject.subjectName}
-                width={40}
-                height={40}
+                alt={""}
+                width={60}
+                height={60}
               />
               <Typography
                 fontSize="14px"

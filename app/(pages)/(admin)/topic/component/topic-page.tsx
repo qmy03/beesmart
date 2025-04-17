@@ -31,7 +31,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 
 const TopicPage = () => {
-  const { accessToken } = useAuth(); // Lấy accessToken từ context
+  const { accessToken, isLoading, setIsLoading } = useAuth(); // Lấy accessToken từ context
   const [grades, setGrades] = useState<any[]>([]); // State để lưu danh sách lớp học
   const [selectedGradeId, setSelectedGradeId] = useState<string>(""); // State để lưu gradeId
   const [selectedGradeName, setSelectedGradeName] = useState<string>(""); // State để lưu gradeName
@@ -43,7 +43,6 @@ const TopicPage = () => {
   const [selectedBookName, setSelectedBookName] = useState<string>(""); // State để lưu bookTypeName
   const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1"); // State để lưu học kỳ đã chọn
   const [topics, setTopics] = useState<any[]>([]); // State để lưu các topics
-  const [loading, setLoading] = useState(false); // State để xử lý loading
   const [openDialog, setOpenDialog] = useState(false);
   const [selected, setSelected] = useState<readonly number[]>([]);
   // Thêm state quản lý snackbar
@@ -95,7 +94,7 @@ const TopicPage = () => {
 
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/grades", {
           // headers: {
@@ -110,17 +109,17 @@ const TopicPage = () => {
             setSelectedGradeId(firstGrade.gradeId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedGradeName(firstGrade.gradeName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/book-types", {
           // headers: {
@@ -135,17 +134,17 @@ const TopicPage = () => {
             setSelectedBookId(firstBook.bookId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedBookName(firstBook.bookName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/subjects", {
           // headers: {
@@ -160,11 +159,11 @@ const TopicPage = () => {
             setSelectedSubjectId(firstSubject.subjectId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedSubjectName(firstSubject.subjectName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]); // Chạy lại khi accessToken thay đổi
@@ -178,7 +177,7 @@ const TopicPage = () => {
       selectedBookName &&
       selectedSubjectName
     ) {
-      setLoading(true);
+      setIsLoading(true);
       // Gọi API để lấy topics theo gradeId và semester
       apiService
         .get(
@@ -193,11 +192,11 @@ const TopicPage = () => {
           console.log("response", response);
           setTopics(response.data.data.topics); // Lưu danh sách topics vào state
           setTotalItems(response.data.data.totalItems);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching topics:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [
@@ -267,7 +266,7 @@ const TopicPage = () => {
       selectedBookName &&
       selectedSubjectName
     ) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
@@ -276,11 +275,11 @@ const TopicPage = () => {
           setTopics(response.data.data.topics); // Set topics data
           // Set total items and total pages for pagination
           setTotalItems(response.data.data.totalItems);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching topics:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [selectedGradeName, selectedSemester, page, rowsPerPage, accessToken]);
@@ -294,7 +293,7 @@ const TopicPage = () => {
       selectedBookName &&
       selectedSubjectName
     ) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
@@ -303,11 +302,11 @@ const TopicPage = () => {
           setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
           // handleSnackbarOpen(response.data.message, "success");
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching topics:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   };
@@ -352,7 +351,7 @@ const TopicPage = () => {
         selectedBookName &&
         selectedSubjectName
       ) {
-        setLoading(true);
+        setIsLoading(true);
         apiService
           .get(
             `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
@@ -360,11 +359,11 @@ const TopicPage = () => {
           .then((response) => {
             setTopics(response.data.data.topics); // Update topics state
             setTotalItems(response.data.data.totalItems);
-            setLoading(false);
+            setIsLoading(false);
           })
           .catch((error) => {
             console.error("Error fetching topics after delete:", error);
-            setLoading(false);
+            setIsLoading(false);
           });
       }
     } catch (error: any) {
@@ -372,7 +371,7 @@ const TopicPage = () => {
 
       // Show error snackbar message
       handleSnackbarOpen("Xóa chủ đề thất bại", "error");
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -411,6 +410,7 @@ const TopicPage = () => {
           flexDirection: "column",
           padding: "0 10px",
           gap: 1,
+          height: "100%",
         }}
       >
         <Box
@@ -432,6 +432,35 @@ const TopicPage = () => {
 
         {/* Các Select */}
         <Box sx={{ display: "flex", gap: 2 }}>
+          <FormControl fullWidth size="small">
+            <TextField
+              select
+              value={selectedGradeName} // Hiển thị gradeName đã chọn
+              onChange={handleGradeChange}
+              label="Chọn lớp học"
+              fullWidth
+            >
+              {grades.map((grade) => (
+                <MenuItem
+                  key={grade.gradeId}
+                  value={grade.gradeName}
+                  sx={{
+                    "&.Mui-selected": {
+                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      color: "white",
+                      opacity: 1,
+                    },
+                    "&:hover": {
+                      backgroundColor: "#BCD181", // Màu khi hover
+                    },
+                  }}
+                >
+                  {grade.gradeName}
+                </MenuItem>
+              ))}
+            </TextField>
+          </FormControl>
+
           <FormControl fullWidth size="small">
             <TextField
               select
@@ -488,34 +517,6 @@ const TopicPage = () => {
               ))}
             </TextField>
           </FormControl>
-          <FormControl fullWidth size="small">
-            <TextField
-              select
-              value={selectedGradeName} // Hiển thị gradeName đã chọn
-              onChange={handleGradeChange}
-              label="Chọn lớp học"
-              fullWidth
-            >
-              {grades.map((grade) => (
-                <MenuItem
-                  key={grade.gradeId}
-                  value={grade.gradeName}
-                  sx={{
-                    "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
-                      color: "white",
-                      opacity: 1,
-                    },
-                    "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
-                    },
-                  }}
-                >
-                  {grade.gradeName}
-                </MenuItem>
-              ))}
-            </TextField>
-          </FormControl>
 
           <FormControl fullWidth size="small">
             <TextField
@@ -558,14 +559,29 @@ const TopicPage = () => {
         </Box>
 
         {/* Bảng danh sách topic */}
-        <Box>
-          <Box sx={{ boxShadow: 4, borderRadius: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            flexGrow: 1,
+            minHeight: 0,
+          }}
+        >
+          <Box
+            sx={{
+              boxShadow: 4,
+              borderRadius: 2,
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              mb: 1,
+            }}
+          >
             <TableContainer
               sx={{
-                borderRadius: 2,
-                flex: 1,
-                height: "70vh", // Set a fixed height for the table
-                overflowY: "auto", // Enable vertical scrolling if content overflows
+                borderRadius: "8px 8px 0 0",
+                flexGrow: 1,
+                overflow: "auto", // Enable vertical scrolling if content overflows
               }}
             >
               <Table size="small">
@@ -633,7 +649,7 @@ const TopicPage = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {loading ? (
+                  {isLoading ? (
                     // Hiển thị thông báo "Đang tải dữ liệu..." khi dữ liệu đang được tải
                     <TableRow>
                       {/* <TableCell colSpan={4} align="center">

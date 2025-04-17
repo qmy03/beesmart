@@ -25,8 +25,9 @@ import TextField from "@/app/components/textfield";
 import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+import ProgressOverlay from "@/app/components/progress-Overlay";
 const SubjectPage = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, isLoading, setIsLoading } = useAuth();
   const [subjects, setSubjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<readonly number[]>([]);
@@ -51,22 +52,22 @@ const SubjectPage = () => {
 
   const fetchSubjects = (query = "") => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
 
       const requestBody = query ? { bookName: query } : {};
 
       apiService
         .get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
-          params: query ? { subjectName: query } : undefined,
+          params: query ? { search: query } : undefined,
         })
         .then((response) => {
           setSubjects(response.data.data.subjects);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching book types:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   };
@@ -94,7 +95,7 @@ const SubjectPage = () => {
 
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -102,11 +103,11 @@ const SubjectPage = () => {
         .then((response) => {
           console.log("AAAAAAAAAA", response.data);
           setSubjects(response.data.data.subjects);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
@@ -141,7 +142,7 @@ const SubjectPage = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
 
     const apiCall =
       editMode === "edit"
@@ -180,12 +181,12 @@ const SubjectPage = () => {
           error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại."
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
   const handleDeleteSubjects = () => {
     if (selected.length === 0) return;
 
-    setLoading(true);
+    setIsLoading(true);
     apiService
       .delete("/subjects", {
         data: selected, // Gửi mảng subjectIds
@@ -208,7 +209,7 @@ const SubjectPage = () => {
       .catch((error) => {
         console.error("Error deleting subjects:", error);
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -497,6 +498,7 @@ const SubjectPage = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+      <ProgressOverlay isLoading={isLoading}/>
     </Layout>
   );
 };

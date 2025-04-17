@@ -33,7 +33,7 @@ import CloseIcon from "@mui/icons-material/close";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 
 const LessonPage = () => {
-  const { accessToken } = useAuth(); // Lấy accessToken từ context
+  const { accessToken, isLoading, setIsLoading } = useAuth(); // Lấy accessToken từ context
   const [grades, setGrades] = useState<any[]>([]); // State để lưu danh sách lớp học
   const [selectedGradeId, setSelectedGradeId] = useState<string>(""); // State để lưu gradeId
   const [selectedGradeName, setSelectedGradeName] = useState<string>(""); // State để lưu gradeName
@@ -45,7 +45,6 @@ const LessonPage = () => {
   const [selectedBookId, setSelectedBookId] = useState<string>(""); // State để lưu bookTypeId
   const [selectedBookName, setSelectedBookName] = useState<string>(""); // State để lưu bookTypeName
   const [topics, setTopics] = useState<any[]>([]); // State để lưu các topics
-  const [loading, setLoading] = useState(false); // State để xử lý loading
   const [openDialog, setOpenDialog] = useState(false);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [checkedState, setCheckedState] = useState<Record<number, Set<number>>>(
@@ -169,7 +168,7 @@ const LessonPage = () => {
 
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/grades")
         .then((response) => {
@@ -180,17 +179,17 @@ const LessonPage = () => {
             setSelectedGradeId(firstGrade.gradeId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedGradeName(firstGrade.gradeName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]); // Chạy lại khi accessToken thay đổi
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/book-types", {
           // headers: {
@@ -205,17 +204,17 @@ const LessonPage = () => {
             setSelectedBookId(firstBook.bookId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedBookName(firstBook.bookName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/subjects", {
           // headers: {
@@ -231,11 +230,11 @@ const LessonPage = () => {
             setSelectedSubjectId(firstSubject.subjectId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
             setSelectedSubjectName(firstSubject.subjectName); // Đặt selectedGradeName là tên lớp học đầu tiên
           }
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]); // Chạy lại khi accessToken thay đổi
@@ -250,11 +249,17 @@ const LessonPage = () => {
     ) {
       fetchTopics();
     }
-  }, [selectedGradeName, selectedSemester, accessToken, selectedBookName, selectedSubjectName]);
+  }, [
+    selectedGradeName,
+    selectedSemester,
+    accessToken,
+    selectedBookName,
+    selectedSubjectName,
+  ]);
 
   const fetchTopics = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const response = await apiService.get(
         `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
       );
@@ -262,7 +267,7 @@ const LessonPage = () => {
     } catch (error) {
       console.error("Error fetching topics:", error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }; // Chạy lại khi gradeId hoặc semester thay đổi
 
@@ -325,7 +330,7 @@ const LessonPage = () => {
       selectedBookName &&
       selectedSubjectName
     ) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
@@ -334,11 +339,11 @@ const LessonPage = () => {
           setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
           // handleSnackbarOpen(response.data.message, "success");
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching topics:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   };
@@ -434,7 +439,7 @@ const LessonPage = () => {
     }
 
     try {
-      setLoading(true);
+      setIsLoading(true);
       const response = await apiService.delete("/lessons", {
         data: selected, // Send selected lesson IDs to delete
         headers: {
@@ -451,7 +456,7 @@ const LessonPage = () => {
       console.error("Failed to delete lessons:", error);
       handleSnackbarOpen("Failed to delete lessons", "error");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -491,6 +496,7 @@ const LessonPage = () => {
           flexDirection: "column",
           padding: "0 10px",
           gap: 1,
+          height: "100%",
         }}
       >
         <Box
@@ -517,6 +523,34 @@ const LessonPage = () => {
 
         {/* Các Select */}
         <Box sx={{ display: "flex", gap: 2 }}>
+          <FormControl fullWidth size="small">
+            <TextField
+              select
+              value={selectedGradeName} // Hiển thị gradeName đã chọn
+              onChange={handleGradeChange}
+              label="Chọn lớp học"
+              fullWidth
+            >
+              {grades.map((grade) => (
+                <MenuItem
+                  key={grade.gradeId}
+                  value={grade.gradeName}
+                  sx={{
+                    "&.Mui-selected": {
+                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      color: "white",
+                      opacity: 1,
+                    },
+                    "&:hover": {
+                      backgroundColor: "#BCD181", // Màu khi hover
+                    },
+                  }}
+                >
+                  {grade.gradeName}
+                </MenuItem>
+              ))}
+            </TextField>
+          </FormControl>
           <FormControl fullWidth size="small">
             <TextField
               select
@@ -573,34 +607,6 @@ const LessonPage = () => {
               ))}
             </TextField>
           </FormControl>
-          <FormControl fullWidth size="small">
-            <TextField
-              select
-              value={selectedGradeName} // Hiển thị gradeName đã chọn
-              onChange={handleGradeChange}
-              label="Chọn lớp học"
-              fullWidth
-            >
-              {grades.map((grade) => (
-                <MenuItem
-                  key={grade.gradeId}
-                  value={grade.gradeName}
-                  sx={{
-                    "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
-                      color: "white",
-                      opacity: 1,
-                    },
-                    "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
-                    },
-                  }}
-                >
-                  {grade.gradeName}
-                </MenuItem>
-              ))}
-            </TextField>
-          </FormControl>
 
           <FormControl fullWidth size="small">
             <TextField
@@ -643,7 +649,8 @@ const LessonPage = () => {
         </Box>
         <TextField
           sx={{
-            marginY: 1,
+            marginTop: 0,
+            marginBottom: 1,
             bgcolor: "#FFF",
             borderRadius: "4px",
           }}
@@ -662,144 +669,162 @@ const LessonPage = () => {
             ),
           }}
         />
-        <Box>
-          <>
-            <Box
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            flexGrow: 1,
+            minHeight: 0,
+          }}
+        >
+          <Box
+            sx={{
+              boxShadow: 4,
+              borderRadius: 2,
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+              mb: 1,
+            }}
+          >
+            <TableContainer
               sx={{
-                boxShadow: 4,
-                borderRadius: 2,
+                borderRadius: "8px 8px 0 0",
+                flexGrow: 1,
+                overflow: "auto",
               }}
             >
-              <TableContainer
-                sx={{
-                  // boxShadow: 4,
-                  borderRadius: 2,
-                  flex: 1,
-                  height: "60vh",
-                  // width: "76vw", // Set a fixed height for the table
-                  overflow: "auto", // Enable vertical scrolling if content overflows
-                }}
-              >
-                <Table size="small">
-                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                    <TableRow>
-                      <TableCell sx={{ width: "5%" }}>
-                        <IconButton></IconButton>
-                      </TableCell>
-                      <TableCell sx={{ width: "5%" }}></TableCell>
-                      <TableCell sx={{ width: "30%", paddingY: "12px" }}>
-                        Tên chủ điểm
-                      </TableCell>
-                      <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
-                      <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
-                      {/* <TableCell sx={{ width: "25%" }}></TableCell> */}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow></TableRow>
-                    ) : (
-                      paginatedTopics.map((topic) => (
-                        <>
-                          {/* Topic row */}
-                          <TableRow key={topic.topicId}>
-                            <TableCell>
-                              <Checkbox
-                                sx={{ p: 0, m: 0 }}
-                                size="small"
-                                checked={
-                                  checkedState[topic.topicId]?.size ===
+              <Table size="small">
+                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                  <TableRow>
+                    <TableCell sx={{ width: "5%" }}>
+                      <IconButton></IconButton>
+                    </TableCell>
+                    <TableCell sx={{ width: "5%" }}></TableCell>
+                    <TableCell sx={{ width: "30%", paddingY: "12px" }}>
+                      Tên chủ điểm
+                    </TableCell>
+                    <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
+                    <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
+                    {/* <TableCell sx={{ width: "25%" }}></TableCell> */}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow></TableRow>
+                  ) : (
+                    paginatedTopics.map((topic) => (
+                      <>
+                        {/* Topic row */}
+                        <TableRow key={topic.topicId}>
+                          <TableCell>
+                            <Checkbox
+                              sx={{
+                                color: "#637381",
+                                "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                                  color: "#99BC4D",
+                                },
+                                p: 0,
+                              }}
+                              size="small"
+                              checked={
+                                checkedState[topic.topicId]?.size ===
+                                (topic.lessons?.length || 0)
+                              }
+                              indeterminate={
+                                checkedState[topic.topicId]?.size > 0 &&
+                                checkedState[topic.topicId]?.size <
                                   (topic.lessons?.length || 0)
-                                }
-                                indeterminate={
-                                  checkedState[topic.topicId]?.size > 0 &&
-                                  checkedState[topic.topicId]?.size <
-                                    (topic.lessons?.length || 0)
-                                }
-                                onChange={(event) =>
-                                  handleTopicCheckboxChange(
-                                    topic.topicId,
-                                    event.target.checked
-                                  )
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <IconButton
-                                onClick={() => handleExpandClick(topic.topicId)}
-                              >
-                                {expandedRows.has(topic.topicId) ? (
-                                  <ExpandLess fontSize="small" />
-                                ) : (
-                                  <ExpandMore fontSize="small" />
-                                )}
-                              </IconButton>
-                            </TableCell>
+                              }
+                              onChange={(event) =>
+                                handleTopicCheckboxChange(
+                                  topic.topicId,
+                                  event.target.checked
+                                )
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              onClick={() => handleExpandClick(topic.topicId)}
+                            >
+                              {expandedRows.has(topic.topicId) ? (
+                                <ExpandLess fontSize="small" />
+                              ) : (
+                                <ExpandMore fontSize="small" />
+                              )}
+                            </IconButton>
+                          </TableCell>
 
-                            <TableCell>{topic.topicName}</TableCell>
-                            <TableCell></TableCell>
-                            {/* <TableCell></TableCell> */}
-                            <TableCell></TableCell>
-                          </TableRow>
-                          {expandedRows.has(topic.topicId) &&
-                            topic.lessons.map((lesson) => (
-                              <TableRow key={lesson.lessonId}>
-                                <TableCell>
-                                  <Checkbox
-                                    sx={{ p: 0, m: 0 }}
-                                    size="small"
-                                    checked={
-                                      checkedState[topic.topicId]?.has(
-                                        lesson.lessonId
-                                      ) || false
-                                    }
-                                    onChange={(event) =>
-                                      handleLessonCheckboxChange(
-                                        topic.topicId,
-                                        lesson.lessonId,
-                                        event.target.checked
-                                      )
-                                    }
-                                    onClick={() => setOpenDelete(true)}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <IconButton
-                                    onClick={() =>
-                                      handleEditLesson(
-                                        lesson.lessonId,
-                                        topic.topicId
-                                      )
-                                    }
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </TableCell>
-                                <TableCell sx={{ paddingLeft: 5 }}>
-                                  Bài học số {lesson.lessonNumber}
-                                </TableCell>
-                                <TableCell>{lesson.lessonName}</TableCell>
-                                <TableCell>{lesson.description}</TableCell>
-                                {/* <TableCell>{lesson.content}</TableCell> */}
-                              </TableRow>
-                            ))}
-                        </>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={getTotalLessonsCount()}
-                page={page}
-                onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </Box>
-          </>
-          {/* )} */}
+                          <TableCell>{topic.topicName}</TableCell>
+                          <TableCell></TableCell>
+                          {/* <TableCell></TableCell> */}
+                          <TableCell></TableCell>
+                        </TableRow>
+                        {expandedRows.has(topic.topicId) &&
+                          topic.lessons.map((lesson) => (
+                            <TableRow key={lesson.lessonId}>
+                              <TableCell>
+                                <Checkbox
+                                  sx={{
+                                    color: "#637381",
+                                    "&.Mui-checked, &.MuiCheckbox-indeterminate":
+                                      {
+                                        color: "#99BC4D",
+                                      },
+                                    p: 0,
+                                  }}
+                                  size="small"
+                                  checked={
+                                    checkedState[topic.topicId]?.has(
+                                      lesson.lessonId
+                                    ) || false
+                                  }
+                                  onChange={(event) =>
+                                    handleLessonCheckboxChange(
+                                      topic.topicId,
+                                      lesson.lessonId,
+                                      event.target.checked
+                                    )
+                                  }
+                                  onClick={() => setOpenDelete(true)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <IconButton
+                                  onClick={() =>
+                                    handleEditLesson(
+                                      lesson.lessonId,
+                                      topic.topicId
+                                    )
+                                  }
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </TableCell>
+                              <TableCell sx={{ paddingLeft: 5 }}>
+                                Bài học số {lesson.lessonNumber}
+                              </TableCell>
+                              <TableCell>{lesson.lessonName}</TableCell>
+                              <TableCell>{lesson.description}</TableCell>
+                              {/* <TableCell>{lesson.content}</TableCell> */}
+                            </TableRow>
+                          ))}
+                      </>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={getTotalLessonsCount()}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </Box>
         </Box>
       </Box>
       <DialogPopup

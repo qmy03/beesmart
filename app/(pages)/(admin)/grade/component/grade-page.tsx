@@ -26,9 +26,8 @@ import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 const GradePage = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, isLoading, setIsLoading } = useAuth();
   const [grades, setGrades] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<readonly number[]>([]);
@@ -50,7 +49,7 @@ const GradePage = () => {
 
   const fetchGrades = (query = "") => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
 
       const requestBody = query ? { gradeName: query } : {};
 
@@ -62,11 +61,11 @@ const GradePage = () => {
         .then((response) => {
           console.log("Fetched grades:", response.data.data.grades);
           setGrades(response.data.data.grades);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching book types:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   };
@@ -93,18 +92,18 @@ const GradePage = () => {
   };
   useEffect(() => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
       apiService
         .get("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
           setGrades(response.data.data.grades);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching grades:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
@@ -140,7 +139,7 @@ const GradePage = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
 
     const apiCall =
       editMode === "edit"
@@ -179,12 +178,12 @@ const GradePage = () => {
           error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại."
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
   const handleDeleteSubjects = () => {
     if (selected.length === 0) return;
 
-    setLoading(true);
+    setIsLoading(true);
     apiService
       .delete("/grades", {
         data: selected,
@@ -207,7 +206,7 @@ const GradePage = () => {
       .catch((error) => {
         console.error("Error deleting subjects:", error);
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -28,9 +28,8 @@ import CloseIcon from "@mui/icons-material/close";
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 const GradePage = () => {
-  const { accessToken } = useAuth(); 
+  const { accessToken, isLoading, setIsLoading } = useAuth(); 
   const [bookTypes, setBookTypes] = useState<any[]>([]); 
-  const [loading, setLoading] = useState(false); 
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
@@ -54,7 +53,7 @@ const GradePage = () => {
 
   const fetchBookTypes = (query = "") => {
     if (accessToken) {
-      setLoading(true);
+      setIsLoading(true);
 
       const requestBody = query ? { bookName: query } : {};
 
@@ -65,11 +64,11 @@ const GradePage = () => {
         })
         .then((response) => {
           setBookTypes(response.data.data.bookTypes);
-          setLoading(false);
+          setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching book types:", error);
-          setLoading(false);
+          setIsLoading(false);
         });
     }
   };
@@ -127,7 +126,7 @@ const GradePage = () => {
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
 
     const apiCall =
       editMode === "edit"
@@ -162,13 +161,13 @@ const GradePage = () => {
           error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại."
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
 
   const handleDeleteBooks = () => {
     if (selected.length === 0) return;
 
-    setLoading(true);
+    setIsLoading(true);
     apiService
       .delete("/book-types", {
         data: selected, 
@@ -190,7 +189,7 @@ const GradePage = () => {
         setSnackbarSeverity("error");
         setSnackbarOpen(true);
       })
-      .finally(() => setLoading(false));
+      .finally(() => setIsLoading(false));
   };
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {

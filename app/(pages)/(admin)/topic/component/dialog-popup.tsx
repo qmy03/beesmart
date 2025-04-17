@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from "@mui/material";
 import TextField from "@/app/components/textfield";
 import { Button } from "@/app/components/button";
 import apiService from "@/app/untils/api";
@@ -17,7 +23,9 @@ interface DialogPopupProps {
   onSuccess: () => string;
 }
 
-const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: any }> = ({
+const DialogPopup: React.FC<
+  DialogPopupProps & { type: "add" | "edit"; topic?: any }
+> = ({
   open,
   onClose,
   onTopicAdded,
@@ -28,7 +36,7 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
   selectedSubjectId,
   type,
   topic,
-  onSuccess
+  onSuccess,
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
   const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
@@ -39,7 +47,6 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
       setTopicNumber(topic.topicNumber || 1);
     }
   }, [type, topic]);
-
   const handleSubmit = () => {
     const body = {
       topicName,
@@ -50,17 +57,20 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
     if (type === "add") {
       // Thêm mới topic
       apiService
-        .post(`/topics/grade/${selectedGradeId}/subject/${selectedSubjectId}/bookType/${selectedBookId}`, body, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
+        .post(
+          `/topics/grade/${selectedGradeId}/subject/${selectedSubjectId}/bookType/${selectedBookId}`,
+          body,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        )
         .then((response) => {
           console.log("Topic added:", response);
           if (response.status === 200) {
             onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onTopicAdded(); // Gọi callback để làm mới danh sách
             onClose(); // Đóng dialog sau khi thành công
           }
-          onTopicAdded();
-          onClose();
         })
         .catch((error) => {
           console.error("Error adding topic:", error);
@@ -75,10 +85,9 @@ const DialogPopup: React.FC<DialogPopupProps & { type: "add" | "edit"; topic?: a
           console.log("Topic updated:", response);
           if (response.status === 200) {
             onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
+            onTopicAdded(); // Gọi callback để làm mới danh sách
             onClose(); // Đóng dialog sau khi thành công
           }
-          onTopicAdded();
-          onClose();
         })
         .catch((error) => {
           console.error("Error updating topic:", error);
