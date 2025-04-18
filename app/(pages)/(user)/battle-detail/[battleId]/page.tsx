@@ -1,12 +1,12 @@
 "use client";
-import HomePage from "@/app/components/user/Home/home-page";
+import BattleDetailPage from "@/app/components/user/BattleDetail/battle-detail";
 import { AuthProvider } from "@/app/hooks/AuthContext";
 
-export default function Home() {
+export default function BattleDetail() {
     return (
         <>
         <AuthProvider>
-            <HomePage/>
+            <BattleDetailPage/>
         </AuthProvider>
         </>
     )

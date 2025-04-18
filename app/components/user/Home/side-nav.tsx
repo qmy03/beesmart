@@ -456,14 +456,14 @@ const SideNav: React.FC = () => {
           >
             Liên hệ
           </Button>
-          {/* <Button
+          <Button
             fullWidth
             variant="text"
             color="primary"
-            onClick={() => handleNavigation("/minigame")}
+            onClick={() => handleNavigation("/battle-home")}
           >
-            Trò chơi
-          </Button> */}
+            Đấu trường
+          </Button>
         </Box>
       </AppBar>
     </>
