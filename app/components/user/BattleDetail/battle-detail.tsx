@@ -19,8 +19,10 @@ import {
   Divider,
   Avatar,
   CircularProgress,
+  Checkbox,
 } from "@mui/material";
 import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
+import TextField from "../../textfield";
 
 export default function BattleDetailPage() {
   const { accessToken, userInfo } = useAuth();
@@ -41,14 +43,16 @@ export default function BattleDetailPage() {
   const [totalQuestions, setTotalQuestions] = useState(10);
   const [isAnswered, setIsAnswered] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
+  const [textAnswer, setTextAnswer] = useState("");
   const [battleResults, setBattleResults] = useState<any>(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Player and opponent info
   const [playerInfo, setPlayerInfo] = useState<any>(null);
   const [opponentInfo, setOpponentInfo] = useState<any>(null);
-  
+
   // Loading state
   const [loadingQuestion, setLoadingQuestion] = useState(false);
 
@@ -60,10 +64,12 @@ export default function BattleDetailPage() {
         const response = await apiService.get(`/battles/${battleId}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        
+
         const battleData = response.data.data;
+
+        console.log("Battle data:", battleData); // Debugging line
         setBattleInfo(battleData);
-        
+
         // Set player and opponent info
         if (battleData.players && battleData.players.length >= 2) {
           const currentPlayer = battleData.players.find(
@@ -72,11 +78,10 @@ export default function BattleDetailPage() {
           const opponent = battleData.players.find(
             (p: any) => p.userId !== userInfo.userId
           );
-          
+
           setPlayerInfo(currentPlayer);
           setOpponentInfo(opponent);
-          
-          // Fetch first question immediately
+
           fetchFirstQuestion();
         }
       } catch (error) {
@@ -88,7 +93,7 @@ export default function BattleDetailPage() {
     fetchBattleInfo();
 
     const socket = new WebSocket(
-      `ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&token=${accessToken}`
+      `ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&battle-token=${accessToken}`
     );
 
     socket.onopen = () => {
@@ -98,14 +103,18 @@ export default function BattleDetailPage() {
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        console.log("WebSocket message received:", msg);  // Add this for debugging
-    
+        console.log("WebSocket message received:", msg); // Add this for debugging
+
         switch (msg.type) {
-          case "QUESTION":
+          case "MULTI_SELECT":
+          case "MULTIPLE_CHOICE":
+          case "FILL_IN_THE_BLANK":
             if (msg.question) {
               handleNewQuestion(msg);
             } else {
-              console.warn("Received QUESTION message but no question was attached");
+              console.warn(
+                "Received QUESTION message but no question was attached"
+              );
             }
             break;
           case "SCORE_UPDATE":
@@ -151,7 +160,9 @@ export default function BattleDetailPage() {
     socket.onclose = () => {
       console.log("WebSocket closed, attempting to reconnect...");
       setTimeout(() => {
-        const newSocket = new WebSocket(`ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&token=${accessToken}`);
+        const newSocket = new WebSocket(
+          `ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&battle-token=${accessToken}`
+        );
         setWs(newSocket);
         // Set up new socket event handlers
       }, 1000);
@@ -167,7 +178,7 @@ export default function BattleDetailPage() {
 
   const fetchFirstQuestion = async () => {
     if (!battleId || !accessToken) return;
-    
+
     setLoadingQuestion(true);
     try {
       await apiService.post(
@@ -186,11 +197,104 @@ export default function BattleDetailPage() {
     }
   };
 
+  // const handleNewQuestion = (msg: any) => {
+  //   setQuestion(msg.question);
+  //   setTimer(30);
+  //   setIsAnswered(false);
+  //   setSelectedAnswer(null);
+
+  //   // Update question number if provided
+  //   if (msg.currentQuestion !== undefined) {
+  //     setQuestionNumber(msg.currentQuestion);
+  //   }
+  //   if (msg.totalQuestions !== undefined) {
+  //     setTotalQuestions(msg.totalQuestions);
+  //   }
+
+  //   // Reset timer for new question
+  //   if (timerRef.current) clearInterval(timerRef.current);
+
+  //   timerRef.current = setInterval(() => {
+  //     setTimer((prev) => {
+  //       if (prev <= 1) {
+  //         clearInterval(timerRef.current!);
+
+  //         // 👇 Ensure this runs correctly by wrapping in setTimeout
+  //         setTimeout(() => {
+  //           if (!isAnswered && question?.questionId) {
+  //             console.log("⏰ Timer expired. Sending null answer...");
+  //             handleAnswer(null);
+  //           }
+  //         }, 50); // Delay slightly to ensure state updates flush
+
+  //         return 0;
+  //       }
+
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+  // };
+  // const handleNewQuestion = (msg: any) => {
+  //   setQuestion({
+  //     ...msg.question,
+  //     type: msg.type, // Add the type from the root message object to the question
+  //   });
+  //   setTimer(30);
+  //   setIsAnswered(false);
+  //   setSelectedAnswer(null);
+  //   setSelectedAnswers([]); // Reset selected answers for multi-select questions
+  //   setTextAnswer(""); // Reset text answer for fill-in-the-blank questions
+
+  //   // Update question number if provided
+  //   if (msg.currentQuestion !== undefined) {
+  //     setQuestionNumber(msg.currentQuestion);
+  //   }
+  //   if (msg.totalQuestions !== undefined) {
+  //     setTotalQuestions(msg.totalQuestions);
+  //   }
+
+  //   // Reset timer for new question
+  //   if (timerRef.current) clearInterval(timerRef.current);
+
+  //   timerRef.current = setInterval(() => {
+  //     setTimer((prev) => {
+  //       if (prev <= 1) {
+  //         clearInterval(timerRef.current!);
+
+  //         // 👇 Ensure this runs correctly by wrapping in setTimeout
+  //         // setTimeout(() => {
+  //         //   if (!isAnswered && msg.question?.questionId) {
+  //         //     console.log("⏰ Timer expired. Sending null answer...");
+  //         //     handleAnswer(null);
+  //         //   }
+  //         // }, 50); // Delay slightly to ensure state updates flush
+  //         setTimeout(() => {
+  //           console.log("Current isAnswered state:", isAnswered);
+  //           console.log("Current question state:", question);
+  //           if (!isAnswered && msg.question?.questionId) {
+  //             console.log("⏰ Timer expired. Sending null answer...");
+  //             handleAnswer(null);
+  //           }
+  //         }, 50);
+
+  //         return 0;
+  //       }
+
+  //       return prev - 1;
+  //     });
+  //   }, 1000);
+  // };
+
   const handleNewQuestion = (msg: any) => {
-    setQuestion(msg.question);
+    setQuestion({
+      ...msg.question,
+      type: msg.type, // Add the type from the root message object to the question
+    });
     setTimer(30);
     setIsAnswered(false);
     setSelectedAnswer(null);
+    setSelectedAnswers([]); // Reset selected answers for multi-select questions
+    setTextAnswer(""); // Reset text answer for fill-in-the-blank questions
 
     // Update question number if provided
     if (msg.currentQuestion !== undefined) {
@@ -207,23 +311,62 @@ export default function BattleDetailPage() {
       setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-    
-          // 👇 Ensure this runs correctly by wrapping in setTimeout
+
+          // Store the current question in a variable to use in the timeout
+          const currentQuestion = msg.question;
+
+          // Use setTimeout to ensure state updates have completed
           setTimeout(() => {
-            if (!isAnswered && question?.questionId) {
+            // Check if we've already answered and if we have a valid question
+            if (!isAnswered && currentQuestion?.questionId) {
               console.log("⏰ Timer expired. Sending null answer...");
-              handleAnswer(null);
+
+              // Call handleAnswer directly instead of relying on state
+              // that might not be updated yet
+              handleTimeExpiredAnswer(currentQuestion);
             }
-          }, 50); // Delay slightly to ensure state updates flush
-    
+          }, 100);
+
           return 0;
         }
-    
+
         return prev - 1;
       });
-    }, 1000);    
+    }, 1000);
   };
 
+  // Add a new function specifically for handling time expired answers
+  const handleTimeExpiredAnswer = async (currentQuestion: any) => {
+    if (!currentQuestion || !userInfo?.userId) return;
+
+    console.log(
+      "Handling time expired answer for question:",
+      currentQuestion.questionId
+    );
+
+    try {
+      // Set isAnswered to true to prevent multiple submissions
+      setIsAnswered(true);
+
+      const timeTaken = 30; // Full time used
+
+      let payload = {
+        userId: userInfo.userId,
+        questionId: currentQuestion.questionId,
+        answer: null, // Always send null when time expires
+        timeTaken,
+      };
+
+      console.log("Submitting time-expired null answer:", payload);
+      const res = await apiService.post(`/battles/${battleId}/answer`, payload, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      console.log("Time-expired answer submitted successfully:", res);
+    } catch (error) {
+      console.error("Error submitting time-expired answer:", error);
+      setError("Failed to submit answer");
+    }
+  };
   useEffect(() => {
     // Cleanup timer when component unmounts
     return () => {
@@ -250,7 +393,7 @@ export default function BattleDetailPage() {
     setFinished(true);
     setBattleResults(msg.results || null);
     if (timerRef.current) clearInterval(timerRef.current);
-    
+
     // Show results dialog after a short delay
     setTimeout(() => {
       setShowResultDialog(true);
@@ -270,26 +413,88 @@ export default function BattleDetailPage() {
     }
   };
 
-  const handleAnswer = async (answerOption: string | null) => {
-    if (!question || !userInfo?.userId || isAnswered) return;
+  // const handleAnswer = async (answerOption: string | null) => {
+  //   if (!question || !userInfo?.userId || isAnswered) return;
+
+  //   try {
+  //     setIsAnswered(true);
+  //     const timeTaken = 30 - timer;
+
+  //     await apiService.post(
+  //       `/battles/${battleId}/answer`,
+  //       {
+  //         userId: userInfo.userId,
+  //         questionId: question.questionId,
+  //         answer: answerOption,
+  //         timeTaken,
+  //       },
+  //       {
+  //         headers: { Authorization: `Bearer ${accessToken}` },
+  //       }
+  //     );
+  //     // The server will send the next question when both players have answered
+  //   } catch (error) {
+  //     console.error("Error submitting answer:", error);
+  //     setError("Failed to submit answer");
+  //   }
+  // };
+  const handleAnswer = async (answerOption: string | null | string[]) => {
+    console.log("handleAnswer called with:", {
+      question: question,
+      userId: userInfo?.userId,
+      isAnswered: isAnswered,
+    });
+
+    if (!question || !userInfo?.userId || isAnswered) {
+      console.log("Early return condition met in handleAnswer");
+      return;
+    }
 
     try {
       setIsAnswered(true);
       const timeTaken = 30 - timer;
 
-      await apiService.post(
-        `/battles/${battleId}/answer`,
-        {
+      let payload;
+
+      if (question.type === "MULTIPLE_CHOICE") {
+        payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
           answer: answerOption,
           timeTaken,
-        },
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      // The server will send the next question when both players have answered
+        };
+      } else if (question.type === "MULTI_SELECT") {
+        // Gửi mảng các câu trả lời được chọn
+        const selectedOptions = selectedAnswers.map(
+          (index) => question.options[index]
+        );
+        payload = {
+          userId: userInfo.userId,
+          questionId: question.questionId,
+          answer: selectedOptions,
+          timeTaken,
+        };
+      } else if (question.type === "FILL_IN_THE_BLANK") {
+        // Gửi câu trả lời text
+        payload = {
+          userId: userInfo.userId,
+          questionId: question.questionId,
+          answer: textAnswer,
+          timeTaken,
+        };
+      } else {
+        // Mặc định gửi answerOption nếu không match các loại trên
+        payload = {
+          userId: userInfo.userId,
+          questionId: question.questionId,
+          answer: answerOption,
+          timeTaken,
+        };
+      }
+      console.log("Submitting answer:", payload); // Debugging line
+      await apiService.post(`/battles/${battleId}/answer`, payload, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
     } catch (error) {
       console.error("Error submitting answer:", error);
       setError("Failed to submit answer");
@@ -300,6 +505,61 @@ export default function BattleDetailPage() {
     const answerIndex = parseInt(e.target.value);
     setSelectedAnswer(answerIndex);
     handleAnswer(question.options[answerIndex]);
+  };
+  const handleCheckboxChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    const newSelectedAnswers = [...selectedAnswers];
+
+    if (e.target.checked) {
+      // Thêm câu trả lời vào danh sách nếu được chọn
+      if (!newSelectedAnswers.includes(index)) {
+        newSelectedAnswers.push(index);
+      }
+    } else {
+      // Xóa câu trả lời khỏi danh sách nếu bỏ chọn
+      const idx = newSelectedAnswers.indexOf(index);
+      if (idx > -1) {
+        newSelectedAnswers.splice(idx, 1);
+      }
+    }
+
+    setSelectedAnswers(newSelectedAnswers);
+  };
+
+  // Handler cho việc submit câu trả lời MULTI_SELECT
+  // const handleMultiSelectSubmit = () => {
+  //   if (selectedAnswers.length > 0) {
+  //     const selectedOptions = selectedAnswers.map(
+  //       (index) => question.options[index]
+  //     );
+  //     handleAnswer(selectedOptions);
+  //   } else {
+  //     handleAnswer(null);
+  //   }
+  // };
+
+  // // Handler cho việc submit câu trả lời FILL_IN_THE_BLANK
+  // const handleTextSubmit = () => {
+  //   handleAnswer(textAnswer);
+  // };
+  const handleMultiSelectSubmit = () => {
+    if (!question) return;
+
+    if (selectedAnswers.length > 0) {
+      const selectedOptions = selectedAnswers.map(
+        (index) => question.options[index]
+      );
+      handleAnswer(selectedOptions);
+    } else {
+      handleAnswer(null);
+    }
+  };
+
+  const handleTextSubmit = () => {
+    if (!question) return;
+    handleAnswer(textAnswer);
   };
 
   const getPlayerStatus = () => {
@@ -377,10 +637,17 @@ export default function BattleDetailPage() {
                 borderBottom: "1px solid #E0E0E0",
               }}
             >
-              <Box sx={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Box
+                sx={{
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
                 <Typography fontWeight={700}>You</Typography>
-                <Avatar 
-                  src={playerInfo?.avatar || ""} 
+                <Avatar
+                  src={playerInfo?.avatar || ""}
                   alt={playerInfo?.username || "You"}
                   sx={{ width: 50, height: 50, mb: 1 }}
                 />
@@ -394,10 +661,17 @@ export default function BattleDetailPage() {
                 <Typography>{getPlayerStatus()}</Typography>
               </Box>
 
-              <Box sx={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Box
+                sx={{
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
                 <Typography fontWeight={700}>Opponent</Typography>
-                <Avatar 
-                  src={opponentInfo?.avatar || ""} 
+                <Avatar
+                  src={opponentInfo?.avatar || ""}
                   alt={opponentInfo?.username || "Opponent"}
                   sx={{ width: 50, height: 50, mb: 1 }}
                 />
@@ -446,8 +720,8 @@ export default function BattleDetailPage() {
                   },
                 }}
               />
-              <Button 
-                onClick={fetchFirstQuestion} 
+              <Button
+                onClick={fetchFirstQuestion}
                 sx={{ mt: 2 }}
                 disabled={loadingQuestion}
               >
@@ -554,46 +828,217 @@ export default function BattleDetailPage() {
                       )}
 
                       {/* Answer options */}
-                      <FormControl
+                      {/* <FormControl
                         component="fieldset"
                         sx={{ width: "100%", marginTop: 2 }}
                       >
                         <RadioGroup
                           value={selectedAnswer ?? -1}
                           onChange={handleRadioChange}
-                          sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                          }}
                         >
                           {question.options &&
-                            question.options.map((option: string, index: number) => (
-                              <FormControlLabel
-                                key={index}
-                                value={index}
-                                control={<Radio />}
-                                label={option}
-                                disabled={isAnswered || timer === 0}
-                                sx={{
-                                  backgroundColor: "#F5F5F5",
-                                  borderRadius: "8px",
-                                  padding: "8px 16px",
-                                  margin: 0,
-                                  "& .MuiFormControlLabel-label": {
-                                    width: "100%",
-                                    fontSize: "16px",
-                                  },
-                                  "&:hover": {
-                                    backgroundColor: isAnswered
-                                      ? "#F5F5F5"
-                                      : "#E8F5E9",
-                                  },
-                                }}
-                              />
-                            ))}
+                            question.options.map(
+                              (option: string, index: number) => (
+                                <FormControlLabel
+                                  key={index}
+                                  value={index}
+                                  control={<Radio />}
+                                  label={option}
+                                  disabled={isAnswered || timer === 0}
+                                  sx={{
+                                    backgroundColor: "#F5F5F5",
+                                    borderRadius: "8px",
+                                    padding: "8px 16px",
+                                    margin: 0,
+                                    "& .MuiFormControlLabel-label": {
+                                      width: "100%",
+                                      fontSize: "16px",
+                                    },
+                                    "&:hover": {
+                                      backgroundColor: isAnswered
+                                        ? "#F5F5F5"
+                                        : "#E8F5E9",
+                                    },
+                                  }}
+                                />
+                              )
+                            )}
                         </RadioGroup>
-                      </FormControl>
+                      </FormControl> */}
+                      {question.type === "MULTIPLE_CHOICE" && (
+                        <FormControl
+                          component="fieldset"
+                          sx={{ width: "100%", marginTop: 2 }}
+                        >
+                          <RadioGroup
+                            value={selectedAnswer ?? -1}
+                            onChange={handleRadioChange}
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                            }}
+                          >
+                            {question.options &&
+                              question.options.map(
+                                (option: string, index: number) => (
+                                  <FormControlLabel
+                                    key={index}
+                                    value={index}
+                                    control={<Radio />}
+                                    label={option}
+                                    disabled={isAnswered || timer === 0}
+                                    sx={{
+                                      backgroundColor: "#F5F5F5",
+                                      borderRadius: "8px",
+                                      padding: "8px 16px",
+                                      margin: 0,
+                                      "& .MuiFormControlLabel-label": {
+                                        width: "100%",
+                                        fontSize: "16px",
+                                      },
+                                      "&:hover": {
+                                        backgroundColor: isAnswered
+                                          ? "#F5F5F5"
+                                          : "#E8F5E9",
+                                      },
+                                    }}
+                                  />
+                                )
+                              )}
+                          </RadioGroup>
+                        </FormControl>
+                      )}
+
+                      {/* Câu hỏi MULTI_SELECT */}
+                      {question.type === "MULTI_SELECT" && (
+                        <Box sx={{ width: "100%", marginTop: 2 }}>
+                          <Typography
+                            sx={{
+                              marginBottom: 2,
+                              color: "#555",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Select all correct answers:
+                          </Typography>
+
+                          {question.options &&
+                            question.options.map(
+                              (option: string, index: number) => (
+                                <FormControlLabel
+                                  key={index}
+                                  control={
+                                    <Checkbox
+                                      checked={selectedAnswers.includes(index)}
+                                      onChange={(e) =>
+                                        handleCheckboxChange(e, index)
+                                      }
+                                      disabled={isAnswered || timer === 0}
+                                    />
+                                  }
+                                  label={option}
+                                  sx={{
+                                    display: "flex",
+                                    width: "100%",
+                                    backgroundColor: "#F5F5F5",
+                                    borderRadius: "8px",
+                                    padding: "8px 16px",
+                                    marginY: 1,
+                                    "& .MuiFormControlLabel-label": {
+                                      width: "100%",
+                                      fontSize: "16px",
+                                    },
+                                    "&:hover": {
+                                      backgroundColor: isAnswered
+                                        ? "#F5F5F5"
+                                        : "#E8F5E9",
+                                    },
+                                  }}
+                                />
+                              )
+                            )}
+
+                          {/* Submit button đặc biệt cho Multi-select */}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                              mt: 2,
+                            }}
+                          >
+                            <Button
+                              onClick={handleMultiSelectSubmit}
+                              disabled={isAnswered || timer === 0}
+                              sx={{
+                                backgroundColor: "#99BC4D",
+                                color: "white",
+                                "&:hover": { backgroundColor: "#7A9F38" },
+                              }}
+                            >
+                              Submit Answers
+                            </Button>
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Câu hỏi FILL_IN_THE_BLANK */}
+                      {question.type === "FILL_IN_THE_BLANK" && (
+                        <Box sx={{ width: "100%", marginTop: 2 }}>
+                          <Typography
+                            sx={{
+                              marginBottom: 2,
+                              color: "#555",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Fill in your answer:
+                          </Typography>
+
+                          <TextField
+                            value={textAnswer}
+                            onChange={(e) => setTextAnswer(e.target.value)}
+                            disabled={isAnswered || timer === 0}
+                            sx={{ width: "100%", bgcolor: "white" }}
+                            placeholder="Type your answer here"
+                          />
+
+                          {/* Submit button đặc biệt cho Fill-in-the-blank */}
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "flex-end",
+                              mt: 2,
+                            }}
+                          >
+                            <Button
+                              onClick={handleTextSubmit}
+                              disabled={isAnswered || timer === 0}
+                              sx={{
+                                backgroundColor: "#99BC4D",
+                                color: "white",
+                                "&:hover": { backgroundColor: "#7A9F38" },
+                              }}
+                            >
+                              Submit Answer
+                            </Button>
+                          </Box>
+                        </Box>
+                      )}
 
                       {timer === 0 && !isAnswered && (
                         <Typography
-                          sx={{ marginTop: 2, fontWeight: 500, color: "#D32F2F", textAlign: "center" }}
+                          sx={{
+                            marginTop: 2,
+                            fontWeight: 500,
+                            color: "#D32F2F",
+                            textAlign: "center",
+                          }}
                         >
                           Time's up! You didn't answer this question.
                         </Typography>
@@ -712,7 +1157,9 @@ export default function BattleDetailPage() {
                     </Typography>
 
                     <Box sx={{ marginBottom: 2 }}>
-                      <Typography fontWeight={600}>Current Question:</Typography>
+                      <Typography fontWeight={600}>
+                        Current Question:
+                      </Typography>
                       <Typography>
                         {questionNumber} of {totalQuestions}
                       </Typography>
@@ -728,6 +1175,31 @@ export default function BattleDetailPage() {
                       <Typography>{opponentScore} points</Typography>
                     </Box>
                   </Box>
+                  {question && (
+                    <Box
+                      sx={{
+                        padding: 2,
+                        border: "1px solid #ccc",
+                        borderRadius: 2,
+                        backgroundColor: "#FFF8E1",
+                      }}
+                    >
+                      <Typography
+                        fontWeight={600}
+                        sx={{ textAlign: "center", marginBottom: 1 }}
+                      >
+                        Question Type
+                      </Typography>
+                      <Typography sx={{ textAlign: "center" }}>
+                        {question.type === "MULTIPLE_CHOICE" &&
+                          "Single Choice Question"}
+                        {question.type === "MULTI_SELECT" &&
+                          "Multiple Choice Question"}
+                        {question.type === "FILL_IN_THE_BLANK" &&
+                          "Fill in the Blank"}
+                      </Typography>
+                    </Box>
+                  )}
 
                   {/* Current status */}
                   <Box
@@ -777,7 +1249,7 @@ export default function BattleDetailPage() {
       {/* Results Dialog */}
       <Dialog
         open={showResultDialog}
-        onClose={() => setShowResultDialog(false)} 
+        onClose={() => setShowResultDialog(false)}
         fullWidth
         maxWidth="md"
       >
@@ -799,24 +1271,28 @@ export default function BattleDetailPage() {
               <Typography variant="h6">Final Score</Typography>
               <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <Box sx={{ textAlign: "center" }}>
-                  <Avatar 
-                    src={playerInfo?.avatar || ""} 
+                  <Avatar
+                    src={playerInfo?.avatar || ""}
                     alt={playerInfo?.username || "You"}
-                    sx={{ width: 40, height: 40, mx: 'auto', mb: 1 }}
+                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
                   />
-                  <Typography fontWeight={600}>{playerInfo?.username || "You"}</Typography>
+                  <Typography fontWeight={600}>
+                    {playerInfo?.username || "You"}
+                  </Typography>
                   <Typography variant="h4">{playerScore}</Typography>
                 </Box>
                 <Typography variant="h5" sx={{ alignSelf: "center" }}>
                   vs
                 </Typography>
                 <Box sx={{ textAlign: "center" }}>
-                  <Avatar 
-                    src={opponentInfo?.avatar || ""} 
+                  <Avatar
+                    src={opponentInfo?.avatar || ""}
                     alt={opponentInfo?.username || "Opponent"}
-                    sx={{ width: 40, height: 40, mx: 'auto', mb: 1 }}
+                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
                   />
-                  <Typography fontWeight={600}>{opponentInfo?.username || "Opponent"}</Typography>
+                  <Typography fontWeight={600}>
+                    {opponentInfo?.username || "Opponent"}
+                  </Typography>
                   <Typography variant="h4">{opponentScore}</Typography>
                 </Box>
               </Box>

@@ -1101,14 +1101,14 @@ const QuizPage = () => {
                     >
                       <Button
                         onClick={handlePreviousPage}
-                        disabled={currentPage === 0 || loading}
+                        disabled={currentPage === 0 || isLoading}
                       >
                         Trang trước
                       </Button>
                       <Button
                         onClick={handleNextPage}
                         disabled={
-                          totalItemsQ <= (currentPage + 1) * 10 || loading
+                          totalItemsQ <= (currentPage + 1) * 10 || isLoading
                         }
                       >
                         Trang sau

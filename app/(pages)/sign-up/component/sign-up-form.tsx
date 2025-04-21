@@ -92,8 +92,8 @@ const SignUpForm: React.FC = () => {
     const fetchGrades = async () => {
       try {
         const response = await apiService.get("/grades");
-        setGrades(response.data);
-        setSelectedGrade(response.data[0]?.gradeId || ""); // Set default grade
+        setGrades(response.data.data.grades);
+        setSelectedGrade(response.data.data.grades[0]?.gradeId || ""); // Set default grade
       } catch (error) {
         console.error("Failed to fetch grades:", error);
       }

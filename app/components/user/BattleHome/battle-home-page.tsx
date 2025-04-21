@@ -96,7 +96,7 @@ export default function BattlePage() {
         setCountdown(0);
 
         const socket = new WebSocket(
-            `ws://localhost:8080/ws/battle?userId=${userInfo.userId}&subjectId=${selectedSubject}&gradeId=${selectedGrade}&token=${accessToken}`
+            `ws://localhost:8080/ws/battle?userId=${userInfo.userId}&subjectId=${selectedSubject}&gradeId=${selectedGrade}&battle-token=${accessToken}`
         );
 
         socketRef.current = socket;
