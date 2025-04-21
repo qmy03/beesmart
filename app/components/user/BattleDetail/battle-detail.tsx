@@ -81,6 +81,7 @@ export default function BattleDetailPage() {
 
           setPlayerInfo(currentPlayer);
           setOpponentInfo(opponent);
+          console.log("Opponent info:", opponent); // Debugging line
 
           fetchFirstQuestion();
         }
@@ -656,7 +657,7 @@ export default function BattleDetailPage() {
 
               <Box sx={{ textAlign: "center" }}>
                 <Typography fontWeight={700} sx={{ fontSize: "20px" }}>
-                  {battleInfo.topic}
+                  {battleInfo.battleId}
                 </Typography>
                 <Typography>{getPlayerStatus()}</Typography>
               </Box>
