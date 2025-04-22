@@ -88,28 +88,62 @@ const QuizPage = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
-  const handleCheckboxChange = (quizId: string) => {
+  const handleOpenDeleteDialog = (quizId) => {
+    setQuizToDelete(quizId);
+
+    // Check if there's any selection
+    const hasSelectedQuizzes = selectedQuizzes.size > 0;
+    const hasSelectedQuestions = selectedQuestions.size > 0;
+
+    // Only open the dialog if there's at least one selection
+    if (hasSelectedQuizzes || hasSelectedQuestions) {
+      setOpenDeleteDialog(true);
+    } else {
+      // If no items are selected, don't open the dialog
+      setOpenDeleteDialog(false);
+    }
+  };
+  const handleCheckboxChange = (quizId) => {
     const updatedSelectedQuizzes = new Set(selectedQuizzes);
+
     if (updatedSelectedQuizzes.has(quizId)) {
       updatedSelectedQuizzes.delete(quizId); // Deselect if already selected
     } else {
       updatedSelectedQuizzes.add(quizId); // Add to selected if not selected
-      setQuizToDelete(quizId); // Set the quiz ID to be deleted
-      setOpenDeleteDialog(true); // Open delete dialog
     }
+
     setSelectedQuizzes(updatedSelectedQuizzes);
+
+    // Only set quiz to delete and open dialog if we have selections
+    if (updatedSelectedQuizzes.size > 0) {
+      setQuizToDelete(quizId);
+      setOpenDeleteDialog(true);
+    } else {
+      // Close the dialog if no items are selected
+      setOpenDeleteDialog(false);
+    }
   };
 
-  const handleCheckboxQChange = (questionId: string) => {
-    const updatedSelectedQuestions = new Set(selectedQuestions); // Create a copy of the current selectedQuestions
+  // Similarly, modify the handleCheckboxQChange function
+  const handleCheckboxQChange = (questionId) => {
+    const updatedSelectedQuestions = new Set(selectedQuestions);
+
     if (updatedSelectedQuestions.has(questionId)) {
       updatedSelectedQuestions.delete(questionId); // Remove if already selected
     } else {
       updatedSelectedQuestions.add(questionId); // Add if not selected
+    }
+
+    setSelectedQuestions(updatedSelectedQuestions);
+
+    // Only set question to delete and open dialog if we have selections
+    if (updatedSelectedQuestions.size > 0) {
       setQuestionToDelete(questionId);
       setOpenDeleteDialog(true);
+    } else {
+      // Close the dialog if no items are selected
+      setOpenDeleteDialog(false);
     }
-    setSelectedQuestions(updatedSelectedQuestions); // Update state with the new array
   };
 
   const handleDeleteQuiz = () => {
@@ -349,24 +383,26 @@ const QuizPage = () => {
   }, [selectedLessonId, selectedTopicId]);
 
   const handleExpandQuiz = (quizId: string, page: number = 0) => {
-    console.log("Expanding quiz ID:", quizId);
+    console.log("Expanding/collapsing quiz ID:", quizId);
 
-    // Kiểm tra nếu quiz đã mở và chỉ thay đổi trang mà không gọi lại API
-    if (expandedQuizId === quizId && page === currentPage) {
-      return; // Không làm gì cả nếu quiz đã mở và đang ở trang hiện tại
-    }
-
-    // Giữ quiz đã mở và chỉ thay đổi trang
+    // If clicking on the already expanded quiz, collapse it
     if (expandedQuizId === quizId) {
-      setSelectedQuizId(quizId);
-    } else {
-      // Mở quiz mới
-      setExpandedQuizId(quizId);
-      setSelectedQuizId(quizId);
+      setExpandedQuizId(null); // Collapse the quiz
+      setSelectedQuizId(null);
+      return; // Exit the function early
     }
 
-    // Fetch câu hỏi cho trang mới
+    // Otherwise, expand the quiz (existing code)
+    // Clear previous questions if opening a different quiz
+    setQuestions((prev) => ({ ...prev, [quizId]: [] })); // Clear previous questions
+
+    // Set loading state and expanded quiz
     setLoadingQuestions((prev) => ({ ...prev, [quizId]: true }));
+    setExpandedQuizId(quizId);
+    setSelectedQuizId(quizId);
+    setCurrentPage(page);
+
+    // Fetch questions for the quiz
     apiService
       .get(`/quizzes/${quizId}/questions?page=${page}`)
       .then((response) => {
@@ -385,10 +421,10 @@ const QuizPage = () => {
     const newPage = currentPage + 1;
     setCurrentPage(newPage);
 
-    // Re-fetch questions cho trang kế tiếp mà không thay đổi quiz
+    // Fetch questions for new page without resetting expansion state
     if (selectedQuizId) {
       console.log("Navigating to next page:", newPage);
-      handleExpandQuiz(selectedQuizId, newPage);
+      fetchQuestionsForPage(selectedQuizId, newPage);
     }
   };
 
@@ -396,11 +432,29 @@ const QuizPage = () => {
     const newPage = currentPage - 1;
     setCurrentPage(newPage);
 
-    // Re-fetch questions cho trang trước đó mà không thay đổi quiz
+    // Fetch questions for new page without resetting expansion state
     if (selectedQuizId) {
       console.log("Navigating to previous page:", newPage);
-      handleExpandQuiz(selectedQuizId, newPage);
+      fetchQuestionsForPage(selectedQuizId, newPage);
     }
+  };
+
+  // New function to fetch questions without changing expanded state
+  const fetchQuestionsForPage = (quizId: string, page: number) => {
+    setLoadingQuestions((prev) => ({ ...prev, [quizId]: true }));
+
+    apiService
+      .get(`/quizzes/${quizId}/questions?page=${page}`)
+      .then((response) => {
+        const fetchedQuestions = response.data.data.questions;
+        setTotalItemsQ(response.data.data.totalItems);
+        setQuestions((prev) => ({ ...prev, [quizId]: fetchedQuestions }));
+        setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
+      })
+      .catch((error) => {
+        console.error("Error fetching questions:", error);
+        setLoadingQuestions((prev) => ({ ...prev, [quizId]: false }));
+      });
   };
 
   const handleAnswerSubmit = (questionId: string, correctAnswer: any) => {
@@ -448,6 +502,7 @@ const QuizPage = () => {
     );
     setSnackbarOpen(true);
   };
+
   const handleDeleteQuestions = () => {
     if (!selectedQuestions?.size) return;
 
@@ -469,21 +524,30 @@ const QuizPage = () => {
 
         // After deletion, fetch the updated list of questions for the selected quiz
         if (selectedQuizId) {
+          setLoadingQuestions((prev) => ({ ...prev, [selectedQuizId]: true })); // Show loading indicator
           apiService
-            .get(`/quizzes/${selectedQuizId}/questions`)
+            .get(`/quizzes/${selectedQuizId}/questions?page=${currentPage}`) // Keep the current page
             .then((response) => {
               const fetchedQuestions = response.data.data.questions;
               setQuestions((prev) => ({
                 ...prev,
                 [selectedQuizId]: fetchedQuestions,
               }));
-              setTotalItemsQ(response.data.data.totalItems);
+              setTotalItemsQ(response.data.data.totalItems); // Update the total count
+              setLoadingQuestions((prev) => ({
+                ...prev,
+                [selectedQuizId]: false,
+              })); // Hide loading indicator
             })
             .catch((error) => {
               console.error("Error fetching updated questions:", error);
               setSnackbarMessage("Error fetching updated questions.");
               setSeverity("error");
               setSnackbarOpen(true);
+              setLoadingQuestions((prev) => ({
+                ...prev,
+                [selectedQuizId]: false,
+              })); // Hide loading indicator on error
             });
         }
       })
@@ -501,7 +565,9 @@ const QuizPage = () => {
   const renderQuestions = (questions: any[]) => {
     return questions.map((question, index) => {
       const correctAnswer = question.correctAnswer;
-      const questionNumber = index + 1;
+      // Calculate question number based on current page (pages are 0-indexed)
+      const questionNumber = currentPage * 10 + index + 1;
+
       switch (question.questionType) {
         case "MULTI_SELECT":
           return (
@@ -516,11 +582,18 @@ const QuizPage = () => {
             >
               <Typography fontWeight={600}>
                 <Checkbox
-                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  sx={{
+                    color: "#637381",
+                    "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                      color: "#99BC4D",
+                    },
+                    paddingX: 1,
+                  }}
+                  size="small"
+                  checked={selectedQuestions?.has(question.questionId)}
                   onChange={() => handleCheckboxQChange(question.questionId)}
                 />{" "}
-                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
-                {`${question.content}`}{" "}
+                {`Câu ${questionNumber}: ${question.content}`}
                 <IconButton onClick={() => handleEditQuestion(question)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
@@ -578,11 +651,18 @@ const QuizPage = () => {
             >
               <Typography fontWeight={600}>
                 <Checkbox
-                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  sx={{
+                    color: "#637381",
+                    "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                      color: "#99BC4D",
+                    },
+                    paddingX: 1,
+                  }}
+                  size="small"
+                  checked={selectedQuestions?.has(question.questionId)}
                   onChange={() => handleCheckboxQChange(question.questionId)}
                 />{" "}
-                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
-                {`${question.content}`}{" "}
+                {`Câu ${questionNumber}: ${question.content}`}
                 <IconButton onClick={() => handleEditQuestion(question)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
@@ -636,11 +716,18 @@ const QuizPage = () => {
             >
               <Typography fontWeight={600}>
                 <Checkbox
-                  checked={selectedQuestions?.has(question.questionId)} // Use `has` for Sets
+                  sx={{
+                    color: "#637381",
+                    "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                      color: "#99BC4D",
+                    },
+                    paddingX: 1,
+                  }}
+                  size="small"
+                  checked={selectedQuestions?.has(question.questionId)}
                   onChange={() => handleCheckboxQChange(question.questionId)}
                 />{" "}
-                {/* {`Câu hỏi ${questionNumber}: ${question.content}`} */}
-                {`${question.content}`}{" "}
+                {`Câu ${questionNumber}: ${question.content}`}
                 <IconButton onClick={() => handleEditQuestion(question)}>
                   <EditIcon fontSize="small" />
                 </IconButton>
@@ -704,11 +791,6 @@ const QuizPage = () => {
     setDialogType("edit");
     setOpenDialog(true);
   };
-  // const handleEditQuestion = (question: any) => {
-  //   setSelectedQuiz(quiz);
-  //   setDialogType("edit");
-  //   setOpenDialog(true);
-  // };
   const handleEditQuestion = (question: any) => {
     setSelectedQuestion(question);
 
@@ -781,7 +863,7 @@ const QuizPage = () => {
         // Log the selectedQuizId to confirm it's correct
         console.log("selectedQuizId", selectedQuizId);
 
-        // Update the questions for the selected quiz
+        // Update the quizzes state with the new question
         const updatedQuiz = quizzes.map((quiz) => {
           if (quiz.quizId === selectedQuizId) {
             return {
@@ -799,9 +881,14 @@ const QuizPage = () => {
         console.log("updatedQuizzes", updatedQuiz);
         setQuizzes(updatedQuiz); // Make sure state is updated
 
-        // Fetch updated questions for the selected quiz
+        // Calculate the page where the new question should appear
+        // If we have totalItemsQ + 1 (including the new question), calculate which page it should be on
+        const newTotalItems = totalItemsQ + 1;
+        const pageOfNewQuestion = Math.floor((newTotalItems - 1) / 10);
+
+        // Fetch questions for the page where the new question should appear
         apiService
-          .get(`/quizzes/${selectedQuizId}/questions`)
+          .get(`/quizzes/${selectedQuizId}/questions?page=${pageOfNewQuestion}`)
           .then((response) => {
             const fetchedQuestions = response.data.data.questions;
             setQuestions((prev) => ({
@@ -809,6 +896,8 @@ const QuizPage = () => {
               [selectedQuizId]: fetchedQuestions,
             }));
             setTotalItemsQ(response.data.data.totalItems);
+            // Update the current page to show where the new question appears
+            setCurrentPage(pageOfNewQuestion);
           })
           .catch((error) => {
             console.error("Error fetching updated questions:", error);
@@ -1049,6 +1138,14 @@ const QuizPage = () => {
                   }}
                 >
                   <Checkbox
+                    sx={{
+                      color: "#637381",
+                      "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                        color: "#99BC4D",
+                      },
+                      paddingX: 1,
+                    }}
+                    size="small"
                     checked={selectedQuizzes.has(quiz.quizId)}
                     onChange={() => handleCheckboxChange(quiz.quizId)} // Trigger checkbox change
                   />
@@ -1082,7 +1179,7 @@ const QuizPage = () => {
 
               {/* Render questions if the quiz is expanded */}
               {/* {expandedQuizId === quiz.quizId && ( */}
-              {expandedQuizId &&
+              {/* {expandedQuizId &&
                 expandedQuizId === quiz.quizId &&
                 questions[expandedQuizId] && (
                   <Box sx={{ border: "1px solid #CCC" }}>
@@ -1115,7 +1212,48 @@ const QuizPage = () => {
                       </Button>
                     </Box>
                   </Box>
-                )}
+                )} */}
+              {/* Render questions if the quiz is expanded */}
+              {expandedQuizId === quiz.quizId && (
+                <Box sx={{ border: "1px solid #CCC" }}>
+                  {loadingQuestions[quiz.quizId] ? (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        padding: 3,
+                      }}
+                    >
+                      <CircularProgress size="30px" sx={{ color: "#99BC4D" }} />
+                    </Box>
+                  ) : (
+                    renderQuestions(questions[selectedQuizId] || [])
+                  )}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      margin: 2,
+                    }}
+                  >
+                    <Button
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 0 || isLoading}
+                    >
+                      Trang trước
+                    </Button>
+                    <Button
+                      onClick={handleNextPage}
+                      disabled={
+                        totalItemsQ <= (currentPage + 1) * 10 || isLoading
+                      }
+                    >
+                      Trang sau
+                    </Button>
+                  </Box>
+                </Box>
+              )}
             </Box>
           ))}
         </Box>
@@ -1143,7 +1281,10 @@ const QuizPage = () => {
           type={selectedQuestion?.questionType}
         />
         <DeleteDialog
-          open={openDeleteDialog}
+          open={
+            openDeleteDialog &&
+            (selectedQuestions.size > 0 || selectedQuizzes.size > 0)
+          }
           handleClose={handleDeleteDialogClose || handleDeleteQDialogClose}
           onDelete={() => {
             if (selectedQuestions.size > 0) {
@@ -1156,8 +1297,8 @@ const QuizPage = () => {
             selectedQuestions.size > 0
               ? selectedQuestions.size
               : selectedQuizzes.size
-          } // Hiển thị số lượng câu hỏi hoặc bài kiểm tra
-          type={selectedQuestions.size > 0 ? "question" : "quiz"} // Xác định loại (question hoặc quiz) để xử lý
+          }
+          type={selectedQuestions.size > 0 ? "question" : "quiz"}
         />
 
         <Snackbar
