@@ -71,19 +71,21 @@ export default function BattleDetailPage() {
         setBattleInfo(battleData);
 
         // Set player and opponent info
-        if (battleData.players && battleData.players.length >= 2) {
-          const currentPlayer = battleData.players.find(
+        // Inside the fetchBattleInfo function
+        if (battleData.playerScores && battleData.playerScores.length >= 2) {
+          const currentPlayer = battleData.playerScores.find(
             (p: any) => p.userId === userInfo.userId
           );
-          const opponent = battleData.players.find(
+          const opponent = battleData.playerScores.find(
             (p: any) => p.userId !== userInfo.userId
           );
 
           setPlayerInfo(currentPlayer);
           setOpponentInfo(opponent);
-          console.log("Opponent info:", opponent); // Debugging line
-
-          fetchFirstQuestion();
+          
+          // Also update the scores
+          setPlayerScore(currentPlayer?.score || 0);
+          setOpponentScore(opponent?.score || 0);
         }
       } catch (error) {
         console.error("Error fetching battle info:", error);
@@ -643,7 +645,7 @@ export default function BattleDetailPage() {
                   alignItems: "center",
                 }}
               >
-                <Typography fontWeight={700}>You</Typography>
+                <Typography fontWeight={700}>You ({playerInfo?.username || "Player"})</Typography>
                 <Avatar
                   src={playerInfo?.avatar || ""}
                   alt={playerInfo?.username || "You"}
@@ -667,7 +669,7 @@ export default function BattleDetailPage() {
                   alignItems: "center",
                 }}
               >
-                <Typography fontWeight={700}>Opponent</Typography>
+                <Typography fontWeight={700}>Opponent ({opponentInfo?.username || "Opponent"})</Typography>
                 <Avatar
                   src={opponentInfo?.avatar || ""}
                   alt={opponentInfo?.username || "Opponent"}
