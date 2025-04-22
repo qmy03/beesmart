@@ -445,18 +445,18 @@ export default function BattleDetailPage() {
       userId: userInfo?.userId,
       isAnswered: isAnswered,
     });
-
+  
     if (!question || !userInfo?.userId || isAnswered) {
       console.log("Early return condition met in handleAnswer");
       return;
     }
-
+  
     try {
       setIsAnswered(true);
       const timeTaken = 30 - timer;
-
+  
       let payload;
-
+  
       if (question.type === "MULTIPLE_CHOICE") {
         payload = {
           userId: userInfo.userId,
@@ -465,18 +465,15 @@ export default function BattleDetailPage() {
           timeTaken,
         };
       } else if (question.type === "MULTI_SELECT") {
-        // Gửi mảng các câu trả lời được chọn
-        const selectedOptions = selectedAnswers.map(
-          (index) => question.options[index]
-        );
+        // For multi-select, use the answers field
+        const selectedOptions = Array.isArray(answerOption) ? answerOption : [];
         payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
-          answer: selectedOptions,
+          answers: selectedOptions,  // Use answers field for arrays
           timeTaken,
         };
       } else if (question.type === "FILL_IN_THE_BLANK") {
-        // Gửi câu trả lời text
         payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
@@ -484,7 +481,6 @@ export default function BattleDetailPage() {
           timeTaken,
         };
       } else {
-        // Mặc định gửi answerOption nếu không match các loại trên
         payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
@@ -492,6 +488,7 @@ export default function BattleDetailPage() {
           timeTaken,
         };
       }
+      
       console.log("Submitting answer:", payload); // Debugging line
       await apiService.post(`/battles/${battleId}/answer`, payload, {
         headers: { Authorization: `Bearer ${accessToken}` },
