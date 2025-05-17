@@ -135,13 +135,13 @@ const HomePage: React.FC = () => {
                 },
               }}
             >
-              <img
+              <Image
                 src="/banner_2.png"
                 width={400}
                 height={225}
                 alt=""
                 style={{ borderRadius: "16px" }}
-              ></img>
+              ></Image>
               <Box sx={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: 1}}>
                 <Typography
                   sx={{

@@ -11,7 +11,6 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
     const [open, setOpen] = React.useState(true);
-    // const {isLoading} = useAppContext();
 
     const handleDrawerToggle = () => {
         setOpen(!open);
@@ -20,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return (
         <>
         <ThemeProvider theme={theme}>
-            <Box sx={{ display: 'flex' , height: '100%', flexDirection: 'column'}}>
+            <Box sx={{ display: 'flex' , minHeight: '100vh', flexDirection: 'column'}}>
                 <CssBaseline />
                 <SideNav  />
                 <Box
@@ -33,7 +32,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Box>
                 <Footer />
             </Box>
-        {/* <ProgressOverlay isLoading={isLoading} /> */}
         </ThemeProvider>
         </>
     );

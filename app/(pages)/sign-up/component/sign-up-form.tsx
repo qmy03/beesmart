@@ -22,7 +22,9 @@ import Layout from "@/app/components/user/Home/layout";
 import Person4Icon from "@mui/icons-material/Person4";
 import FaceIcon from "@mui/icons-material/Face";
 import apiService from "@/app/untils/api";
+import { useAuth } from "@/app/hooks/AuthContext";
 const SignUpForm: React.FC = () => {
+  const { isLoading, setIsLoading } = useAuth();
   const [showResendDialog, setShowResendDialog] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0); // Thời gian đếm ngược (giây)
 
@@ -413,12 +415,13 @@ const SignUpForm: React.FC = () => {
                   />
                 </div>
                 <Button
-                  variant="contained"
                   type="submit"
-                  className="mt-4 w-full"
+                  className="w-full mt-4"
+                  disabled={isLoading}
                 >
-                  Đăng ký
+                  {isLoading ? "Đang đăng ký..." : "Đăng ký"}
                 </Button>
+
                 <Typography
                   variant="body2"
                   align="center"
@@ -447,7 +450,6 @@ const SignUpForm: React.FC = () => {
                           color: "blue",
                           cursor: "pointer",
                           textDecoration: "underline",
-                          
                         }}
                       >
                         Bấm vào đây

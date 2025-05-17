@@ -49,11 +49,17 @@ export default function BattleDetailPage() {
   const [showResultDialog, setShowResultDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Player and opponent info
   const [playerInfo, setPlayerInfo] = useState<any>(null);
   const [opponentInfo, setOpponentInfo] = useState<any>(null);
-
-  // Loading state
+  const [playerLastAnswerCorrect, setPlayerLastAnswerCorrect] = useState<
+    boolean | null
+  >(null);
+  const getPlayerStatusMessage = (isCorrect: boolean | null) => {
+    if (isCorrect === null) return;
+    return isCorrect
+      ? "Tuyệt vời! Tiếp tục phát huy nhé!"
+      : "Đừng nản lòng! Cố gắng lên nào!";
+  };
   const [loadingQuestion, setLoadingQuestion] = useState(false);
 
   useEffect(() => {
@@ -67,11 +73,8 @@ export default function BattleDetailPage() {
 
         const battleData = response.data.data;
 
-        console.log("Battle data:", battleData); // Debugging line
+        console.log("Battle data:", battleData);
         setBattleInfo(battleData);
-
-        // Set player and opponent info
-        // Inside the fetchBattleInfo function
         if (battleData.playerScores && battleData.playerScores.length >= 2) {
           const currentPlayer = battleData.playerScores.find(
             (p: any) => p.userId === userInfo.userId
@@ -82,8 +85,7 @@ export default function BattleDetailPage() {
 
           setPlayerInfo(currentPlayer);
           setOpponentInfo(opponent);
-          
-          // Also update the scores
+
           setPlayerScore(currentPlayer?.score || 0);
           setOpponentScore(opponent?.score || 0);
         }
@@ -106,7 +108,7 @@ export default function BattleDetailPage() {
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
-        console.log("WebSocket message received:", msg); // Add this for debugging
+        console.log("WebSocket message received:", msg);
 
         switch (msg.type) {
           case "MULTI_SELECT":
@@ -135,16 +137,13 @@ export default function BattleDetailPage() {
             break;
           case "JOINED":
           case "START":
-            // Update battleInfo state if needed but don't overwrite existing data
             if (msg.battleId) {
               console.log("Battle joined/started:", msg.battleId);
             }
             break;
           case "WAITING_FOR_OPPONENT":
-            // Just a status update, no action needed
             break;
           default:
-            // Handle battle state update message (no specific type)
             if (msg.battleId && msg.status) {
               updateBattleState(msg);
             }
@@ -296,10 +295,9 @@ export default function BattleDetailPage() {
     setTimer(30);
     setIsAnswered(false);
     setSelectedAnswer(null);
-    setSelectedAnswers([]); // Reset selected answers for multi-select questions
-    setTextAnswer(""); // Reset text answer for fill-in-the-blank questions
-
-    // Update question number if provided
+    setSelectedAnswers([]);
+    setTextAnswer(""); 
+    setPlayerLastAnswerCorrect(null);
     if (msg.currentQuestion !== undefined) {
       setQuestionNumber(msg.currentQuestion);
     }
@@ -307,7 +305,6 @@ export default function BattleDetailPage() {
       setTotalQuestions(msg.totalQuestions);
     }
 
-    // Reset timer for new question
     if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = setInterval(() => {
@@ -315,17 +312,11 @@ export default function BattleDetailPage() {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
 
-          // Store the current question in a variable to use in the timeout
           const currentQuestion = msg.question;
 
-          // Use setTimeout to ensure state updates have completed
           setTimeout(() => {
-            // Check if we've already answered and if we have a valid question
             if (!isAnswered && currentQuestion?.questionId) {
               console.log("⏰ Timer expired. Sending null answer...");
-
-              // Call handleAnswer directly instead of relying on state
-              // that might not be updated yet
               handleTimeExpiredAnswer(currentQuestion);
             }
           }, 100);
@@ -338,7 +329,6 @@ export default function BattleDetailPage() {
     }, 1000);
   };
 
-  // Add a new function specifically for handling time expired answers
   const handleTimeExpiredAnswer = async (currentQuestion: any) => {
     if (!currentQuestion || !userInfo?.userId) return;
 
@@ -348,30 +338,34 @@ export default function BattleDetailPage() {
     );
 
     try {
-      // Set isAnswered to true to prevent multiple submissions
       setIsAnswered(true);
 
-      const timeTaken = 30; // Full time used
+      const timeTaken = 30;
 
       let payload = {
         userId: userInfo.userId,
         questionId: currentQuestion.questionId,
-        answer: null, // Always send null when time expires
+        answer: null,
         timeTaken,
       };
 
       console.log("Submitting time-expired null answer:", payload);
-      const res = await apiService.post(`/battles/${battleId}/answer`, payload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const res = await apiService.post(
+        `/battles/${battleId}/answer`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       console.log("Time-expired answer submitted successfully:", res);
+      setPlayerLastAnswerCorrect(false);
     } catch (error) {
       console.error("Error submitting time-expired answer:", error);
       setError("Failed to submit answer");
     }
   };
   useEffect(() => {
-    // Cleanup timer when component unmounts
+ 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -385,7 +379,13 @@ export default function BattleDetailPage() {
       const opponent = msg.playerScores.find(
         (p: any) => p.userId !== userInfo.userId
       );
-
+      if (isAnswered) {
+        if (myScore && playerScore < myScore.score) {
+          setPlayerLastAnswerCorrect(true);
+        } else {
+          setPlayerLastAnswerCorrect(false);
+        }
+      }
       setPlayerScore(myScore?.score || 0);
       setOpponentScore(opponent?.score || 0);
     }
@@ -447,18 +447,18 @@ export default function BattleDetailPage() {
       userId: userInfo?.userId,
       isAnswered: isAnswered,
     });
-  
+
     if (!question || !userInfo?.userId || isAnswered) {
       console.log("Early return condition met in handleAnswer");
       return;
     }
-  
+
     try {
       setIsAnswered(true);
       const timeTaken = 30 - timer;
-  
+
       let payload;
-  
+
       if (question.type === "MULTIPLE_CHOICE") {
         payload = {
           userId: userInfo.userId,
@@ -472,7 +472,7 @@ export default function BattleDetailPage() {
         payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
-          answers: selectedOptions,  // Use answers field for arrays
+          answers: selectedOptions, // Use answers field for arrays
           timeTaken,
         };
       } else if (question.type === "FILL_IN_THE_BLANK") {
@@ -490,7 +490,7 @@ export default function BattleDetailPage() {
           timeTaken,
         };
       }
-      
+
       console.log("Submitting answer:", payload); // Debugging line
       await apiService.post(`/battles/${battleId}/answer`, payload, {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -566,20 +566,23 @@ export default function BattleDetailPage() {
     if (!battleInfo) return "";
 
     if (finished) {
-      return winner === userInfo?.userId ? "You won! 🏆" : "You lost! 😢";
+      return winner === userInfo?.userId ? "Chiến thắng! 🏆" : "Thua rồi! 😢";
     }
 
     if (isAnswered) {
-      return "Waiting for opponent...";
+      return "Chờ đợi đối thủ...";
     }
 
-    return "Battle in progress";
+    return "Trận đấu đang diễn ra...";
   };
 
   const formatTime = (seconds: number) => {
     return `${seconds.toString().padStart(2, "0")}`;
   };
-
+  const getBeeImage = (isCorrect: boolean | null) => {
+    if (isCorrect === null) return "/bee-2.png"; // Default/waiting
+    return isCorrect ? "/bee-1.png" : "/bee-3.png"; // Correct/Incorrect
+  };
   return (
     <Layout>
       <Box
@@ -599,18 +602,21 @@ export default function BattleDetailPage() {
             border: "1px solid #ccc",
             borderRadius: 4,
             flex: 1,
+            overflow: "hidden",
           }}
         >
-          <Typography
-            sx={{
-              fontSize: "32px",
-              fontWeight: "600",
-              textAlign: "center",
-              paddingY: "8px",
-            }}
-          >
-            Battle Quiz
-          </Typography>
+          <Box sx={{ bgcolor: "#E8F5E9" }}>
+            <Typography
+              sx={{
+                fontSize: "24px",
+                fontWeight: "600",
+                textAlign: "center",
+                paddingY: "8px",
+              }}
+            >
+              ĐẤU TRƯỜNG VUI HỌC
+            </Typography>
+          </Box>
           <Divider />
 
           {error && (
@@ -629,57 +635,233 @@ export default function BattleDetailPage() {
 
           {/* Battle Header - Scores */}
           {battleInfo && (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "16px 40px",
-                borderBottom: "1px solid #E0E0E0",
-              }}
-            >
+            <>
               <Box
                 sx={{
-                  textAlign: "center",
                   display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px",
+                  // borderBottom: "1px solid #E0E0E0",
                 }}
               >
-                <Typography fontWeight={700}>You ({playerInfo?.username || "Player"})</Typography>
-                <Avatar
-                  src={playerInfo?.avatar || ""}
-                  alt={playerInfo?.username || "You"}
-                  sx={{ width: 50, height: 50, mb: 1 }}
-                />
-                <Typography sx={{ fontSize: "24px" }}>{playerScore}</Typography>
-              </Box>
+                <Box
+                  sx={{
+                    // textAlign: "center",
+                    display: "flex",
+                    // flexDirection: "column",
+                    alignItems: "center",
+                    backgroundColor: "#E8F5E9",
+                    padding: 2,
+                    borderRadius: 4,
+                    width: "35%",
+                    gap: 2,
+                  }}
+                >
+                  <Avatar
+                    // src={playerInfo?.avatar || ""}
+                    // alt={playerInfo?.username || "You"}
+                    // sx={{ width: 50, height: 50, }}
+                    sx={{
+                      border: "2px solid #BB9066",
+                      color: "#BB9066",
+                      bgcolor: "#FFFBF3",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {playerInfo?.username?.[0]?.toUpperCase() || "Y"}
+                  </Avatar>
 
-              <Box sx={{ textAlign: "center" }}>
-                <Typography fontWeight={700} sx={{ fontSize: "20px" }}>
+                  {/* <Typography sx={{ fontSize: "24px" }}>{playerScore}</Typography> */}
+                  <Box>
+                    <Typography fontWeight={700}>
+                      You ({playerInfo?.username || "Player"})
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Điểm: </Typography>
+                      <Typography>{playerScore}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                <Box sx={{ textAlign: "center", width: "20%" }}>
+                  {/* <Typography fontWeight={700} sx={{ fontSize: "20px" }}>
                   {battleInfo.battleId}
-                </Typography>
-                <Typography>{getPlayerStatus()}</Typography>
-              </Box>
+                </Typography> */}
+                  {/* Timer display */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 1,
+                      backgroundColor: timer < 10 ? "#FFEBEE" : "#E8F5E9",
+                      borderRadius: 2,
+                      border: "1px solid #ccc",
+                    }}
+                  >
+                    <AccessAlarmIcon
+                      sx={{
+                        fontSize: "32px",
+                        color: timer < 10 ? "#F44336" : "#4CAF50",
+                        marginRight: 1,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: "32px",
+                        fontWeight: "bold",
+                        color: timer < 10 ? "#F44336" : "#4CAF50",
+                      }}
+                    >
+                      {formatTime(timer)}
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ paddingTop: 2 }}>
+                    {getPlayerStatus()}
+                  </Typography>
+                </Box>
 
-              <Box
+                <Box
+                  sx={{
+                    // textAlign: "center",
+                    display: "flex",
+                    // flexDirection: "column",
+                    alignItems: "center",
+                    backgroundColor: "#E8F5E9",
+                    padding: 2,
+                    borderRadius: 4,
+                    width: "35%",
+                    gap: 2,
+                  }}
+                >
+                  <Avatar
+                    // src={playerInfo?.avatar || ""}
+                    // alt={playerInfo?.username || "You"}
+                    // sx={{ width: 50, height: 50, }}
+                    sx={{
+                      border: "2px solid #BB9066",
+                      color: "#BB9066",
+                      bgcolor: "#FFFBF3",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {opponentInfo?.username?.[0]?.toUpperCase() || "O"}
+                  </Avatar>
+
+                  {/* <Typography sx={{ fontSize: "24px" }}>
+                  {opponentScore}
+                </Typography> */}
+                  <Box>
+                    <Typography fontWeight={700}>
+                      Opponent ({opponentInfo?.username || "Opponent"})
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Điểm:</Typography>
+                      <Typography>{opponentScore} </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+              {/* <Box
                 sx={{
-                  textAlign: "center",
+                  paddingX: "16px",
                   display: "flex",
-                  flexDirection: "column",
+                  justifyContent: "flex-start",
+                  // flexDirection: "column",
                   alignItems: "center",
+                  width: "100%",
+                  gap: 2,
                 }}
               >
-                <Typography fontWeight={700}>Opponent ({opponentInfo?.username || "Opponent"})</Typography>
-                <Avatar
-                  src={opponentInfo?.avatar || ""}
-                  alt={opponentInfo?.username || "Opponent"}
-                  sx={{ width: 50, height: 50, mb: 1 }}
+                <img
+                  src={getBeeImage(playerLastAnswerCorrect)}
+                  alt="Player status"
+                  style={{ height: "60px", marginBottom: "8px" }}
                 />
-                <Typography sx={{ fontSize: "24px" }}>
-                  {opponentScore}
-                </Typography>
+                <Box>
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      textAlign: "center",
+                      color:
+                        playerLastAnswerCorrect === true
+                          ? "#4CAF50"
+                          : playerLastAnswerCorrect === false
+                            ? "#F44336"
+                            : "#757575",
+                    }}
+                  >
+                    {getPlayerStatusMessage(playerLastAnswerCorrect)}
+                  </Typography>
+                </Box>
+              </Box> */}
+              <Box
+                sx={{
+                  paddingX: "16px",
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  width: "100%",
+                  gap: 2,
+                }}
+              >
+                {/* Mascot/character image */}
+                <Box>
+                  <img
+                    src={getBeeImage(playerLastAnswerCorrect)}
+                    alt="Player status"
+                    style={{ height: "60px" }}
+                  />
+                </Box>
+
+                {/* Message bubble with arrow */}
+                <Box
+                  sx={{
+                    position: "relative",
+                    backgroundColor:
+                      playerLastAnswerCorrect === true
+                        ? "#e8f5e9" 
+                        : playerLastAnswerCorrect === false
+                          ? "#ffebee"
+                          : "#f5f5f5", 
+                    borderRadius: 1,
+                    padding: "12px 16px",
+                    boxShadow: "0px 1px 3px rgba(0,0,0,0.1)",
+                    "&:before": {
+                      content: '""',
+                      position: "absolute",
+                      left: "-10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "0",
+                      height: "0",
+                      borderTop: "8px solid transparent",
+                      borderBottom: "8px solid transparent",
+                      borderRight:
+                        playerLastAnswerCorrect === true
+                          ? "10px solid #e8f5e9" 
+                          : playerLastAnswerCorrect === false
+                            ? "10px solid #ffebee"
+                            : "10px solid #f5f5f5",
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: "14px",
+                      color:
+                        playerLastAnswerCorrect === true
+                          ? "#4CAF50" // Green text for correct
+                          : playerLastAnswerCorrect === false
+                            ? "#F44336" // Red text for incorrect
+                            : "#757575", // Gray text for neutral
+                    }}
+                  >
+                    {getPlayerStatusMessage(playerLastAnswerCorrect)}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
+            </>
           )}
 
           {/* Waiting for opponent screen */}
@@ -695,7 +877,7 @@ export default function BattleDetailPage() {
               }}
             >
               <Typography sx={{ fontSize: "20px", marginBottom: 4 }}>
-                Waiting for opponent to join...
+                Chờ đợi đối thủ tham gia...
               </Typography>
               <Box
                 sx={{
@@ -725,14 +907,14 @@ export default function BattleDetailPage() {
                 sx={{ mt: 2 }}
                 disabled={loadingQuestion}
               >
-                {loadingQuestion ? "Loading..." : "Refresh Battle"}
+                {loadingQuestion ? "Loading..." : "Tải lại"}
               </Button>
             </Box>
           )}
 
           {/* Question section */}
           {battleInfo?.status === "ONGOING" && !finished && (
-            <Box sx={{ padding: { xs: "20px", md: "40px" } }}>
+            <Box sx={{ padding: "8px 16px" }}>
               <Box
                 sx={{
                   display: "flex",
@@ -743,7 +925,7 @@ export default function BattleDetailPage() {
                 {/* Left Section: Question Area */}
                 <Box
                   sx={{
-                    flex: 3,
+                    flex: 1,
                     display: "flex",
                     flexDirection: "column",
                     border: "1px solid #ccc",
@@ -764,9 +946,9 @@ export default function BattleDetailPage() {
                     }}
                   >
                     <Typography fontSize="16px" fontWeight={700}>
-                      Question {questionNumber}/{totalQuestions}
+                      Câu hỏi {questionNumber}/{totalQuestions}
                     </Typography>
-                    <Box
+                    {/* <Box
                       sx={{
                         display: "flex",
                         alignItems: "center",
@@ -777,7 +959,7 @@ export default function BattleDetailPage() {
                       <Typography fontSize="16px" fontWeight={700}>
                         {formatTime(timer)}
                       </Typography>
-                    </Box>
+                    </Box> */}
                   </Box>
 
                   {/* Timer bar */}
@@ -925,7 +1107,7 @@ export default function BattleDetailPage() {
                               fontStyle: "italic",
                             }}
                           >
-                            Select all correct answers:
+                            Vui lòng chọn các câu trả lời đúng:
                           </Typography>
 
                           {question.options &&
@@ -1045,19 +1227,20 @@ export default function BattleDetailPage() {
                       )}
 
                       {isAnswered && (
-                        <Box
-                          sx={{
-                            marginTop: 4,
-                            padding: 2,
-                            backgroundColor: "#E8F5E9",
-                            borderRadius: 2,
-                            textAlign: "center",
-                          }}
-                        >
-                          <Typography>
-                            Waiting for opponent to answer...
-                          </Typography>
-                        </Box>
+                        // <Box
+                        //   sx={{
+                        //     marginTop: 4,
+                        //     padding: 2,
+                        //     backgroundColor: "#E8F5E9",
+                        //     borderRadius: 2,
+                        //     textAlign: "center",
+                        //   }}
+                        // >
+                        //   <Typography>
+                        //     Waiting for opponent to answer...
+                        //   </Typography>
+                        // </Box>
+                        <></>
                       )}
                     </Box>
                   ) : (
@@ -1097,45 +1280,15 @@ export default function BattleDetailPage() {
 
                 {/* Right Section: Battle info */}
                 <Box
-                  sx={{
-                    flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 3,
-                  }}
+                // sx={{
+                //   flex: 1,
+                //   display: "flex",
+                //   flexDirection: "column",
+                //   gap: 3,
+                // }}
                 >
-                  {/* Timer display */}
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "12px",
-                      backgroundColor: timer < 10 ? "#FFEBEE" : "#E8F5E9",
-                      borderRadius: 2,
-                      border: "1px solid #ccc",
-                    }}
-                  >
-                    <AccessAlarmIcon
-                      sx={{
-                        fontSize: "32px",
-                        color: timer < 10 ? "#F44336" : "#4CAF50",
-                        marginRight: 1,
-                      }}
-                    />
-                    <Typography
-                      sx={{
-                        fontSize: "32px",
-                        fontWeight: "bold",
-                        color: timer < 10 ? "#F44336" : "#4CAF50",
-                      }}
-                    >
-                      {formatTime(timer)}
-                    </Typography>
-                  </Box>
-
                   {/* Battle info */}
-                  <Box
+                  {/* <Box
                     sx={{
                       padding: 2,
                       border: "1px solid #ccc",
@@ -1174,8 +1327,8 @@ export default function BattleDetailPage() {
                       <Typography fontWeight={600}>Opponent Score:</Typography>
                       <Typography>{opponentScore} points</Typography>
                     </Box>
-                  </Box>
-                  {question && (
+                  </Box> */}
+                  {/* {question && (
                     <Box
                       sx={{
                         padding: 2,
@@ -1199,10 +1352,10 @@ export default function BattleDetailPage() {
                           "Fill in the Blank"}
                       </Typography>
                     </Box>
-                  )}
+                  )} */}
 
                   {/* Current status */}
-                  <Box
+                  {/* <Box
                     sx={{
                       padding: 2,
                       border: "1px solid #ccc",
@@ -1215,7 +1368,7 @@ export default function BattleDetailPage() {
                         ? "Waiting for opponent's answer..."
                         : "Choose an answer before time runs out!"}
                     </Typography>
-                  </Box>
+                  </Box> */}
                 </Box>
               </Box>
             </Box>
@@ -1223,25 +1376,39 @@ export default function BattleDetailPage() {
 
           {/* Battle ended - basic finished message */}
           {finished && !showResultDialog && (
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 8,
-                flex: 1,
-              }}
-            >
-              <Typography sx={{ fontSize: "20px", marginBottom: 2 }}>
-                Battle finished!
-              </Typography>
-              <Typography sx={{ fontSize: "24px", fontWeight: "bold" }}>
-                {winner === userInfo?.userId
-                  ? "You won! 🏆"
-                  : "You lost! Try again next time! 😢"}
-              </Typography>
-            </Box>
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 8,
+                  flex: 1,
+                  gap: 2,
+                }}
+              >
+                <Typography sx={{ fontSize: "20px" }}>
+                  Trận đấu đã kết thúc!
+                </Typography>
+                <Typography sx={{ fontSize: "24px", fontWeight: "bold" }}>
+                  {winner === userInfo?.userId
+                    ? "Chiến thắng! 🏆"
+                    : "Thua rồi! Hãy thử lại lần sau nhé! 😢"}
+                </Typography>
+                <Button
+                  onClick={() => router.push("/battle-home")}
+                  sx={{
+                    backgroundColor: "#757575",
+                    color: "white",
+                    "&:hover": { backgroundColor: "#616161" },
+                  }}
+                  variant="outlined"
+                >
+                  Trở về
+                </Button>
+              </Box>
+            </>
           )}
         </Box>
       </Box>
@@ -1255,49 +1422,11 @@ export default function BattleDetailPage() {
       >
         <DialogTitle>
           <Typography variant="h5" align="center" fontWeight={600}>
-            Battle Results
+            Kết quả trận đấu
           </Typography>
         </DialogTitle>
         <DialogContent>
           <Box sx={{ marginBottom: 4 }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 2,
-              }}
-            >
-              <Typography variant="h6">Final Score</Typography>
-              <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
-                <Box sx={{ textAlign: "center" }}>
-                  <Avatar
-                    src={playerInfo?.avatar || ""}
-                    alt={playerInfo?.username || "You"}
-                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
-                  />
-                  <Typography fontWeight={600}>
-                    {playerInfo?.username || "You"}
-                  </Typography>
-                  <Typography variant="h4">{playerScore}</Typography>
-                </Box>
-                <Typography variant="h5" sx={{ alignSelf: "center" }}>
-                  vs
-                </Typography>
-                <Box sx={{ textAlign: "center" }}>
-                  <Avatar
-                    src={opponentInfo?.avatar || ""}
-                    alt={opponentInfo?.username || "Opponent"}
-                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
-                  />
-                  <Typography fontWeight={600}>
-                    {opponentInfo?.username || "Opponent"}
-                  </Typography>
-                  <Typography variant="h4">{opponentScore}</Typography>
-                </Box>
-              </Box>
-            </Box>
-
             <Box
               sx={{
                 padding: 3,
@@ -1310,9 +1439,79 @@ export default function BattleDetailPage() {
             >
               <Typography variant="h5" fontWeight={600}>
                 {winner === userInfo?.userId
-                  ? "Congratulations! You Won! 🏆"
-                  : "Better luck next time! 🎮"}
+                  ? "Chúc mừng! Bạn chiến thắng 🏆"
+                  : "Chúc bạn may mắn lần sau nhé! 🎮"}
               </Typography>
+            </Box>
+            <Box
+              sx={{
+                // display: "flex",
+                // justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 2,
+              }}
+            >
+              {/* <Typography sx={{ textAlign: "center" }} variant="h6">
+                Điểm
+              </Typography> */}
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 4,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    border: "1px solid #ccc",
+                    borderRadius: 2,
+                    padding: 2,
+                  }}
+                >
+                  <Avatar
+                    src={playerInfo?.avatar || ""}
+                    alt={playerInfo?.username || "You"}
+                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
+                  />
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography fontWeight={600}>
+                      {playerInfo?.username || "You"}
+                    </Typography>
+                    <Typography>Số câu trả lời đúng: </Typography>
+                    <Typography>Số câu trả lời sai: </Typography>
+                    <Typography>Điểm: {playerScore}</Typography>
+                  </Box>
+                </Box>
+                <Typography variant="h5" sx={{ alignSelf: "center" }}>
+                  vs
+                </Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    border: "1px solid #ccc",
+                    borderRadius: 2,
+                    padding: 2,
+                  }}
+                >
+                  <Avatar
+                    src={opponentInfo?.avatar || ""}
+                    alt={opponentInfo?.username || "Opponent"}
+                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
+                  />
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography fontWeight={600}>
+                      {opponentInfo?.username || "Opponent"}
+                    </Typography>
+                    <Typography>Số câu trả lời đúng: </Typography>
+                    <Typography>Số câu trả lời sai: </Typography>
+                    <Typography>Điểm: {opponentScore}</Typography>
+                  </Box>
+                </Box>
+              </Box>
             </Box>
 
             {battleResults && battleResults.questions && (
@@ -1363,6 +1562,17 @@ export default function BattleDetailPage() {
         </DialogContent>
         <DialogActions>
           <Button
+            onClick={() => router.push("/battle-home")}
+            sx={{
+              backgroundColor: "#757575",
+              color: "white",
+              "&:hover": { backgroundColor: "#616161" },
+            }}
+            variant="outlined"
+          >
+            Trở về
+          </Button>
+          {/* <Button
             onClick={() => router.push("/battle")}
             sx={{
               backgroundColor: "#99BC4D",
@@ -1371,18 +1581,8 @@ export default function BattleDetailPage() {
               marginRight: 2,
             }}
           >
-            New Battle
-          </Button>
-          <Button
-            onClick={() => router.push("/")}
-            sx={{
-              backgroundColor: "#757575",
-              color: "white",
-              "&:hover": { backgroundColor: "#616161" },
-            }}
-          >
-            Return Home
-          </Button>
+            Trận đấu mới
+          </Button> */}
         </DialogActions>
       </Dialog>
     </Layout>
