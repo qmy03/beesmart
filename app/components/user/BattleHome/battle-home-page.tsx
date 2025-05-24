@@ -10,6 +10,17 @@ import { Box, LinearProgress, MenuItem, TextField } from "@mui/material";
 import Image from "next/image";
 
 export default function BattlePage() {
+  const [usersOnline, setUsersOnline] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOpponent, setSelectedOpponent] = useState<any | null>(null);
+  useEffect(() => {
+    setUsersOnline([
+      { id: 1, name: "Minh Anh", wins: 10, losses: 5 },
+      { id: 2, name: "Quynh My", wins: 7, losses: 3 },
+      { id: 3, name: "Bao Nam", wins: 12, losses: 8 },
+    ]);
+  }, []);
+
   const { accessToken, userInfo } = useAuth();
   const router = useRouter();
   const [matching, setMatching] = useState(false);
@@ -146,8 +157,7 @@ export default function BattlePage() {
           sx={{
             backgroundImage: 'url("/battle.png")',
             backgroundSize: "cover",
-            // backgroundRepeat: "no-repeat",
-            height: "600px",
+            height: "800px",
             backgroundPosition: "center",
             position: "relative",
             display: "flex",
@@ -157,7 +167,7 @@ export default function BattlePage() {
         >
           <Box
             sx={{
-              paddingTop: "100px",
+              paddingTop: "120px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
@@ -165,6 +175,175 @@ export default function BattlePage() {
             }}
           >
             {error && <p className="text-red-500">{error}</p>}
+            <Box
+              sx={{
+                display: "flex",
+                gap: 4,
+                mt: 4,
+                justifyContent: "center",
+                flexGrow: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: "50%",
+                    backgroundColor: "#1976d2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    mb: 1,
+                  }}
+                >
+                  {userInfo?.name?.[0].toUpperCase()}
+                </Box>
+                <div className="font-semibold">
+                  {userInfo?.name || "Tên người dùng"}
+                </div>
+                <div>Thắng: {userInfo?.wins || 0}</div>
+                <div>Thua: {userInfo?.losses || 0}</div>
+              </Box>
+
+              <Box
+                sx={{
+                  mt: 4,
+                  p: 2,
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  flex: 2,
+                  backgroundColor: "white",
+                }}
+              >
+                {selectedOpponent ? (
+                  <>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box
+                        sx={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: "50%",
+                          backgroundColor: "#1976d2",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontSize: "24px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {selectedOpponent.name[0].toUpperCase()}
+                      </Box>
+                      <Box>
+                        <div className="font-semibold">
+                          {selectedOpponent.name}
+                        </div>
+                        <div>Thắng: {selectedOpponent.wins}</div>
+                        <div>Thua: {selectedOpponent.losses}</div>
+                      </Box>
+                    </Box>
+                    {/* <Button
+                      variant="contained"
+                      color="primary"
+                      sx={{ mt: 2 }}
+                      onClick={() =>
+                        alert(`Thách đấu ${selectedOpponent.name}`)
+                      }
+                    >
+                      Thách đấu
+                    </Button> */}
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={startMatching}
+                    >
+                      Thách đấu
+                    </Button>
+                  </>
+                ) : (
+                  <div>Hãy chọn người tham dự đấu trường để thách đấu</div>
+                )}
+              </Box>
+
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  bgcolor: "white",
+                  p: 2,
+                  borderRadius: "8px",
+                  flex: 1,
+                }}
+              >
+                <TextField
+                  label="Tìm học sinh..."
+                  size="small"
+                  variant="outlined"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  sx={{ backgroundColor: "white" }}
+                />
+                <Box sx={{ maxHeight: 200, overflowY: "auto" }}>
+                  {usersOnline
+                    .filter((user) =>
+                      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((user) => (
+                      <Box
+                        key={user.id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          p: 1,
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          backgroundColor:
+                            selectedOpponent?.id === user.id
+                              ? "#f0f0f0"
+                              : "transparent",
+                          "&:hover": { backgroundColor: "#f5f5f5" },
+                        }}
+                        onClick={() => setSelectedOpponent(user)}
+                      >
+                        <Box
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: "50%",
+                            backgroundColor: "#1976d2",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            fontWeight: "bold",
+                            fontSize: "16px",
+                          }}
+                        >
+                          {user.name[0].toUpperCase()}
+                        </Box>
+                        <Box>{user.name}</Box>
+                      </Box>
+                    ))}
+                </Box>
+              </Box>
+            </Box>
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <TextField
@@ -213,14 +392,21 @@ export default function BattlePage() {
             </Box>
 
             {!matching ? (
-              <Box sx={{paddingTop: 4}}>
-                <Image
+              <Box sx={{ paddingTop: 4 }}>
+                {/* <Image
                   src="/play.png"
                   alt=""
                   width={100}
                   height={100}
                   onClick={startMatching}
-                />
+                /> */}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={startMatching}
+                >
+                  Thách đấu
+                </Button>
               </Box>
             ) : (
               //   <Button onClick={startMatching}>Start Matching</Button>

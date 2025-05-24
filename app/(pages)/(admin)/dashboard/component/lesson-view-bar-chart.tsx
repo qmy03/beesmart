@@ -117,6 +117,9 @@ const LessonViewsBarChart = ({
         </Typography>
         <Box
           sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             overflowX: "auto",
             width: "100%",
             "&::-webkit-scrollbar": {

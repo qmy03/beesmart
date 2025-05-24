@@ -53,13 +53,14 @@ const DashboardPage = () => {
               Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header cho API người dùng
             },
           });
+
           const userData = await userResponse.json();
           const totalUsers = userData.data.length;
 
           // Fetch total number of classes without accessToken
           const gradeResponse = await fetch("http://localhost:8080/api/grades");
           const gradeData = await gradeResponse.json();
-          const totalGrades = gradeData.length;
+          const totalGrades = gradeData.data.grades.length;
 
           // Fetch total number of lessons without accessToken
           const lessonResponse = await fetch(
@@ -228,6 +229,13 @@ const DashboardPage = () => {
             year={currentYear}
           />
         </Box>
+        <Box sx={{ display: "flex", marginBottom: 4, gap: 2, flexGrow: 1 }}>
+          <QuizAverageBarChart
+            data={quizAverageData}
+            month={currentMonth}
+            year={currentYear}
+          />
+        </Box>
         <Card
           variant="outlined"
           sx={{
@@ -244,13 +252,6 @@ const DashboardPage = () => {
           </Typography>
           <QuizStatisticsChart />
         </Card>
-        <Box sx={{ display: "flex", marginBottom: 4, gap: 2, flexGrow: 1 }}>
-          <QuizAverageBarChart
-            data={quizAverageData}
-            month={currentMonth}
-            year={currentYear}
-          />
-        </Box>
       </Box>
     </Layout>
   );

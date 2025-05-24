@@ -190,7 +190,7 @@ const LoginForm = () => {
           paddingY: 3,
           alignItems: "center",
           backgroundColor: "#EFF3E6",
-          height: "100%",
+          minHeight: "100vh",
         }}
       >
         <form className=" w-[40vw] space-y-3" onSubmit={handleLogin}>
