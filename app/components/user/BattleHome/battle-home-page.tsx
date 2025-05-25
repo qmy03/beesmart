@@ -13,15 +13,9 @@ export default function BattlePage() {
   const [usersOnline, setUsersOnline] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOpponent, setSelectedOpponent] = useState<any | null>(null);
-  useEffect(() => {
-    setUsersOnline([
-      { id: 1, name: "Minh Anh", wins: 10, losses: 5 },
-      { id: 2, name: "Quynh My", wins: 7, losses: 3 },
-      { id: 3, name: "Bao Nam", wins: 12, losses: 8 },
-    ]);
-  }, []);
 
   const { accessToken, userInfo } = useAuth();
+  console.log("User Info:", userInfo);
   const router = useRouter();
   const [matching, setMatching] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -32,7 +26,32 @@ export default function BattlePage() {
   const [error, setError] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    if (!accessToken) return;
 
+    const fetchOnlineUsers = async () => {
+      try {
+        const response = await apiService.get("/battles/get-online-list", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const users = response.data?.data?.users || [];
+
+        // ✅ Lọc ra user khác với user hiện tại
+        const filteredUsers = users.filter(
+          (user: any) => user.userId !== userInfo?.userId
+        );
+
+        setUsersOnline(filteredUsers);
+      } catch (error) {
+        console.error("❌ Lỗi khi lấy danh sách người dùng online:", error);
+      }
+    };
+
+    fetchOnlineUsers();
+  }, [accessToken]);
   // Fetch subjects and grades on mount
   useEffect(() => {
     if (!accessToken) return;
@@ -211,10 +230,10 @@ export default function BattlePage() {
                     mb: 1,
                   }}
                 >
-                  {userInfo?.name?.[0].toUpperCase()}
+                  {userInfo?.username?.[0].toUpperCase()}
                 </Box>
                 <div className="font-semibold">
-                  {userInfo?.name || "Tên người dùng"}
+                  {userInfo?.username || "Tên người dùng"}
                 </div>
                 <div>Thắng: {userInfo?.wins || 0}</div>
                 <div>Thua: {userInfo?.losses || 0}</div>
@@ -302,43 +321,58 @@ export default function BattlePage() {
                 <Box sx={{ maxHeight: 200, overflowY: "auto" }}>
                   {usersOnline
                     .filter((user) =>
-                      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+                      user.username
+                        .toLowerCase()
+                        .includes(searchTerm.toLowerCase())
                     )
                     .map((user) => (
                       <Box
-                        key={user.id}
+                        key={user.userId}
                         sx={{
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "space-between",
                           gap: 1,
                           p: 1,
                           borderRadius: "8px",
                           cursor: "pointer",
-                          backgroundColor:
-                            selectedOpponent?.id === user.id
-                              ? "#f0f0f0"
-                              : "transparent",
-                          "&:hover": { backgroundColor: "#f5f5f5" },
+                          "&:hover": { backgroundColor: "#f0f0f0" },
                         }}
-                        onClick={() => setSelectedOpponent(user)}
                       >
                         <Box
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: "50%",
-                            backgroundColor: "#1976d2",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "white",
-                            fontWeight: "bold",
-                            fontSize: "16px",
-                          }}
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
                         >
-                          {user.name[0].toUpperCase()}
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: "50%",
+                              backgroundColor: "#1976d2",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "white",
+                              fontSize: "16px",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {user.username[0].toUpperCase()}
+                          </Box>
+                          <span>{user.username}</span>
                         </Box>
-                        <Box>{user.name}</Box>
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            setSelectedOpponent({
+                              id: user.userId,
+                              name: user.username,
+                              wins: user.wins || 0,
+                              losses: user.losses || 0,
+                            })
+                          }
+                        >
+                          Thách đấu
+                        </Button>
                       </Box>
                     ))}
                 </Box>
