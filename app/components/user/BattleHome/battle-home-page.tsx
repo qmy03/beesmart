@@ -169,6 +169,38 @@ export default function BattlePage() {
     setCountdown(0);
   };
 
+  const sendBattleInvitation = async (opponentId: string) => {
+    if (!accessToken || !selectedSubject || !selectedGrade) {
+      setError("Please select both a subject and a grade before sending invitation.");
+      return;
+    }
+
+    try {
+      const invitationRequest = {
+        inviteeId: opponentId,
+        gradeId: selectedGrade,
+        subjectId: selectedSubject,
+        topic: "Battle Challenge" // You can customize this or make it dynamic
+      };
+
+      const response = await apiService.post("/battle-invitations/send", invitationRequest, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.data?.status === 200) {
+        alert("Lời mời thách đấu đã được gửi thành công!");
+        // Optionally reset selected opponent
+        setSelectedOpponent(null);
+      }
+    } catch (error: any) {
+      console.error("❌ Error sending battle invitation:", error);
+      const errorMessage = error.response?.data?.message || "Không thể gửi lời mời thách đấu";
+      setError(errorMessage);
+    }
+  };
+
   return (
     <Layout>
       <Box className="p-6">
@@ -276,23 +308,22 @@ export default function BattlePage() {
                         <div>Thua: {selectedOpponent.losses}</div>
                       </Box>
                     </Box>
-                    {/* <Button
+                    <Button
                       variant="contained"
                       color="primary"
                       sx={{ mt: 2 }}
-                      onClick={() =>
-                        alert(`Thách đấu ${selectedOpponent.name}`)
-                      }
+                      onClick={() => selectedOpponent && sendBattleInvitation(selectedOpponent.id)}
+                      disabled={!selectedSubject || !selectedGrade || !selectedOpponent}
                     >
                       Thách đấu
-                    </Button> */}
-                    <Button
+                    </Button>
+                    {/* <Button
                       variant="contained"
                       color="primary"
                       onClick={startMatching}
                     >
                       Thách đấu
-                    </Button>
+                    </Button> */}
                   </>
                 ) : (
                   <div>Hãy chọn người tham dự đấu trường để thách đấu</div>
@@ -362,14 +393,8 @@ export default function BattlePage() {
                         </Box>
                         <Button
                           size="small"
-                          onClick={() =>
-                            setSelectedOpponent({
-                              id: user.userId,
-                              name: user.username,
-                              wins: user.wins || 0,
-                              losses: user.losses || 0,
-                            })
-                          }
+                          onClick={() => sendBattleInvitation(user.userId)}
+                          disabled={!selectedSubject || !selectedGrade}
                         >
                           Thách đấu
                         </Button>

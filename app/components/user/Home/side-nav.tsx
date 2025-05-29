@@ -45,6 +45,9 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LockIcon from "@mui/icons-material/Lock";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import SportsIcon from "@mui/icons-material/Sports";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 
 // Interface for Notification
 interface Notification {
@@ -443,6 +446,55 @@ const SideNav: React.FC = () => {
   const notificationOpen = Boolean(notificationAnchorEl);
   const notificationId = notificationOpen ? 'notification-popover' : undefined;
 
+  const handleBattleInvitationAction = async (
+    notificationId: string, 
+    invitationId: string, 
+    action: 'accept' | 'decline'
+  ) => {
+    try {
+      // First mark the notification as read
+      await apiService.put(`/notifications/${notificationId}/read`, {}, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      // Then handle the invitation action
+      const response = await apiService.post(`/battle-invitations/${invitationId}/${action}`, {}, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      // Update UI immediately
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.notificationId === notificationId 
+            ? { ...notification, read: true } 
+            : notification
+        )
+      );
+      
+      // Decrease unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      if (action === 'accept' && response.data?.data?.battleId) {
+        // Navigate to battle if accepted
+        router.push(`/battle/${response.data.data.battleId}`);
+      }
+      
+      // Close notification dropdown
+      setNotificationAnchorEl(null);
+      
+      // Show success message (optional)
+      console.log(`Battle invitation ${action}ed successfully`);
+      
+    } catch (error) {
+      console.error(`Error ${action}ing battle invitation:`, error);
+      // You might want to show an error toast here
+    }
+  };
+
   return (
     <>
       <AppBar position="static" sx={{ bgcolor: "#FFFBF3" }}>
@@ -678,17 +730,16 @@ const SideNav: React.FC = () => {
                               maxHeight: 400, 
                               overflow: 'auto', 
                               padding: 0,
-                              paddingBottom: 0, // Add bottom padding to prevent cutting off
-                              // Add custom scrollbar styling
+                              paddingBottom: 0,
                               '&::-webkit-scrollbar': {
-                                width: '6px' // Slightly wider scrollbar for better visibility
+                                width: '6px'
                               },
                               '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: 'rgba(153, 188, 77, 0.5)', // Slightly more visible
+                                backgroundColor: 'rgba(153, 188, 77, 0.5)',
                                 borderRadius: '4px'
                               },
                               '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light track background
+                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
                                 marginTop: 1,
                                 marginBottom: 1
                               }
@@ -698,7 +749,6 @@ const SideNav: React.FC = () => {
                               <React.Fragment key={notification.notificationId}>
                                 <ListItem 
                                   component="div"
-                                  onClick={() => handleMarkAsRead(notification.notificationId, notification.link)}
                                   sx={{ 
                                     bgcolor: notification.read ? 'white' : '#f0f8ff',
                                     '&:hover': { bgcolor: '#e8f4f8' },
@@ -709,9 +759,14 @@ const SideNav: React.FC = () => {
                                 >
                                   <ListItemText 
                                     primary={
-                                      <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
-                                        {notification.title}
-                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        {notification.type === 'BATTLE_INVITATION' && (
+                                          <SportsIcon sx={{ color: '#ff9800', fontSize: 18 }} />
+                                        )}
+                                        <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
+                                          {notification.title}
+                                        </Typography>
+                                      </Box>
                                     }
                                     secondary={
                                       <Typography
@@ -739,28 +794,73 @@ const SideNav: React.FC = () => {
                                             minute: '2-digit'
                                           })
                                         : 'Vừa xong'}
-                                    </Typography>
-                                    
-                                    <Typography 
-                                      variant="caption" 
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Prevent the parent click event
-                                        handleRetakeQuiz(notification.notificationId, notification.link);
-                                      }}
-                                      sx={{ 
-                                        color: '#99BC4D',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          textDecoration: 'underline'
-                                        }
-                                      }}
-                                    >
-                                      Làm lại
-                                    </Typography>
+                                    </Typography>                         
+                                    {/* Battle invitation specific actions */}
+                                    {notification.type === 'BATTLE_INVITATION' && !notification.read ? (
+                                      <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const invitationId = notification.link.split('/').pop();
+                                            handleBattleInvitationAction(notification.notificationId, invitationId, 'accept');
+                                          }}
+                                          sx={{ 
+                                            color: '#4caf50',
+                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.1)' }
+                                          }}
+                                        >
+                                          <CheckCircleIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const invitationId = notification.link.split('/').pop();
+                                            handleBattleInvitationAction(notification.notificationId, invitationId, 'decline');
+                                          }}
+                                          sx={{ 
+                                            color: '#f44336',
+                                            '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' }
+                                          }}
+                                        >
+                                          <CancelIcon fontSize="small" />
+                                        </IconButton>
+                                      </Box>
+                                    ) : (notification.type !== 'BATTLE_INVITATION' && (notification.type === 'QUIZ_FAILED' || notification.type === 'QUIZ_RETAKE')) ? (
+                                      <Typography 
+                                        variant="caption" 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRetakeQuiz(notification.notificationId, notification.link);
+                                        }}
+                                        sx={{ 
+                                          color: '#99BC4D',
+                                          cursor: 'pointer',
+                                          '&:hover': {
+                                            textDecoration: 'underline'
+                                          }
+                                        }}
+                                      >
+                                        Làm lại
+                                      </Typography>
+                                    ) : null}
                                   </Box>
-                                  <Tooltip title="Bấm vào đây để thực hiện lại bài quiz" placement="left">
-                                    <span></span>
-                                  </Tooltip>
+                                  
+                                  {/* Click handler for non-battle notifications */}
+                                  {notification.type !== 'BATTLE_INVITATION' && (
+                                    <Box 
+                                      onClick={() => handleMarkAsRead(notification.notificationId, notification.link)}
+                                      sx={{ 
+                                        position: 'absolute', 
+                                        top: 0, 
+                                        left: 0, 
+                                        right: 0, 
+                                        bottom: 0, 
+                                        cursor: 'pointer' 
+                                      }} 
+                                    />
+                                  )}
                                 </ListItem>
                                 <Divider />
                               </React.Fragment>
