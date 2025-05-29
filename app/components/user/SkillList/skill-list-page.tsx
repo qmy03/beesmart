@@ -180,6 +180,18 @@ const SkillListPage: React.FC = () => {
     console.log("Updated topicQuizzes:", topicQuizzes);
   }, [topicQuizzes]);
 
+  useEffect(() => {
+    const topicId = sessionStorage.getItem("notificationTopicId");
+
+    if (topicId && topics.length > 0) {
+      const matchedTopic = topics.find(t => t.topicId === topicId);
+      if (matchedTopic) {
+        setSelectedTopic(matchedTopic);
+        sessionStorage.removeItem("notificationTopicId"); // cleanup
+      }
+    }
+  }, [topics]);
+
   const handleSubjectClick = (subject: any) => {
     setSelectedSubjectId(subject.subjectId);
     setSelectedSubjectName(subject.subjectName);
