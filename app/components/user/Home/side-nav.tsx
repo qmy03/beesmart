@@ -70,6 +70,7 @@ const SideNav: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const websocketRef = useRef<WebSocket | null>(null);
+  const [websocketConnected, setWebsocketConnected] = useState<boolean>(false);
 
   // Menu dropdown state
   const [dropdownEl, setDropdownEl] = useState<null | HTMLElement>(null);
@@ -80,18 +81,17 @@ const SideNav: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const [options, setOptions] = useState([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [battleAcceptedDialog, setBattleAcceptedDialog] = useState<{
+    open: boolean;
+    battleId: string | null;
+  }>({ open: false, battleId: null });
 
   // Connect to WebSocket when user is logged in
   useEffect(() => {
     if (accessToken && userInfo) {
-      // Fetch existing notifications first
+      connectWebSocket();
+      // Initial HTTP fetch as a fallback
       fetchNotifications();
-      
-      // Then establish WebSocket connection
-      // Uncomment this when WebSocket is ready
-      // connectWebSocket();
-      
-      // Clean up WebSocket connection on unmount
       return () => {
         if (websocketRef.current) {
           websocketRef.current.close();
@@ -103,24 +103,15 @@ const SideNav: React.FC = () => {
   // Fetch existing notifications from the backend
   const fetchNotifications = async () => {
     try {
-      // Ensure the token is properly sent with the Authorization header
       const response = await apiService.get("/notifications", {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       });
-      
-      console.log("Notification response:", response);
-      
+      console.log("HTTP Notification response:", response);
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        // Handle the case where notifications are in response.data.data (as shown in your sample response)
         setNotifications(response.data.data);
         const unread = response.data.data.filter((notification: Notification) => !notification.read).length;
-        setUnreadCount(unread);
-      } else if (response.data && Array.isArray(response.data)) {
-        // Handle the case where notifications are directly in response.data
-        setNotifications(response.data);
-        const unread = response.data.filter((notification: Notification) => !notification.read).length;
         setUnreadCount(unread);
       } else {
         console.error("Unexpected notification response format:", response.data);
@@ -128,8 +119,7 @@ const SideNav: React.FC = () => {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
-      // Fallback to empty notifications list on error
+      console.error("Error fetching notifications via HTTP:", error);
       setNotifications([]);
       setUnreadCount(0);
     }
@@ -138,24 +128,31 @@ const SideNav: React.FC = () => {
   // Connect to WebSocket for real-time notifications
   const connectWebSocket = () => {
     if (!accessToken) return;
-    
-    // Fix the WebSocket URL format and token handling
-    // Remove the extra slash and correctly format the WebSocket URL
+
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications?noti-token=${accessToken}`;
     
-    console.log("Connecting to notification WebSocket...");
+    console.log("Connecting to notification WebSocket:", wsUrl);
     
-    // Close existing connection if any
     if (websocketRef.current && websocketRef.current.readyState !== WebSocket.CLOSED) {
       websocketRef.current.close();
     }
     
-    // Create new WebSocket connection
     websocketRef.current = new WebSocket(wsUrl);
     
     websocketRef.current.onopen = () => {
       console.log("Notification WebSocket connection established");
+      setWebsocketConnected(true);
+      websocketRef.current?.send(JSON.stringify({ 
+        type: 'GET_NOTIFICATIONS' 
+      }));
+      // Set a timeout to fallback to HTTP if WebSocket doesn't respond
+      setTimeout(() => {
+        if (notifications.length === 0) {
+          console.log("WebSocket did not return notifications, falling back to HTTP");
+          fetchNotifications();
+        }
+      }, 3000); // Wait 3 seconds for WebSocket response
     };
     
     websocketRef.current.onmessage = (event) => {
@@ -164,22 +161,17 @@ const SideNav: React.FC = () => {
         console.log("WebSocket message received:", data);
         
         if (data.type === 'NEW_NOTIFICATION') {
-          // Play notification sound (optional)
           const audio = new Audio('/notification-sound.mp3');
           audio.play().catch(e => console.log('Sound play error:', e));
-          
-          // Add new notification to the list
           setNotifications(prev => [data.notification, ...prev]);
           setUnreadCount(prev => prev + 1);
           
-          // Show browser notification if supported
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification(data.notification.title, {
               body: data.notification.message
             });
           }
         } else if (data.type === 'NOTIFICATION_READ') {
-          // Update the read status of the notification
           setNotifications(prev => 
             prev.map(notification => 
               notification.notificationId === data.notificationId 
@@ -187,8 +179,6 @@ const SideNav: React.FC = () => {
                 : notification
             )
           );
-          
-          // Update unread count if needed
           setUnreadCount(prev => {
             const notification = notifications.find(n => n.notificationId === data.notificationId);
             if (notification && !notification.read) {
@@ -196,27 +186,53 @@ const SideNav: React.FC = () => {
             }
             return prev;
           });
+        } else if (data.type === 'ALL_NOTIFICATIONS') {
+          setNotifications(data.notifications || []);
+          const unread = (data.notifications || []).filter((notification: Notification) => !notification.read).length;
+          setUnreadCount(unread);
         } else if (data.type === 'UNREAD_NOTIFICATIONS') {
-          // Initialize with unread notifications
-          setNotifications(data.notifications);
+          setNotifications(prev => {
+            const existingIds = new Set(prev.map(n => n.notificationId));
+            const newNotifications = data.notifications.filter((n: Notification) => !existingIds.has(n.notificationId));
+            return [...newNotifications, ...prev];
+          });
           setUnreadCount(data.notifications.length);
+        } else if (data.type === 'ALL_NOTIFICATIONS_DELETED') {
+          setNotifications([]);
+          setUnreadCount(0);
+        } else if (data.type === 'UNREAD_COUNT') {
+          setUnreadCount(data.data.count || 0);
+        } else if (data.type === 'BATTLE_INVITATION_ACCEPTED') {
+          console.log('Battle invitation accepted, showing dialog and redirecting to battle:', data.battleId);
+          setBattleAcceptedDialog({ open: true, battleId: data.battleId });
+          setTimeout(() => {
+            setBattleAcceptedDialog({ open: false, battleId: null });
+            router.push(`/battle-detail/${data.battleId}`);
+          }, 2000);
+        } else if (data.type === 'ERROR') {
+          console.error("WebSocket error message:", data.message);
+          fetchNotifications(); // Fallback to HTTP on error
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
+        fetchNotifications(); // Fallback to HTTP on parse error
       }
     };
     
     websocketRef.current.onerror = (error) => {
       console.error("WebSocket error:", error);
+      setWebsocketConnected(false);
+      fetchNotifications(); // Fallback to HTTP
     };
     
     websocketRef.current.onclose = (event) => {
       console.log("WebSocket connection closed with code:", event.code);
-      // Try to reconnect after 5 seconds if not closed intentionally
+      setWebsocketConnected(false);
       if (event.code !== 1000) {
         console.log("Attempting to reconnect in 5 seconds...");
         setTimeout(connectWebSocket, 5000);
       }
+      fetchNotifications(); // Fallback to HTTP on close
     };
   };
 
@@ -480,7 +496,7 @@ const SideNav: React.FC = () => {
 
       if (action === 'accept' && response.data?.data?.battleId) {
         // Navigate to battle if accepted
-        router.push(`/battle/${response.data.data.battleId}`);
+        router.push(`/battle-detail/${response.data.data.battleId}`);
       }
       
       // Close notification dropdown
@@ -846,6 +862,27 @@ const SideNav: React.FC = () => {
                                       </Typography>
                                     ) : null}
                                   </Box>
+                                  <Dialog
+                                    open={battleAcceptedDialog.open}
+                                    onClose={() => {}} // Prevent manual closing
+                                    aria-labelledby="battle-accepted-dialog-title"
+                                    aria-describedby="battle-accepted-dialog-description"
+                                    maxWidth="sm"
+                                    fullWidth
+                                  >
+                                    <DialogTitle id="battle-accepted-dialog-title" sx={{ textAlign: 'center', color: '#4caf50' }}>
+                                      🎉 Thách đấu được chấp nhận!
+                                    </DialogTitle>
+                                    <DialogContent sx={{ textAlign: 'center', py: 3 }}>
+                                      <DialogContentText id="battle-accepted-dialog-description" sx={{ fontSize: '16px' }}>
+                                        Đối thủ đã chấp nhận lời thách đấu của bạn.<br />
+                                        Đang chuyển đến trang battle...
+                                      </DialogContentText>
+                                      <Box sx={{ mt: 2 }}>
+                                        <CircularProgress size={30} sx={{ color: '#4caf50' }} />
+                                      </Box>
+                                    </DialogContent>
+                                  </Dialog>
                                   
                                   {/* Click handler for non-battle notifications */}
                                   {notification.type !== 'BATTLE_INVITATION' && (
