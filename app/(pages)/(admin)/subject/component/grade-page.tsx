@@ -26,6 +26,21 @@ import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 import ProgressOverlay from "@/app/components/progress-Overlay";
+
+interface Subject {
+  subjectId: number;
+  subjectName: string;
+}
+
+interface SubjectsResponse {
+  data: {
+    subjects: Subject[];
+  };
+}
+interface SubjectDetailResponse {
+  data: Subject;
+}
+
 const SubjectPage = () => {
   const { accessToken, isLoading, setIsLoading } = useAuth();
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -57,7 +72,7 @@ const SubjectPage = () => {
       const requestBody = query ? { bookName: query } : {};
 
       apiService
-        .get("/subjects", {
+        .get<SubjectsResponse>("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: query ? { search: query } : undefined,
         })
@@ -97,11 +112,10 @@ const SubjectPage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/subjects", {
+        .get<SubjectsResponse>("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
-          console.log("AAAAAAAAAA", response.data);
           setSubjects(response.data.data.subjects);
           setIsLoading(false);
         })
@@ -159,7 +173,7 @@ const SubjectPage = () => {
 
     apiCall
       .then(() => {
-        return apiService.get("/subjects", {
+        return apiService.get<SubjectsResponse>("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -193,7 +207,7 @@ const SubjectPage = () => {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then(() => {
-        return apiService.get("/subjects", {
+        return apiService.get<SubjectsResponse>("/subjects", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -230,14 +244,13 @@ const SubjectPage = () => {
     setError("");
     setOpenDialog(true);
 
-    // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/subjects/${subject.subjectId}`, {
+      .get<SubjectDetailResponse>(`/subjects/${subject.subjectId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
         const { subjectName } = response.data.data;
-        setNewSubjectName(subjectName); // set vào TextField
+        setNewSubjectName(subjectName);
       })
       .catch((error) => {
         console.error("Error fetching grade detail:", error);

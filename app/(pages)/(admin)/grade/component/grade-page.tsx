@@ -25,9 +25,20 @@ import TextField from "@/app/components/textfield";
 import CloseIcon from "@mui/icons-material/close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+interface Grade {
+  gradeId: number;
+  gradeName: string;
+}
+
+interface GradeResponse {
+  data: {
+    grades: Grade[];
+  };
+}
+
 const GradePage = () => {
   const { accessToken, isLoading, setIsLoading } = useAuth();
-  const [grades, setGrades] = useState<any[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<readonly number[]>([]);
@@ -40,7 +51,7 @@ const GradePage = () => {
   const [error, setError] = useState("");
   const [openDelete, setOpenDelete] = useState(false);
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedGrade, setSelectedGrade] = useState<any | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -54,7 +65,7 @@ const GradePage = () => {
       const requestBody = query ? { gradeName: query } : {};
 
       apiService
-        .get("/grades", {
+        .get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: query ? { gradeName: query } : undefined,
         })
@@ -94,7 +105,7 @@ const GradePage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/grades", {
+        .get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
@@ -143,8 +154,8 @@ const GradePage = () => {
 
     const apiCall =
       editMode === "edit"
-        ? apiService.put(
-            `/grades/${selectedGrade.gradeId}`,
+        ? apiService.put<GradeResponse>(
+            `/grades/${selectedGrade?.gradeId}`,
             { gradeName: newGradeName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )
@@ -156,7 +167,7 @@ const GradePage = () => {
 
     apiCall
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -185,12 +196,12 @@ const GradePage = () => {
 
     setIsLoading(true);
     apiService
-      .delete("/grades", {
+      .delete<GradeResponse>("/grades", {
         data: selected,
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -227,15 +238,20 @@ const GradePage = () => {
     setError("");
     setOpenDialog(true);
 
-    // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/grades/${grade.gradeId}`, {
+      .get<GradeResponse>(`/grades/${grade.gradeId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
-        const { gradeName } = response.data.data;
-        setNewGradeName(gradeName); // set vào TextField
+        const grades = response.data.data.grades;
+        if (grades.length > 0) {
+          const gradeName = grades[0].gradeName;
+          setNewGradeName(gradeName);
+        } else {
+          setError("Không tìm thấy lớp học.");
+        }
       })
+
       .catch((error) => {
         console.error("Error fetching grade detail:", error);
         setError("Không thể lấy thông tin lớp học.");
@@ -295,7 +311,7 @@ const GradePage = () => {
             minHeight: 0,
           }}
         >
-          {loading ? (
+          {isLoading ? (
             <Typography>Đang tải...</Typography>
           ) : (
             <>

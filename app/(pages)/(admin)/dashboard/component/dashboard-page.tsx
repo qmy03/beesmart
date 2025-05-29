@@ -12,10 +12,11 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import apiService from "@/app/untils/api";
 import QuizStatisticsChart from "./quiz-statistics-chart";
 import QuizAverageBarChart from "./quiz-average-bar-chart";
+import { SvgIconComponent } from "@mui/icons-material";
 interface SummaryDataItem {
   title: string;
   value: any;
-  Icon: React.ComponentType;
+  Icon: SvgIconComponent;
   bgColor: string;
   bgColorIcon: string;
   iconColor: string;
@@ -23,7 +24,6 @@ interface SummaryDataItem {
 }
 
 const DashboardPage = () => {
-  // const { accessToken } = useAuth();
   const accessToken = localStorage.getItem("accessToken");
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
@@ -33,15 +33,14 @@ const DashboardPage = () => {
   >([]);
   const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
   useEffect(() => {
-    console.log("Access Token:", accessToken); // Add this line for debugging
+    console.log("Access Token:", accessToken); 
     if (accessToken) {
-      // API calls go here
     } else {
       console.error("Access token is missing");
     }
   }, [accessToken]);
-  const currentMonth = new Date().getMonth() + 1; // getMonth() trả về tháng từ 0-11, do đó cần cộng thêm 1
-  const currentYear = new Date().getFullYear(); // Lấy năm hiện tại
+  const currentMonth = new Date().getMonth() + 1; 
+  const currentYear = new Date().getFullYear();
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -50,26 +49,23 @@ const DashboardPage = () => {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header cho API người dùng
+              Authorization: `Bearer ${accessToken}`,
             },
           });
 
           const userData = await userResponse.json();
           const totalUsers = userData.data.length;
 
-          // Fetch total number of classes without accessToken
           const gradeResponse = await fetch("http://localhost:8080/api/grades");
           const gradeData = await gradeResponse.json();
           const totalGrades = gradeData.data.grades.length;
 
-          // Fetch total number of lessons without accessToken
           const lessonResponse = await fetch(
             "http://localhost:8080/api/lessons?page&size"
           );
           const lessonData = await lessonResponse.json();
           const totalLessons = lessonData.data.totalItems;
 
-          // Update summary data
           setSummaryData([
             {
               title: "Tổng số tài khoản hiện có",
@@ -108,7 +104,7 @@ const DashboardPage = () => {
     };
 
     fetchData();
-  }, [accessToken]); // Hook sẽ chạy lại mỗi khi accessToken thay đổi
+  }, [accessToken]);
 
   useEffect(() => {
     const fetchQuizAverageData = async () => {
@@ -164,7 +160,7 @@ const DashboardPage = () => {
               const dayData = lessonData.data[date];
               return {
                 date,
-                ...dayData, // Lưu từng lớp riêng biệt
+                ...dayData, 
               };
             });
             setLessonViewData(chartData);
@@ -204,7 +200,6 @@ const DashboardPage = () => {
           </Typography>
         </Box>
 
-        {/* Display StatCards */}
         <Grid container spacing={3}>
           {summaryData.map((item, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
@@ -221,7 +216,6 @@ const DashboardPage = () => {
           ))}
         </Grid>
 
-        {/* Add SessionsChart */}
         <Box sx={{ display: "flex", marginY: 4, gap: 2, flexGrow: 1 }}>
           <LessonViewsBarChart
             data={lessonViewData}

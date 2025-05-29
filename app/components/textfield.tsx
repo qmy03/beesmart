@@ -7,9 +7,9 @@ import { SxProps } from "@mui/system";
 import theme from "./theme";
 
 interface TextFieldProps extends Omit<MuiTextFieldProps, "InputProps"> {
-  label: string;
-  value: string;
-  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  label?: string;
+  value?: string;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   maxLength?: number;
   endAdornment?: React.ReactNode;

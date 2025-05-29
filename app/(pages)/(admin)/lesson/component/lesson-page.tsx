@@ -31,20 +31,72 @@ import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/close";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
+interface GradesResponse {
+  data: {
+    grades: Grade[];
+  };
+}
+interface BookType {
+  bookId: string;
+  bookName: string;
+}
+
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
+
+interface Lesson {
+  lessonId: number;
+  lessonName: string;
+}
+
+interface Topic {
+  topicId: number;
+  topicName: string;
+  lessons: Lesson[];
+}
+
+interface BookTypesResponse {
+  data: {
+    bookTypes: BookType[];
+  };
+}
+
+interface SubjectsResponse {
+  data: {
+    subjects: Subject[];
+  };
+}
+
+interface TopicsResponse {
+  data: {
+    topics: Topic[];
+    totalItems: number;
+  };
+}
+type ApiResponse = {
+  message: string;
+};
 
 const LessonPage = () => {
-  const { accessToken, isLoading, setIsLoading } = useAuth(); // Lấy accessToken từ context
-  const [grades, setGrades] = useState<any[]>([]); // State để lưu danh sách lớp học
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(""); // State để lưu gradeId
-  const [selectedGradeName, setSelectedGradeName] = useState<string>(""); // State để lưu gradeName
-  const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1"); // State để lưu học kỳ đã chọn
-  const [subjects, setSubjects] = useState<any[]>([]); // State để lưu danh sách môn học
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(""); // State để lưu subjectId
-  const [selectedSubjectName, setSelectedSubjectName] = useState<string>(""); // State để lưu subjectName
-  const [books, setBooks] = useState<any[]>([]); // State để lưu danh sách loại sách
-  const [selectedBookId, setSelectedBookId] = useState<string>(""); // State để lưu bookTypeId
-  const [selectedBookName, setSelectedBookName] = useState<string>(""); // State để lưu bookTypeName
-  const [topics, setTopics] = useState<any[]>([]); // State để lưu các topics
+  const { accessToken, isLoading, setIsLoading } = useAuth();
+  const [grades, setGrades] = useState<any[]>([]);
+  const [selectedGradeId, setSelectedGradeId] = useState<string>("");
+  const [selectedGradeName, setSelectedGradeName] = useState<string>("");
+  const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1");
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [selectedSubjectName, setSelectedSubjectName] = useState<string>("");
+  const [books, setBooks] = useState<any[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string>("");
+  const [selectedBookName, setSelectedBookName] = useState<string>("");
+  const [topics, setTopics] = useState<any[]>([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [checkedState, setCheckedState] = useState<Record<number, Set<number>>>(
@@ -53,8 +105,8 @@ const LessonPage = () => {
   const isTopicExpanded = (topicId: number) => expandedRows.has(topicId);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const [snackbarOpen, setSnackbarOpen] = useState(false); // Trạng thái mở/đóng Snackbar
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Nội dung thông báo
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
@@ -73,7 +125,7 @@ const LessonPage = () => {
 
     topics.forEach((topic) => {
       if (isTopicExpanded(topic.topicId)) {
-        totalLessons += topic.lessons.length + 1; // Topic + lessons
+        totalLessons += topic.lessons.length + 1;
       } else {
         totalLessons += 1;
       }
@@ -83,14 +135,13 @@ const LessonPage = () => {
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
-    console.log("Changing to page:", newPage); // Add logging
+    console.log("Changing to page:", newPage);
 
-    // Ensure newPage doesn't exceed the total pages
     const totalPages = Math.ceil(topics.length / rowsPerPage);
     if (newPage < totalPages) {
       setPage(newPage);
     } else {
-      setPage(totalPages - 1); // Set to last page if next page is out of bounds
+      setPage(totalPages - 1);
     }
   };
 
@@ -99,23 +150,20 @@ const LessonPage = () => {
   ) => {
     const newRowsPerPage = parseInt(event.target.value, 10);
     setRowsPerPage(newRowsPerPage);
-    setPage(0); // Reset to the first page when rows per page change
+    setPage(0);
 
-    // If the number of rows exceeds 10, automatically go to the next page
     if (newRowsPerPage === 10 && topics.length > 10) {
-      setPage(1); // Move to next page
+      setPage(1);
     }
   };
 
-  // Pagination
   const paginatedTopics = topics.slice(
     page * rowsPerPage,
     (page + 1) * rowsPerPage
   );
   const isSelected = (topicId: number): boolean => {
-    return selected.includes(topicId); // Kiểm tra nếu topicId đã được chọn
+    return selected.includes(topicId);
   };
-  // Thêm state để quản lý chế độ edit và topic được chọn
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
   const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -123,19 +171,17 @@ const LessonPage = () => {
     message: string,
     severity: "success" | "error"
   ) => {
-    setSnackbarMessage(message); // Đặt nội dung thông báo
-    setSnackbarSeverity(severity); // Đặt loại thông báo
-    setSnackbarOpen(true); // Mở Snackbar
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
   };
   useEffect(() => {
     fetchTopics();
   }, [selectedGradeId, selectedSemester, accessToken, debouncedSearch]);
 
-  // Hàm đóng Snackbar
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false); // Đóng Snackbar
+    setSnackbarOpen(false);
   };
-  // Toggle expand/collapse for a topic
   const handleExpandClick = (topicId: number) => {
     const newExpandedRows = new Set(expandedRows);
     if (expandedRows.has(topicId)) {
@@ -145,64 +191,39 @@ const LessonPage = () => {
     }
     setExpandedRows(newExpandedRows);
   };
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null); // State để lưu lessonId được chọn
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
 
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null); // Add state for selected topicId
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
   const handleEditLesson = (lessonId: string, topicId: string) => {
     console.log("Lesson ID:", lessonId);
-    console.log("Topic ID:", topicId); // Log topicId to check
+    console.log("Topic ID:", topicId);
 
-    setSelectedLessonId(lessonId); // Save lessonId to state
-    setSelectedTopicId(topicId); // Save topicId to state
-    setEditMode("edit"); // Switch to edit mode
-    setOpenDialog(true); // Open the dialog
+    setSelectedLessonId(lessonId);
+    setSelectedTopicId(topicId);
+    setEditMode("edit");
+    setOpenDialog(true);
   };
 
   const handleOpenEdit = (lessonId: string, topicId: string) => {
-    setEditMode("edit"); // Switch to edit mode
-    setSelectedLessonId(lessonId); // Set lessonId
-    setSelectedTopicId(topicId); // Set topicId
-    setOpenDialog(true); // Open the dialog
+    setEditMode("edit");
+    setSelectedLessonId(lessonId);
+    setSelectedTopicId(topicId);
+    setOpenDialog(true);
   };
 
   useEffect(() => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/grades")
+        .get<GradesResponse>("/grades")
         .then((response) => {
           const fetchedGrades = response.data.data.grades;
-          setGrades(fetchedGrades); // Lưu danh sách lớp học vào state
+          setGrades(fetchedGrades);
           if (fetchedGrades.length > 0) {
             const firstGrade = fetchedGrades[0];
-            setSelectedGradeId(firstGrade.gradeId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedGradeName(firstGrade.gradeName); // Đặt selectedGradeName là tên lớp học đầu tiên
-          }
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setIsLoading(false);
-        });
-    }
-  }, [accessToken]); // Chạy lại khi accessToken thay đổi
-  useEffect(() => {
-    if (accessToken) {
-      setIsLoading(true);
-      apiService
-        .get("/book-types", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
-        .then((response) => {
-          const fetchedBooks = response.data.data.bookTypes;
-          setBooks(fetchedBooks); // Lưu danh sách lớp học vào state
-          if (fetchedBooks.length > 0) {
-            const firstBook = fetchedBooks[0];
-            setSelectedBookId(firstBook.bookId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedBookName(firstBook.bookName); // Đặt selectedGradeName là tên lớp học đầu tiên
+            setSelectedGradeId(firstGrade.gradeId);
+            setSelectedGradeName(firstGrade.gradeName);
           }
           setIsLoading(false);
         })
@@ -216,19 +237,14 @@ const LessonPage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/subjects", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
+        .get<BookTypesResponse>("/book-types", {})
         .then((response) => {
-          const fetchedSubjects = response.data.data.subjects;
-          console.log("Fetched subjects:", fetchedSubjects); // Log fetched subjects
-          setSubjects(fetchedSubjects); // Lưu danh sách lớp học vào state
-          if (fetchedSubjects.length > 0) {
-            const firstSubject = fetchedSubjects[0];
-            setSelectedSubjectId(firstSubject.subjectId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedSubjectName(firstSubject.subjectName); // Đặt selectedGradeName là tên lớp học đầu tiên
+          const fetchedBooks = response.data.data.bookTypes;
+          setBooks(fetchedBooks);
+          if (fetchedBooks.length > 0) {
+            const firstBook = fetchedBooks[0];
+            setSelectedBookId(firstBook.bookId);
+            setSelectedBookName(firstBook.bookName);
           }
           setIsLoading(false);
         })
@@ -237,7 +253,29 @@ const LessonPage = () => {
           setIsLoading(false);
         });
     }
-  }, [accessToken]); // Chạy lại khi accessToken thay đổi
+  }, [accessToken]);
+  useEffect(() => {
+    if (accessToken) {
+      setIsLoading(true);
+      apiService
+        .get<SubjectsResponse>("/subjects", {})
+        .then((response) => {
+          const fetchedSubjects = response.data.data.subjects;
+          console.log("Fetched subjects:", fetchedSubjects);
+          setSubjects(fetchedSubjects);
+          if (fetchedSubjects.length > 0) {
+            const firstSubject = fetchedSubjects[0];
+            setSelectedSubjectId(firstSubject.subjectId);
+            setSelectedSubjectName(firstSubject.subjectName);
+          }
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching grades:", error);
+          setIsLoading(false);
+        });
+    }
+  }, [accessToken]);
   console.log("selectedGradeId", selectedGradeId);
   console.log("selectedSemester", selectedSemester);
   useEffect(() => {
@@ -260,7 +298,7 @@ const LessonPage = () => {
   const fetchTopics = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.get(
+      const response = await apiService.get<TopicsResponse>(
         `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
       );
       setTopics(response.data.data.topics);
@@ -269,31 +307,29 @@ const LessonPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }; // Chạy lại khi gradeId hoặc semester thay đổi
+  };
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
     setSearchKeyword("");
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedGradeItem = grades.find(
       (grade) => grade.gradeName === selectedGrade
     );
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
-      setSelectedGradeName(selectedGradeItem.gradeName); // Hiển thị tên lớp học đã chọn
+      setSelectedGradeName(selectedGradeItem.gradeName);
     }
   };
 
   const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedBook = event.target.value as string;
     setSearchKeyword("");
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedBookItem = books.find(
       (book) => book.bookName === selectedBook
     );
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
-      setSelectedBookName(selectedBookItem.bookName); // Hiển thị tên lớp học đã chọn
+      setSelectedBookName(selectedBookItem.bookName);
     }
   };
   const handleSubjectChange = (
@@ -301,13 +337,12 @@ const LessonPage = () => {
   ) => {
     const selectedSubject = event.target.value as string;
     setSearchKeyword("");
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedSubjectItem = subjects.find(
       (subject) => subject.subjectName === selectedSubject
     );
     if (selectedSubjectItem) {
       setSelectedSubjectId(selectedSubjectItem.subjectId);
-      setSelectedSubjectName(selectedSubjectItem.subjectName); // Hiển thị tên lớp học đã chọn
+      setSelectedSubjectName(selectedSubjectItem.subjectName);
     }
   };
 
@@ -317,7 +352,6 @@ const LessonPage = () => {
     setSelectedSemester(event.target.value as string);
     setSearchKeyword("");
   };
-  // Open dialog
   const handleOpenDialog = () => {
     setOpenDialog(true);
   };
@@ -325,9 +359,7 @@ const LessonPage = () => {
     setOpenDialog(false);
   };
 
-  // Refresh topics list after adding a new topic
   const handleTopicAdded = () => {
-    // Re-fetch topics after adding a new one
     if (
       selectedGradeName &&
       selectedSemester &&
@@ -336,13 +368,12 @@ const LessonPage = () => {
     ) {
       setIsLoading(true);
       apiService
-        .get(
+        .get<TopicsResponse>(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
         )
         .then((response) => {
           setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
-          // handleSnackbarOpen(response.data.message, "success");
           setIsLoading(false);
         })
         .catch((error) => {
@@ -353,46 +384,32 @@ const LessonPage = () => {
   };
   const handleTopicCheckboxChange = (topicId: number, isChecked: boolean) => {
     setCheckedState((prevState) => {
-      const updatedState = { ...prevState };
+      const updatedState: { [key: number]: Set<number> } = { ...prevState };
+
+      const topic = topics.find((t) => t.topicId === topicId);
+      const allLessons: number[] =
+        topic?.lessons.map((lesson: Lesson) => lesson.lessonId) || [];
 
       if (isChecked) {
-        // Chọn tất cả các bài học trong topic
-        const allLessons =
-          topics
-            .find((topic) => topic.topicId === topicId)
-            ?.lessons.map((lesson) => lesson.lessonId) || [];
         updatedState[topicId] = new Set(allLessons);
-
-        // Kiểm tra nếu topic có lesson nào không, nếu có thì hiển thị nút xóa
-        if (allLessons.length > 0) {
-          setOpenDelete(true); // Hiển thị nút xóa
-        } else {
-          setOpenDelete(false); // Không có lesson nào, ẩn nút xóa
-        }
+        setOpenDelete(allLessons.length > 0);
       } else {
-        // Bỏ chọn tất cả các bài học trong topic
         updatedState[topicId] = new Set();
-        setOpenDelete(false); // Nếu bỏ chọn topic, ẩn nút xóa
+        setOpenDelete(false);
       }
 
       return updatedState;
     });
 
-    // Cập nhật trạng thái selected dựa trên việc chọn topic
     setSelected((prevSelected) => {
+      const topicLessons =
+        topics
+          .find((t) => t.topicId === topicId)
+          ?.lessons.map((lesson: Lesson) => lesson.lessonId) || [];
+
       if (isChecked) {
-        // Thêm tất cả bài học của topic vào selected
-        const topicLessons =
-          topics
-            .find((topic) => topic.topicId === topicId)
-            ?.lessons.map((lesson) => lesson.lessonId) || [];
         return [...new Set([...prevSelected, ...topicLessons])];
       } else {
-        // Loại bỏ các bài học của topic khỏi selected
-        const topicLessons =
-          topics
-            .find((topic) => topic.topicId === topicId)
-            ?.lessons.map((lesson) => lesson.lessonId) || [];
         return prevSelected.filter(
           (lessonId) => !topicLessons.includes(lessonId)
         );
@@ -432,7 +449,6 @@ const LessonPage = () => {
     });
   };
 
-  // Update the number of selected lessons for deletion
   const handleDelete = async () => {
     if (selected.length === 0) {
       handleSnackbarOpen(
@@ -444,16 +460,16 @@ const LessonPage = () => {
 
     try {
       setIsLoading(true);
-      const response = await apiService.delete("/lessons", {
-        data: selected, // Send selected lesson IDs to delete
+      const response = await apiService.delete<ApiResponse>("/lessons", {
+        data: selected,
         headers: {
-          Authorization: `Bearer ${accessToken}`, // Add token
+          Authorization: `Bearer ${accessToken}`,
         },
       });
       if (response.status === 200) {
         handleSnackbarOpen(response.data.message, "success");
-        setSelected([]); // Clear selected lessons
-        setOpenDelete(false); // Close the delete dialog
+        setSelected([]);
+        setOpenDelete(false);
         await fetchTopics();
       }
     } catch (error) {
@@ -465,8 +481,8 @@ const LessonPage = () => {
   };
 
   const handleCloseDelete = () => {
-    setSelected([]); // Đảm bảo xóa tất cả các mục đã chọn
-    setOpenDelete(false); // Đóng DeleteDialog
+    setSelected([]);
+    setOpenDelete(false);
   };
 
   const handleCheckboxClick = (
@@ -474,21 +490,19 @@ const LessonPage = () => {
     topicId: number
   ) => {
     const updatedSelected = event.target.checked
-      ? [...selected, topicId] // Add topicId if checked
-      : selected.filter((id) => id !== topicId); // Remove topicId if unchecked
+      ? [...selected, topicId]
+      : selected.filter((id) => id !== topicId);
 
     setSelected(updatedSelected);
 
-    // Check if no checkbox is selected
     if (updatedSelected.length === 0) {
-      setOpenDelete(false); // Close the DeleteDialog
+      setOpenDelete(false);
     } else {
-      setOpenDelete(true); // Open DeleteDialog
+      setOpenDelete(true);
     }
 
-    // Handle opening the topic
     if (event.target.checked) {
-      handleExpandClick(topicId); // Expand the selected topic when checked
+      handleExpandClick(topicId);
     }
   };
 
@@ -525,12 +539,11 @@ const LessonPage = () => {
           </Button>
         </Box>
 
-        {/* Các Select */}
         <Box sx={{ display: "flex", gap: 2 }}>
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedGradeName} // Hiển thị gradeName đã chọn
+              value={selectedGradeName}
               onChange={handleGradeChange}
               label="Chọn lớp học"
               fullWidth
@@ -541,12 +554,12 @@ const LessonPage = () => {
                   value={grade.gradeName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important",
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181",
                     },
                   }}
                 >
@@ -558,7 +571,7 @@ const LessonPage = () => {
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedSubjectName} // Hiển thị gradeName đã chọn
+              value={selectedSubjectName}
               onChange={handleSubjectChange}
               label="Chọn môn học"
               fullWidth
@@ -569,12 +582,12 @@ const LessonPage = () => {
                   value={subject.subjectName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important",
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181",
                     },
                   }}
                 >
@@ -586,7 +599,7 @@ const LessonPage = () => {
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedBookName} // Hiển thị gradeName đã chọn
+              value={selectedBookName}
               onChange={handleBookChange}
               label="Chọn loại sách"
               fullWidth
@@ -597,12 +610,12 @@ const LessonPage = () => {
                   value={book.bookName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important",
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181",
                     },
                   }}
                 >
@@ -624,11 +637,11 @@ const LessonPage = () => {
                 value="Học kì 1"
                 sx={{
                   "&.Mui-selected": {
-                    backgroundColor: "#99BC4D !important", // Chỉnh màu khi item được chọn
+                    backgroundColor: "#99BC4D !important",
                     color: "white",
                   },
                   "&:hover": {
-                    backgroundColor: "#99BC4D 70%", // Màu khi hover
+                    backgroundColor: "#99BC4D 70%",
                   },
                 }}
               >
@@ -638,11 +651,11 @@ const LessonPage = () => {
                 value="Học kì 2"
                 sx={{
                   "&.Mui-selected": {
-                    backgroundColor: "#99BC4D !important", // Chỉnh màu khi item được chọn
+                    backgroundColor: "#99BC4D !important",
                     color: "white",
                   },
                   "&:hover": {
-                    backgroundColor: "#99BC4D 70%", // Màu khi hover
+                    backgroundColor: "#99BC4D 70%",
                   },
                 }}
               >
@@ -661,7 +674,7 @@ const LessonPage = () => {
           label="Tìm kiếm"
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
-          InputProps={{
+          inputProps={{
             endAdornment: (
               <InputAdornment position="end">
                 {searchKeyword && (
@@ -673,14 +686,6 @@ const LessonPage = () => {
             ),
           }}
         />
-        {/* <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
-            minHeight: 0,
-          }}
-        > */}
         <Box
           sx={{
             boxShadow: 4,
@@ -691,7 +696,7 @@ const LessonPage = () => {
             flexGrow: 1,
             minHeight: 0,
             mb: 1,
-            overflow: "hidden" 
+            overflow: "hidden",
           }}
         >
           <TableContainer
@@ -699,7 +704,7 @@ const LessonPage = () => {
               borderRadius: "8px 8px 0 0",
               flexGrow: 1,
               overflow: "auto",
-               maxHeight: "calc(100% - 52px)",
+              maxHeight: "calc(100% - 52px)",
             }}
           >
             <Table size="small">
@@ -714,7 +719,6 @@ const LessonPage = () => {
                   </TableCell>
                   <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
                   <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
-                  {/* <TableCell sx={{ width: "25%" }}></TableCell> */}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -723,7 +727,6 @@ const LessonPage = () => {
                 ) : (
                   paginatedTopics.map((topic) => (
                     <>
-                      {/* Topic row */}
                       <TableRow key={topic.topicId}>
                         <TableCell>
                           <Checkbox
@@ -766,11 +769,10 @@ const LessonPage = () => {
 
                         <TableCell>{topic.topicName}</TableCell>
                         <TableCell></TableCell>
-                        {/* <TableCell></TableCell> */}
                         <TableCell></TableCell>
                       </TableRow>
                       {expandedRows.has(topic.topicId) &&
-                        topic.lessons.map((lesson) => (
+                        topic.lessons.map((lesson: any) => (
                           <TableRow key={lesson.lessonId}>
                             <TableCell>
                               <Checkbox
@@ -815,7 +817,6 @@ const LessonPage = () => {
                             </TableCell>
                             <TableCell>{lesson.lessonName}</TableCell>
                             <TableCell>{lesson.description}</TableCell>
-                            {/* <TableCell>{lesson.content}</TableCell> */}
                           </TableRow>
                         ))}
                     </>
@@ -835,26 +836,46 @@ const LessonPage = () => {
           />
         </Box>
       </Box>
-      {/* </Box> */}
+      {/* <DialogPopup
+        open={openDialog}
+        onClose={handleCloseDialog}
+        onTopicAdded={handleTopicAdded}
+        accessToken={accessToken ?? ""}
+        selectedGradeId={selectedGradeId}
+        selectedSemester={selectedSemester}
+        type={editMode}
+        topic={selectedTopic}
+        lesson={selectedLessonId ?? ""}
+        topicId={selectedTopicId}
+        selectedGradeName={selectedGradeName}
+        onSuccess={(message: string) => {
+          handleSnackbarOpen(message, "success");
+          handleTopicAdded();
+        }}
+        selectedBookName={selectedBookName}
+        selectedSubjectName={selectedSubjectName}
+      /> */}
       <DialogPopup
         open={openDialog}
         onClose={handleCloseDialog}
         onTopicAdded={handleTopicAdded}
-        accessToken={accessToken}
+        accessToken={accessToken ?? ""}
         selectedGradeId={selectedGradeId}
         selectedSemester={selectedSemester}
-        type={editMode} // "add" hoặc "edit"
-        topic={selectedTopic} // Dữ liệu topic khi sửa
-        lesson={selectedLessonId} // Dữ liệu lesson khi sửa
-        topicId={selectedTopicId} // Dữ liệu topicId khi sửa
+        type={editMode}
+        topic={selectedTopic}
+        lesson={selectedLessonId ?? ""}
+        topicId={selectedTopicId}
         selectedGradeName={selectedGradeName}
         onSuccess={(message: string) => {
           handleSnackbarOpen(message, "success");
-          handleTopicAdded(); // Làm mới danh sách topics
+          handleTopicAdded();
         }}
         selectedBookName={selectedBookName}
-        selectedSubjectName={selectedSubjectName} // Dữ liệu subjectId khi sửa
+        selectedSubjectName={selectedSubjectName}
+        selectedLessonId={selectedLessonId} // <-- Add this line
       />
+
       <DeleteDialog
         open={openDelete}
         handleClose={handleCloseDelete}
@@ -863,16 +884,16 @@ const LessonPage = () => {
       />
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000} // Đóng sau 3 giây
-        onClose={handleSnackbarClose} // Đóng khi người dùng nhấn
-        anchorOrigin={{ vertical: "top", horizontal: "right" }} // Vị trí
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarSeverity} // success hoặc error
+          severity={snackbarSeverity}
           sx={{ width: "100%" }}
         >
-          {snackbarMessage} {/* Nội dung thông báo */}
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </Layout>

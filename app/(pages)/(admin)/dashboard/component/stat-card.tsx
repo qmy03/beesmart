@@ -9,11 +9,11 @@ import { SvgIconComponent } from "@mui/icons-material";
 export type StatCardProps = {
   title: string;
   value: string | number;
-  Icon: SvgIconComponent; // Icon component để hiển thị biểu tượng
-  bgColor: string; // Màu nền cho Card
-  bgColorIcon: string; // Màu nền cho Icon
-  iconColor?: string; // Màu cho Icon
-  textColor?: string; // Màu cho Typography
+  Icon: SvgIconComponent;
+  bgColor: string;
+  bgColorIcon: string;
+  iconColor?: string;
+  textColor?: string;
 };
 
 export default function StatCard({
@@ -22,8 +22,8 @@ export default function StatCard({
   Icon,
   bgColor,
   bgColorIcon,
-  iconColor = "white", // Màu mặc định cho Icon
-  textColor = "white", // Màu mặc định cho Typography
+  iconColor = "white",
+  textColor = "white",
 }: StatCardProps) {
   return (
     <Card
@@ -31,7 +31,7 @@ export default function StatCard({
       sx={{
         flexGrow: 1,
         backgroundColor: bgColor,
-        color: textColor, // Áp dụng màu chữ cho toàn bộ Card
+        color: textColor,
       }}
     >
       <CardContent>
@@ -41,7 +41,6 @@ export default function StatCard({
           justifyContent="center"
           spacing={2}
         >
-          {/* Hiển thị Icon */}
           <Box
             sx={{
               display: "flex",
@@ -50,7 +49,6 @@ export default function StatCard({
             }}
           >
             <Box sx={{padding: 1, borderRadius: "50%", bgcolor: bgColorIcon, mb: 1}}>
-              {" "}
               <Icon sx={{ fontSize: 40, color: iconColor }} />
             </Box>
 

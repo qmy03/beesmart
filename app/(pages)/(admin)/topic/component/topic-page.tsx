@@ -29,61 +29,104 @@ import TextField from "@/app/components/textfield";
 import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
+
+interface Book {
+  bookId: string;
+  bookName: string;
+}
+
+interface Topic {
+  topicId: number;
+  topicName: string;
+}
+
+interface GradesResponse {
+  data: {
+    grades: Grade[];
+  };
+}
+
+interface BooksResponse {
+  data: {
+    bookTypes: Book[];
+  };
+}
+
+interface SubjectsResponse {
+  data: {
+    subjects: Subject[];
+  };
+}
+
+interface TopicsResponse {
+  data: {
+    topics: Topic[];
+    totalItems: number;
+  };
+}
+
+interface DeleteResponse {
+  message: string;
+}
 
 const TopicPage = () => {
-  const { accessToken, isLoading, setIsLoading } = useAuth(); // Lấy accessToken từ context
-  const [grades, setGrades] = useState<any[]>([]); // State để lưu danh sách lớp học
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(""); // State để lưu gradeId
-  const [selectedGradeName, setSelectedGradeName] = useState<string>(""); // State để lưu gradeName
-  const [subjects, setSubjects] = useState<any[]>([]); // State để lưu danh sách môn học
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string>(""); // State để lưu subjectId
-  const [selectedSubjectName, setSelectedSubjectName] = useState<string>(""); // State để lưu subjectName
-  const [books, setBooks] = useState<any[]>([]); // State để lưu danh sách loại sách
-  const [selectedBookId, setSelectedBookId] = useState<string>(""); // State để lưu bookTypeId
-  const [selectedBookName, setSelectedBookName] = useState<string>(""); // State để lưu bookTypeName
-  const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1"); // State để lưu học kỳ đã chọn
-  const [topics, setTopics] = useState<any[]>([]); // State để lưu các topics
+  const { accessToken, isLoading, setIsLoading } = useAuth();
+  const [grades, setGrades] = useState<any[]>([]);
+  const [selectedGradeId, setSelectedGradeId] = useState<string>(""); 
+  const [selectedGradeName, setSelectedGradeName] = useState<string>("");
+  const [subjects, setSubjects] = useState<any[]>([]); 
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [selectedSubjectName, setSelectedSubjectName] = useState<string>("");
+  const [books, setBooks] = useState<any[]>([]); 
+  const [selectedBookId, setSelectedBookId] = useState<string>(""); 
+  const [selectedBookName, setSelectedBookName] = useState<string>("");
+  const [selectedSemester, setSelectedSemester] = useState<string>("Học kì 1"); 
+  const [topics, setTopics] = useState<any[]>([]); 
   const [openDialog, setOpenDialog] = useState(false);
   const [selected, setSelected] = useState<readonly number[]>([]);
-  // Thêm state quản lý snackbar
-  const [snackbarOpen, setSnackbarOpen] = useState(false); // Trạng thái mở/đóng Snackbar
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Nội dung thông báo
+  const [snackbarOpen, setSnackbarOpen] = useState(false); 
+  const [snackbarMessage, setSnackbarMessage] = useState(""); 
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
-  ); // Loại thông báo (success/error)
+  ); 
   const [openDelete, setOpenDelete] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
   const isSelected = (topicId: number): boolean => {
-    return selected.includes(topicId); // Kiểm tra nếu topicId đã được chọn
+    return selected.includes(topicId);
   };
-  // Pagination state
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Thêm state để quản lý chế độ edit và topic được chọn
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
   const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchKeyword);
-    }, 300); // Delay 300ms
+    }, 300);
     return () => clearTimeout(handler);
   }, [searchKeyword]);
-  // Hàm mở Snackbar
   const handleSnackbarOpen = (
     message: string,
     severity: "success" | "error"
   ) => {
-    setSnackbarMessage(message); // Đặt nội dung thông báo
-    setSnackbarSeverity(severity); // Đặt loại thông báo
-    setSnackbarOpen(true); // Mở Snackbar
+    setSnackbarMessage(message); 
+    setSnackbarSeverity(severity); 
+    setSnackbarOpen(true); 
   };
 
-  // Hàm đóng Snackbar
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false); // Đóng Snackbar
+    setSnackbarOpen(false); 
   };
 
   const handleOpenEdit = (topic: any) => {
@@ -96,18 +139,14 @@ const TopicPage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/grades", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
+        .get<GradesResponse>("/grades", {})
         .then((response) => {
           const fetchedGrades = response.data.data.grades;
-          setGrades(fetchedGrades); // Lưu danh sách lớp học vào state
+          setGrades(fetchedGrades); 
           if (fetchedGrades.length > 0) {
             const firstGrade = fetchedGrades[0];
-            setSelectedGradeId(firstGrade.gradeId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedGradeName(firstGrade.gradeName); // Đặt selectedGradeName là tên lớp học đầu tiên
+            setSelectedGradeId(firstGrade.gradeId);
+            setSelectedGradeName(firstGrade.gradeName); 
           }
           setIsLoading(false);
         })
@@ -121,18 +160,14 @@ const TopicPage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/book-types", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
+        .get<BooksResponse>("/book-types", {})
         .then((response) => {
           const fetchedBooks = response.data.data.bookTypes;
-          setBooks(fetchedBooks); // Lưu danh sách lớp học vào state
+          setBooks(fetchedBooks); 
           if (fetchedBooks.length > 0) {
             const firstBook = fetchedBooks[0];
-            setSelectedBookId(firstBook.bookId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedBookName(firstBook.bookName); // Đặt selectedGradeName là tên lớp học đầu tiên
+            setSelectedBookId(firstBook.bookId); 
+            setSelectedBookName(firstBook.bookName);
           }
           setIsLoading(false);
         })
@@ -146,18 +181,14 @@ const TopicPage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/subjects", {
-          // headers: {
-          //   Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
-          // },
-        })
+        .get<SubjectsResponse>("/subjects", {})
         .then((response) => {
           const fetchedSubjects = response.data.data.subjects;
-          setSubjects(fetchedSubjects); // Lưu danh sách lớp học vào state
+          setSubjects(fetchedSubjects);
           if (fetchedSubjects.length > 0) {
             const firstSubject = fetchedSubjects[0];
-            setSelectedSubjectId(firstSubject.subjectId); // Đặt selectedGradeId là gradeId của lớp học đầu tiên
-            setSelectedSubjectName(firstSubject.subjectName); // Đặt selectedGradeName là tên lớp học đầu tiên
+            setSelectedSubjectId(firstSubject.subjectId); 
+            setSelectedSubjectName(firstSubject.subjectName); 
           }
           setIsLoading(false);
         })
@@ -166,8 +197,7 @@ const TopicPage = () => {
           setIsLoading(false);
         });
     }
-  }, [accessToken]); // Chạy lại khi accessToken thay đổi
-
+  }, [accessToken]); 
   console.log("selectedGradeId", selectedGradeId);
   console.log("selectedSemester", selectedSemester);
   useEffect(() => {
@@ -178,19 +208,14 @@ const TopicPage = () => {
       selectedSubjectName
     ) {
       setIsLoading(true);
-      // Gọi API để lấy topics theo gradeId và semester
       apiService
-        .get(
+        .get<TopicsResponse>(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`,
-          {
-            // headers: {
-            //   Authorization: `Bearer ${accessToken}`,
-            // },
-          }
+          {}
         )
         .then((response) => {
           console.log("response", response);
-          setTopics(response.data.data.topics); // Lưu danh sách topics vào state
+          setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
           setIsLoading(false);
         })
@@ -206,41 +231,38 @@ const TopicPage = () => {
     debouncedSearch,
     selectedBookName,
     selectedSubjectName,
-  ]); // Chạy lại khi gradeId hoặc semester thay đổi
+  ]); 
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedGradeItem = grades.find(
       (grade) => grade.gradeName === selectedGrade
     );
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
-      setSelectedGradeName(selectedGradeItem.gradeName); // Hiển thị tên lớp học đã chọn
+      setSelectedGradeName(selectedGradeItem.gradeName);
     }
   };
   const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedBook = event.target.value as string;
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedBookItem = books.find(
       (book) => book.bookName === selectedBook
     );
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
-      setSelectedBookName(selectedBookItem.bookName); // Hiển thị tên lớp học đã chọn
+      setSelectedBookName(selectedBookItem.bookName); 
     }
   };
   const handleSubjectChange = (
     event: React.ChangeEvent<{ value: unknown }>
   ) => {
     const selectedSubject = event.target.value as string;
-    // Lấy gradeId tương ứng với gradeName được chọn
     const selectedSubjectItem = subjects.find(
       (subject) => subject.subjectName === selectedSubject
     );
     if (selectedSubjectItem) {
       setSelectedSubjectId(selectedSubjectItem.subjectId);
-      setSelectedSubjectName(selectedSubjectItem.subjectName); // Hiển thị tên lớp học đã chọn
+      setSelectedSubjectName(selectedSubjectItem.subjectName);
     }
   };
 
@@ -249,13 +271,11 @@ const TopicPage = () => {
   ) => {
     setSelectedSemester(event.target.value as string);
   };
-  // Open dialog
   const handleOpenDialog = () => {
     setEditMode("add");
     setOpenDialog(true);
   };
 
-  // Close dialog
   const handleCloseDialog = () => {
     setOpenDialog(false);
   };
@@ -268,12 +288,11 @@ const TopicPage = () => {
     ) {
       setIsLoading(true);
       apiService
-        .get(
+        .get<TopicsResponse>(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
         )
         .then((response) => {
-          setTopics(response.data.data.topics); // Set topics data
-          // Set total items and total pages for pagination
+          setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
           setIsLoading(false);
         })
@@ -284,9 +303,7 @@ const TopicPage = () => {
     }
   }, [selectedGradeName, selectedSemester, page, rowsPerPage, accessToken]);
 
-  // Refresh topics list after adding a new topic
   const handleTopicAdded = () => {
-    // Re-fetch topics after adding a new one
     if (
       selectedGradeName &&
       selectedSemester &&
@@ -295,13 +312,12 @@ const TopicPage = () => {
     ) {
       setIsLoading(true);
       apiService
-        .get(
+        .get<TopicsResponse>(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
         )
         .then((response) => {
           setTopics(response.data.data.topics);
           setTotalItems(response.data.data.totalItems);
-          // handleSnackbarOpen(response.data.message, "success");
           setIsLoading(false);
         })
         .catch((error) => {
@@ -315,36 +331,33 @@ const TopicPage = () => {
       if (event.target.checked) {
         const newSelected = topics.map((topic) => topic.topicId);
         setSelected(newSelected);
-        setOpenDelete(true); // Mở DeleteDialog nếu chọn tất cả
+        setOpenDelete(true);
       } else {
         setSelected([]);
-        setOpenDelete(false); // Đóng DeleteDialog nếu bỏ chọn tất cả
+        setOpenDelete(false); 
       }
     }
   };
 
   const handleCloseDelete = () => {
-    setSelected([]); // Đảm bảo xóa tất cả các mục đã chọn
-    setOpenDelete(false); // Đóng DeleteDialog
+    setSelected([]); 
+    setOpenDelete(false); 
   };
   const handleDelete = async () => {
     try {
-      const response = await apiService.delete("/topics", {
+      const response = await apiService.delete<DeleteResponse>("/topics", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-        data: selected, // Send selected topics to delete
+        data: selected, 
       });
 
       console.log("Delete response: ", response);
 
-      // Show success snackbar message
       handleSnackbarOpen(response.data.message, "success");
 
-      // Clear selected items after delete
       setSelected([]);
 
-      // Reload topics list after delete
       if (
         selectedGradeName &&
         selectedSemester &&
@@ -353,11 +366,11 @@ const TopicPage = () => {
       ) {
         setIsLoading(true);
         apiService
-          .get(
+          .get<TopicsResponse>(
             `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
           )
           .then((response) => {
-            setTopics(response.data.data.topics); // Update topics state
+            setTopics(response.data.data.topics); 
             setTotalItems(response.data.data.totalItems);
             setIsLoading(false);
           })
@@ -369,7 +382,6 @@ const TopicPage = () => {
     } catch (error: any) {
       console.error("Failed to delete topics: ", error.message);
 
-      // Show error snackbar message
       handleSnackbarOpen("Xóa chủ đề thất bại", "error");
       setIsLoading(false);
     }
@@ -380,16 +392,15 @@ const TopicPage = () => {
     topicId: number
   ) => {
     const updatedSelected = event.target.checked
-      ? [...selected, topicId] // Thêm topicId nếu checkbox được chọn
-      : selected.filter((id) => id !== topicId); // Loại bỏ topicId nếu checkbox bị bỏ chọn
+      ? [...selected, topicId]
+      : selected.filter((id) => id !== topicId); 
 
     setSelected(updatedSelected);
 
-    // Kiểm tra nếu không có checkbox nào được chọn
     if (updatedSelected.length === 0) {
-      setOpenDelete(false); // Đóng DeleteDialog
+      setOpenDelete(false);
     } else {
-      setOpenDelete(true); // Mở DeleteDialog
+      setOpenDelete(true); 
     }
   };
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -425,17 +436,14 @@ const TopicPage = () => {
           <Typography fontWeight={700} flexGrow={1}>
             Quản lý Chủ điểm
           </Typography>
-          {/* {editMode === "add" && ( */}
           <Button onClick={handleOpenDialog}>Thêm mới</Button>
-          {/* )} */}
         </Box>
 
-        {/* Các Select */}
         <Box sx={{ display: "flex", gap: 2 }}>
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedGradeName} // Hiển thị gradeName đã chọn
+              value={selectedGradeName} 
               onChange={handleGradeChange}
               label="Chọn lớp học"
               fullWidth
@@ -446,12 +454,12 @@ const TopicPage = () => {
                   value={grade.gradeName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important",
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181", 
                     },
                   }}
                 >
@@ -464,7 +472,7 @@ const TopicPage = () => {
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedSubjectName} // Hiển thị gradeName đã chọn
+              value={selectedSubjectName}
               onChange={handleSubjectChange}
               label="Chọn môn học"
               fullWidth
@@ -475,12 +483,12 @@ const TopicPage = () => {
                   value={subject.subjectName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important",
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181",
                     },
                   }}
                 >
@@ -492,7 +500,7 @@ const TopicPage = () => {
           <FormControl fullWidth size="small">
             <TextField
               select
-              value={selectedBookName} // Hiển thị gradeName đã chọn
+              value={selectedBookName} 
               onChange={handleBookChange}
               label="Chọn loại sách"
               fullWidth
@@ -503,12 +511,12 @@ const TopicPage = () => {
                   value={book.bookName}
                   sx={{
                     "&.Mui-selected": {
-                      backgroundColor: "#BCD181 !important", // Chỉnh màu khi item được chọn
+                      backgroundColor: "#BCD181 !important", 
                       color: "white",
                       opacity: 1,
                     },
                     "&:hover": {
-                      backgroundColor: "#BCD181", // Màu khi hover
+                      backgroundColor: "#BCD181", 
                     },
                   }}
                 >
@@ -530,11 +538,11 @@ const TopicPage = () => {
                 value="Học kì 1"
                 sx={{
                   "&.Mui-selected": {
-                    backgroundColor: "#99BC4D !important", // Chỉnh màu khi item được chọn
+                    backgroundColor: "#99BC4D !important", 
                     color: "white",
                   },
                   "&:hover": {
-                    backgroundColor: "#99BC4D 70%", // Màu khi hover
+                    backgroundColor: "#99BC4D 70%", 
                   },
                 }}
               >
@@ -544,11 +552,11 @@ const TopicPage = () => {
                 value="Học kì 2"
                 sx={{
                   "&.Mui-selected": {
-                    backgroundColor: "#99BC4D !important", // Chỉnh màu khi item được chọn
+                    backgroundColor: "#99BC4D !important", 
                     color: "white",
                   },
                   "&:hover": {
-                    backgroundColor: "#99BC4D 70%", // Màu khi hover
+                    backgroundColor: "#99BC4D 70%", 
                   },
                 }}
               >
@@ -558,7 +566,6 @@ const TopicPage = () => {
           </FormControl>
         </Box>
 
-        {/* Bảng danh sách topic */}
         <Box
           sx={{
             display: "flex",
@@ -581,7 +588,7 @@ const TopicPage = () => {
               sx={{
                 borderRadius: "8px 8px 0 0",
                 flexGrow: 1,
-                overflow: "auto", // Enable vertical scrolling if content overflows
+                overflow: "auto", 
               }}
             >
               <Table size="small">
@@ -650,21 +657,13 @@ const TopicPage = () => {
                 </TableHead>
                 <TableBody>
                   {isLoading ? (
-                    // Hiển thị thông báo "Đang tải dữ liệu..." khi dữ liệu đang được tải
+                   
                     <TableRow>
-                      {/* <TableCell colSpan={4} align="center">
-                        Đang tải dữ liệu...
-                      </TableCell> */}
                     </TableRow>
                   ) : topics.length === 0 ? (
-                    // Hiển thị thông báo "Không có dữ liệu để hiển thị" khi không có dữ liệu
                     <TableRow>
-                      {/* <TableCell colSpan={4} align="center">
-                        Không có dữ liệu để hiển thị
-                      </TableCell> */}
                     </TableRow>
                   ) : (
-                    // Hiển thị danh sách dữ liệu nếu có
                     topics.map((topic, index) => {
                       const isItemSelected = isSelected(topic.topicId);
                       return (
@@ -707,12 +706,12 @@ const TopicPage = () => {
             </TableContainer>
             <TablePagination
               component="div"
-              count={totalItems} // Total number of items (use the state we set from API response)
+              count={totalItems} 
               page={page}
-              onPageChange={handleChangePage} // Function to handle page change
+              onPageChange={handleChangePage}
               rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage} // Function to handle change in number of rows per page
-              rowsPerPageOptions={[10, 25, 50]} // Options for number of rows per page
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[10, 25, 50]}
             />
           </Box>
         </Box>
@@ -721,16 +720,16 @@ const TopicPage = () => {
           open={openDialog}
           onClose={handleCloseDialog}
           onTopicAdded={handleTopicAdded}
-          accessToken={accessToken}
+          accessToken={accessToken ?? ""}
           selectedGradeId={selectedGradeId}
           selectedSemester={selectedSemester}
           selectedSubjectId={selectedSubjectId}
           selectedBookId={selectedBookId}
-          type={editMode} // "add" hoặc "edit"
-          topic={selectedTopic} // Dữ liệu topic khi sửa
+          type={editMode}
+          topic={selectedTopic} 
           onSuccess={(message: string) => {
             handleSnackbarOpen(message, "success");
-            handleTopicAdded(); // Làm mới danh sách topics
+            handleTopicAdded(); 
           }}
         />
       </Box>
@@ -742,16 +741,16 @@ const TopicPage = () => {
       />
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000} // Đóng sau 3 giây
-        onClose={handleSnackbarClose} // Đóng khi người dùng nhấn
-        anchorOrigin={{ vertical: "top", horizontal: "right" }} // Vị trí
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose} 
+        anchorOrigin={{ vertical: "top", horizontal: "right" }} 
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarSeverity} // success hoặc error
+          severity={snackbarSeverity}
           sx={{ width: "100%" }}
         >
-          {snackbarMessage} {/* Nội dung thông báo */}
+          {snackbarMessage} 
         </Alert>
       </Snackbar>
     </Layout>

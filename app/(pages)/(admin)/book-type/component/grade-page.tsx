@@ -27,9 +27,22 @@ import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/close";
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+
+interface BookType {
+  bookId: number;
+  bookName: string;
+}
+
+interface BookResponse {
+  data: {
+    bookTypes: BookType[];
+    bookName?: string; 
+  };
+}
+
 const GradePage = () => {
   const { accessToken, isLoading, setIsLoading } = useAuth(); 
-  const [bookTypes, setBookTypes] = useState<any[]>([]); 
+  const [bookTypes, setBookTypes] = useState<BookType[]>([]);
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(
@@ -44,7 +57,7 @@ const GradePage = () => {
   const [error, setError] = useState(""); 
   const [openDelete, setOpenDelete] = useState(false);
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedBook, setSelectedBook] = useState<any | null>(null);
+  const [selectedBook, setSelectedBook] = useState<BookType | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false); 
   const [snackbarMessage, setSnackbarMessage] = useState(""); 
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -58,7 +71,7 @@ const GradePage = () => {
       const requestBody = query ? { bookName: query } : {};
 
       apiService
-        .get("/book-types", {
+        .get<BookResponse>("/book-types", {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: query ? { bookName: query } : undefined,
         })
@@ -131,7 +144,7 @@ const GradePage = () => {
     const apiCall =
       editMode === "edit"
         ? apiService.put(
-            `/book-types/${selectedBook.bookId}`,
+            `/book-types/${selectedBook?.bookId}`,
             { bookName: newBookTypeName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )
@@ -214,13 +227,13 @@ const GradePage = () => {
     console.log("bookType", bookType);
     // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/book-types/${bookType.bookId}`, {
+      .get<BookResponse>(`/book-types/${bookType.bookId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
         console.log("responseBT", response);
         const { bookName } = response.data.data;
-        setNewBookTypeName(bookName); // set vào TextField
+        setNewBookTypeName(bookName || "");
       })
       .catch((error) => {
         console.error("Error fetching grade detail:", error);
@@ -282,7 +295,7 @@ const GradePage = () => {
             minHeight: 0,
           }}
         >
-          {loading ? (
+          {isLoading ? (
             <Typography>Đang tải...</Typography>
           ) : (
             <Box
@@ -349,6 +362,8 @@ const GradePage = () => {
                             borderRadius: "4px",
                           }}
                           disabled
+                          onChange={() => {}}
+                          label=""
                         ></TextField>
                       </TableCell>
                       <TableCell>
@@ -363,6 +378,7 @@ const GradePage = () => {
                           value={searchTerm}
                           onChange={handleSearchChange}
                           variant="outlined"
+                          label=""
                         />
                       </TableCell>
                     </TableRow>

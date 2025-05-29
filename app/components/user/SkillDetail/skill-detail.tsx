@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { Button } from "../../button";
 import ErrorIcon from "@mui/icons-material/Error";
-import CloseIcon from "@mui/icons-material/Close";
+import CloseIcon from "@mui/icons-material/close";
 import { useAuth } from "@/app/hooks/AuthContext";
 
 const SkillDetailPage = () => {

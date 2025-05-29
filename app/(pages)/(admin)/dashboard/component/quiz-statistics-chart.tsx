@@ -5,7 +5,6 @@ import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 const COLORS = ["#1877f2", "#ff5630", "#ffab00", "#5119b7", "#22C55E"];
 
 const QuizStatisticsChart = () => {
-  // const {accessToken} = useAuth();
   const accessToken = localStorage.getItem("accessToken");
   const [quizStatistics, setQuizStatistics] = useState<{
     [key: string]: number;

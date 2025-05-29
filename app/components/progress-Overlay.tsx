@@ -3,9 +3,12 @@ import React from "react";
 import { Backdrop, CircularProgress } from "@mui/material";
 import { useAuth } from "../hooks/AuthContext";
 
-const ProgressOverlay: React.FC = () => {
-  const { isLoading } = useAuth();
+interface ProgressOverlayProps {
+  isLoading: boolean;
+}
 
+const ProgressOverlay: React.FC<ProgressOverlayProps> = ({ isLoading }) => {
+  if (!isLoading) return null;
   return (
     <Backdrop
       sx={{

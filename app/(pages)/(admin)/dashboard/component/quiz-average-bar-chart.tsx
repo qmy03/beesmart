@@ -11,7 +11,7 @@ import {
 const transformData = (rawData: any) => {
   return rawData.map((item: any) => ({
     date: item.date,
-    ...item.averages, // Trích xuất các giá trị "Lớp 1", "Lớp 2", ...
+    ...item.averages,
   }));
 };
 
@@ -27,7 +27,6 @@ const QuizAverageBarChart = ({
   const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const colors = ["#FF6B6B", "#4ECDC4", "#1A535C", "#FF8C00", "#2E8B57"];
 
-  // Chuyển đổi dữ liệu
   const chartData = transformData(data);
   console.log(chartData);
   return (
@@ -39,17 +38,17 @@ const QuizAverageBarChart = ({
           alignItems: "center",
           minWidth: "900px",
           "&::-webkit-scrollbar": {
-            height: "6px", // Đặt chiều cao của thanh cuộn ngang
+            height: "6px",
           },
           "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#888", // Màu của thanh kéo
-            borderRadius: "10px", // Làm tròn góc
+            backgroundColor: "#888",
+            borderRadius: "10px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#555", // Màu khi hover
+            backgroundColor: "#555", 
           },
           "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1", // Màu nền của thanh cuộn
+            backgroundColor: "#f1f1f1",
           },
         }}
       >
@@ -61,7 +60,7 @@ const QuizAverageBarChart = ({
             overflowX: "auto",
             width: "100%",
             "&::-webkit-scrollbar": {
-              height: "6px", // Kích thước của thanh cuộn ngang
+              height: "6px", 
             },
             "&::-webkit-scrollbar-thumb": {
               backgroundColor: "#888",
@@ -93,7 +92,7 @@ const QuizAverageBarChart = ({
               <Line
                 key={cls}
                 type="monotone"
-                dataKey={cls} // Chỉ cần sử dụng tên key trực tiếp
+                dataKey={cls} 
                 stroke={colors[index]}
                 strokeWidth={2}
                 activeDot={{ r: 8 }}

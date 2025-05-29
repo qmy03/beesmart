@@ -19,14 +19,42 @@ import {
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
 import TextField from "@/app/components/textfield";
+interface User {
+  userId: string;
+  username: string;
+  role: string;
+}
+
+interface UsersResponse {
+  data: User[];
+}
+
+interface QuizRecord {
+  recordId: string;
+  quizName: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  points: number;
+  timeSpent: number;
+  createdAt: string;
+}
+
+interface QuizRecordsData {
+  quizRecords: QuizRecord[];
+  totalItems: number;
+}
+
+interface QuizRecordsResponse {
+  data: QuizRecordsData;
+}
 
 const StatisticHomeworkHistory = () => {
-  const { accessToken } = useAuth(); // Lấy accessToken từ context
-  const [users, setUsers] = useState<any[]>([]); // Danh sách người dùng
-  const [selectedUser, setSelectedUser] = useState(""); // Người dùng được chọn
-  const [quizRecords, setQuizRecords] = useState<any[]>([]); // Lịch sử làm bài kiểm tra
-  const [loading, setLoading] = useState(false); // Xử lý trạng thái loading
-  const [totalItems, setTotalItems] = useState(0); // Tổng số mục từ API
+  const { accessToken } = useAuth();
+  const [users, setUsers] = useState<any[]>([]); 
+  const [selectedUser, setSelectedUser] = useState("");
+  const [quizRecords, setQuizRecords] = useState<any[]>([]); 
+  const [loading, setLoading] = useState(false); 
+  const [totalItems, setTotalItems] = useState(0);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -34,43 +62,41 @@ const StatisticHomeworkHistory = () => {
     "success"
   );
 
-  const [page, setPage] = useState(0); // Trạng thái trang hiện tại
-  const [rowsPerPage, setRowsPerPage] = useState(10); // Số dòng mỗi trang
+  const [page, setPage] = useState(0); 
+  const [rowsPerPage, setRowsPerPage] = useState(10); 
 
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false); // Đóng Snackbar
+    setSnackbarOpen(false);
   };
 
   const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage); // Cập nhật trang khi người dùng thay đổi
+    setPage(newPage);
   };
 
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setRowsPerPage(parseInt(event.target.value, 10)); // Cập nhật số dòng mỗi trang
-    setPage(0); // Đặt lại trang về trang đầu tiên khi thay đổi số dòng mỗi trang
+    setRowsPerPage(parseInt(event.target.value, 10)); 
+    setPage(0);
   };
 
-  // Lấy danh sách người dùng
-  // Lấy danh sách người dùng và lọc theo role
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
       apiService
-        .get("/users", {
+        .get<UsersResponse>("/users", {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
+            Authorization: `Bearer ${accessToken}`,
           },
         })
         .then((response) => {
           const userList = response.data.data;
           const students = userList.filter(
             (user: any) => user.role === "STUDENT"
-          ); // Lọc chỉ người dùng có role là "STUDENT"
-          setUsers(students); // Lưu danh sách người dùng là STUDENT
+          ); 
+          setUsers(students);
           if (students.length > 0) {
-            setSelectedUser(students[0].userId); // Chọn người dùng đầu tiên
+            setSelectedUser(students[0].userId);
           }
           setLoading(false);
         })
@@ -82,11 +108,11 @@ const StatisticHomeworkHistory = () => {
   }, [accessToken]);
 
   useEffect(() => {
-    console.log("Fetching data for page:", page); // Log chính xác page hiện tại
+    console.log("Fetching data for page:", page);
     if (selectedUser) {
       setLoading(true);
       apiService
-        .get(`/statistics/user/${selectedUser}/quiz-records?page=${page}`, {
+        .get<QuizRecordsResponse>(`/statistics/user/${selectedUser}/quiz-records?page=${page}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -105,13 +131,13 @@ const StatisticHomeworkHistory = () => {
     }
   }, [selectedUser, accessToken, page]);
   const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60); // Calculate minutes
-    const remainingSeconds = seconds % 60; // Calculate remaining seconds
+    const minutes = Math.floor(seconds / 60); 
+    const remainingSeconds = seconds % 60;
     return `${minutes}'${remainingSeconds < 10 ? "0" : ""}${remainingSeconds}s`;
   };
   const handleUserChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     setSelectedUser(event.target.value as string);
-    setPage(0); // Đặt lại trang về 0 khi thay đổi người dùng
+    setPage(0); 
   };
 
   return (
