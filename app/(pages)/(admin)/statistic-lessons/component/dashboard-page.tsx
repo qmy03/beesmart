@@ -28,6 +28,27 @@ const StatisticLessonsPage = () => {
     `${new Date().getFullYear()}`
   );
   const { accessToken } = useAuth();
+  const [subjects, setSubjects] = useState<
+    { subjectId: string; subjectName: string }[]
+  >([]);
+  const [selectedSubjectForLessonView, setSelectedSubjectForLessonView] =
+    useState<string>("");
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await apiService.get("/subjects");
+        const data = response.data?.data?.subjects || [];
+        setSubjects(data);
+        if (data.length > 0) {
+          // Khởi tạo cả hai state với môn học đầu tiên
+          setSelectedSubjectForLessonView(data[0].subjectName);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách môn học:", error);
+      }
+    };
+    fetchSubjects();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +56,7 @@ const StatisticLessonsPage = () => {
         if (accessToken) {
           const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`;
           const lessonResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${date}`,
+            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${date}&subject=${selectedSubjectForLessonView}`,
             {
               method: "GET",
               headers: {
@@ -64,7 +85,7 @@ const StatisticLessonsPage = () => {
     };
 
     fetchData();
-  }, [accessToken, selectedMonth, selectedYear]);
+  }, [accessToken, selectedMonth, selectedYear, selectedSubjectForLessonView]);
 
   return (
     <Layout>
@@ -114,6 +135,9 @@ const StatisticLessonsPage = () => {
             data={lessonViewData}
             month={Number(selectedMonth)}
             year={Number(selectedYear)}
+            selectedSubject={selectedSubjectForLessonView}
+            setSelectedSubject={setSelectedSubjectForLessonView}
+            subjects={subjects}
           />
         </Box>
       </Box>

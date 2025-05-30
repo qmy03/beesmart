@@ -16,6 +16,7 @@ export default function BattlePage() {
 
   const { accessToken, userInfo } = useAuth();
   console.log("User Info:", userInfo);
+  console.log("Access Token:", accessToken);
   const router = useRouter();
   const [matching, setMatching] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -171,7 +172,9 @@ export default function BattlePage() {
 
   const sendBattleInvitation = async (opponentId: string) => {
     if (!accessToken || !selectedSubject || !selectedGrade) {
-      setError("Please select both a subject and a grade before sending invitation.");
+      setError(
+        "Please select both a subject and a grade before sending invitation."
+      );
       return;
     }
 
@@ -180,14 +183,18 @@ export default function BattlePage() {
         inviteeId: opponentId,
         gradeId: selectedGrade,
         subjectId: selectedSubject,
-        topic: "Battle Challenge" // You can customize this or make it dynamic
+        topic: "Battle Challenge", // You can customize this or make it dynamic
       };
 
-      const response = await apiService.post("/battle-invitations/send", invitationRequest, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await apiService.post(
+        "/battle-invitations/send",
+        invitationRequest,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
 
       if (response.data?.status === 200) {
         alert("Lời mời thách đấu đã được gửi thành công!");
@@ -196,7 +203,8 @@ export default function BattlePage() {
       }
     } catch (error: any) {
       console.error("❌ Error sending battle invitation:", error);
-      const errorMessage = error.response?.data?.message || "Không thể gửi lời mời thách đấu";
+      const errorMessage =
+        error.response?.data?.message || "Không thể gửi lời mời thách đấu";
       setError(errorMessage);
     }
   };
@@ -312,8 +320,13 @@ export default function BattlePage() {
                       variant="contained"
                       color="primary"
                       sx={{ mt: 2 }}
-                      onClick={() => selectedOpponent && sendBattleInvitation(selectedOpponent.id)}
-                      disabled={!selectedSubject || !selectedGrade || !selectedOpponent}
+                      onClick={() =>
+                        selectedOpponent &&
+                        sendBattleInvitation(selectedOpponent.id)
+                      }
+                      disabled={
+                        !selectedSubject || !selectedGrade || !selectedOpponent
+                      }
                     >
                       Thách đấu
                     </Button>

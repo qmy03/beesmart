@@ -32,14 +32,40 @@ const StatisticQuizzesPage = () => {
   const [quizAverageData, setQuizAverageData] = useState<
     { date: string; averages: { [key: string]: number } }[]
   >([]);
+  // Tạo state riêng biệt cho từng component
+  const [selectedSubjectForQuizView, setSelectedSubjectForQuizView] =
+    useState<string>("");
+  const [selectedSubjectForQuizAverage, setSelectedSubjectForQuizAverage] =
+    useState<string>("");
+  const [subjects, setSubjects] = useState<
+    { subjectId: string; subjectName: string }[]
+  >([]);
 
   useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = await apiService.get("/subjects");
+        const data = response.data?.data?.subjects || [];
+        setSubjects(data);
+        if (data.length > 0) {
+          // Khởi tạo cả hai state với môn học đầu tiên
+          setSelectedSubjectForQuizView(data[0].subjectName);
+          setSelectedSubjectForQuizAverage(data[0].subjectName);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách môn học:", error);
+      }
+    };
+    fetchSubjects();
+  }, []);
+  useEffect(() => {
     const fetchQuizAverageData = async () => {
+      if (!accessToken || !selectedSubjectForQuizAverage) return;
       try {
         if (accessToken) {
           const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`;
           const averageResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${date}`,
+            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${date}&subject=${selectedSubjectForQuizAverage}`,
             {
               method: "GET",
               headers: {
@@ -68,14 +94,15 @@ const StatisticQuizzesPage = () => {
     };
 
     fetchQuizAverageData();
-  }, [accessToken, selectedMonth, selectedYear]);
+  }, [accessToken, selectedMonth, selectedYear, selectedSubjectForQuizAverage]);
   useEffect(() => {
     const fetchData = async () => {
+      if (!accessToken || !selectedSubjectForQuizView) return;
       try {
         if (accessToken) {
           const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`; // Format the date to mm-yyyy
           const lessonResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/quiz-by-month?date=${date}`,
+            `http://localhost:8080/api/statistics/admin/quiz-by-month?date=${date}&subject=${selectedSubjectForQuizView}`,
             {
               method: "GET",
               headers: {
@@ -104,7 +131,7 @@ const StatisticQuizzesPage = () => {
     };
 
     fetchData();
-  }, [accessToken, selectedMonth, selectedYear]);
+  }, [accessToken, selectedMonth, selectedYear, selectedSubjectForQuizView]);
 
   return (
     <Layout>
@@ -155,11 +182,17 @@ const StatisticQuizzesPage = () => {
             data={lessonViewData}
             month={Number(selectedMonth)}
             year={Number(selectedYear)}
+            selectedSubject={selectedSubjectForQuizView}
+            setSelectedSubject={setSelectedSubjectForQuizView}
+            subjects={subjects}
           />
           <QuizAverageBarChart
             data={quizAverageData}
             month={Number(selectedMonth)}
             year={Number(selectedYear)}
+            selectedSubject={selectedSubjectForQuizAverage}
+            setSelectedSubject={setSelectedSubjectForQuizAverage}
+            subjects1={subjects}
           />
         </Box>
 
