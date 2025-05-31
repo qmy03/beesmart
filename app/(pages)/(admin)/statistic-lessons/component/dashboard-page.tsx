@@ -16,6 +16,10 @@ interface SummaryDataItem {
   textColor: string;
 }
 
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
 const StatisticLessonsPage = () => {
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
@@ -36,7 +40,18 @@ const StatisticLessonsPage = () => {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const response = await apiService.get("/subjects");
+        const response = (await apiService.get("/subjects")) as {
+          data: {
+            data: {
+              subjects: Subject[];
+              totalItems: number;
+              totalPages: number;
+              currentPage: number;
+            };
+          };
+        };
+        console.log("Fetched subjects:", response.data);
+
         const data = response.data?.data?.subjects || [];
         setSubjects(data);
         if (data.length > 0) {

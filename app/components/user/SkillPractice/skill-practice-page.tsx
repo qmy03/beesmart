@@ -23,56 +23,63 @@ import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArro
 import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/hooks/AuthContext";
-// import { Button } from "../../button";
 import TextField from "../../textfield";
 import { Key } from "@mui/icons-material";
+interface Question {
+  questionId: string;
+  content: string;
+  questionType: "MULTIPLE_CHOICE" | "MULTI_SELECT" | "FILL_IN_THE_BLANK";
+  options: string[];
+  image?: string;
+}
+
+interface Answer {
+  selectedAnswerIndex?: number;
+  selectedAnswers?: number[];
+  inputAnswer?: string;
+}
+
+interface QuizResponse {
+  data: {
+    questions: Question[];
+    quizDuration: number;
+  };
+}
+
+interface QuizResult {
+  points: number;
+  correctAnswers: number;
+  totalQuestions: number;
+  questions: Array<{
+    content: string;
+    image?: string;
+    options?: string[];
+    correctAnswer?: string;
+    correctAnswers?: string[];
+    userAnswer?: string;
+    answers?: string[];
+    correct: boolean;
+  }>;
+}
+
+interface SubmitResponse {
+  data: QuizResult;
+}
 const SkillPracticePage = () => {
   const router = useRouter();
   const { quizId } = useParams();
-  const [questions, setQuestions] = useState<any[]>([]);
-  // const [answers, setAnswers] = useState<any[]>([]);
-  const [answers, setAnswers] = useState([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  // const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [timeLeft, setTimeLeft] = useState<number>(0); // 10 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState<number>(0);
   const { accessToken } = useAuth();
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [quizResult, setQuizResult] = useState<any>(null);
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [quizDuration, setQuizDuration] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleTextFieldChange = (e) => {
-    const updatedAnswers = [...answers];
-    updatedAnswers[currentPage] = {
-      inputAnswer: e.target.value,
-    };
-    setAnswers(updatedAnswers);
-  };
-  const handleRadioChange = (e) => {
-    const updatedAnswers = [...answers];
-    updatedAnswers[currentPage] = {
-      selectedAnswerIndex: e.target.value,
-    };
-    setAnswers(updatedAnswers);
-  };
-
-  // Hàm xử lý khi Checkbox thay đổi
-  const handleCheckboxChange = (index, e) => {
-    const updatedAnswers = [...answers];
-    const selectedAnswers = updatedAnswers[currentPage]?.selectedAnswers || [];
-
-    if (e.target.checked) {
-      selectedAnswers.push(index);
-    } else {
-      const idx = selectedAnswers.indexOf(index);
-      if (idx > -1) selectedAnswers.splice(idx, 1);
-    }
-
-    updatedAnswers[currentPage] = {
-      selectedAnswers,
-    };
-    setAnswers(updatedAnswers);
-  };
   const handleNext = () => {
     if (currentPage < questions.length - 1) {
       setCurrentPage(currentPage + 1);
@@ -88,21 +95,20 @@ const SkillPracticePage = () => {
   const question = questions[currentPage];
 
   useEffect(() => {
-    // Countdown timer
-    if (isSubmitted) return; // Nếu đã nộp bài thì không chạy timer nữa
+    if (isSubmitted) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
-          clearInterval(timer); // Dừng timer khi hết giờ
+          clearInterval(timer);
           return 0;
         }
         return prevTime - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer); // Clean up interval on component unmount
-  }, [isSubmitted]); // Khi isSubmitted thay đổi thì sẽ chạy lại
+    return () => clearInterval(timer);
+  }, [isSubmitted]);
 
   const handleAnswerChange = (questionIndex: number, answerIndex: number) => {
     const updatedAnswers = [...answers];
@@ -112,34 +118,32 @@ const SkillPracticePage = () => {
 
   useEffect(() => {
     if (timeLeft > 0) {
-      // Chỉ chạy timer nếu timeLeft > 0
       const timer = setInterval(() => {
         setTimeLeft((prevTime) => {
           if (prevTime <= 1) {
-            clearInterval(timer); // Dừng timer khi hết giờ
+            clearInterval(timer);
             return 0;
           }
           return prevTime - 1;
         });
       }, 1000);
 
-      return () => clearInterval(timer); // Clean up interval
+      return () => clearInterval(timer);
     }
-  }, [timeLeft]); // Thêm timeLeft vào dependency
+  }, [timeLeft]);
 
   useEffect(() => {
     if (quizId) {
       setLoading(true);
       apiService
-        .get(`/quizzes/${quizId}/get-questions`)
+        .get<QuizResponse>(`/quizzes/${quizId}/get-questions`)
         .then((response) => {
           console.log("responseQ", response);
           setQuestions(response.data.data.questions);
 
-          // Lấy quizDuration từ response
-          const duration = response.data.data.quizDuration || 10; // Mặc định 10 nếu không có
-          setQuizDuration(duration); // Lưu quizDuration vào state
-          setTimeLeft(duration * 60); // Đặt thời gian đếm ngược
+          const duration = response.data.data.quizDuration || 10;
+          setQuizDuration(duration);
+          setTimeLeft(duration * 60);
         })
         .catch((error) => {
           console.error("Error fetching questions:", error);
@@ -151,10 +155,10 @@ const SkillPracticePage = () => {
   }, [quizId]);
 
   const handleSubmit = () => {
-    if (isSubmitted) return; // Nếu đã nộp bài, không thực hiện gì thêm.
+    if (isSubmitted) return;
 
-    const totalQuizTime = quizDuration * 60; // Tổng thời gian quiz tính bằng giây
-    const timeSpent = totalQuizTime - timeLeft; // Thời gian đã sử dụng
+    const totalQuizTime = quizDuration * 60;
+    const timeSpent = totalQuizTime - timeLeft;
 
     const payload = {
       timeSpent,
@@ -164,14 +168,15 @@ const SkillPracticePage = () => {
           if (question.questionType === "MULTIPLE_CHOICE") {
             return {
               questionId: question.questionId,
-              selectedAnswer: question.options[answer.selectedAnswerIndex],
+              selectedAnswer: question.options[answer.selectedAnswerIndex!],
             };
           } else if (question.questionType === "MULTI_SELECT") {
             return {
               questionId: question.questionId,
-              selectedAnswers: answer.selectedAnswers.map(
-                (idx) => question.options[idx]
-              ),
+              selectedAnswers:
+                answer.selectedAnswers?.map(
+                  (idx: number) => question.options[idx]
+                ) || [],
             };
           } else if (question.questionType === "FILL_IN_THE_BLANK") {
             return {
@@ -187,7 +192,7 @@ const SkillPracticePage = () => {
     console.log("payload", payload);
 
     apiService
-      .post(`/quizzes/${quizId}/submit-quiz`, payload, {
+      .post<SubmitResponse>(`/quizzes/${quizId}/submit-quiz`, payload, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -196,7 +201,7 @@ const SkillPracticePage = () => {
         console.log("Quiz submitted successfully", response.data);
         setQuizResult(response.data.data);
         setDialogOpen(true);
-        setIsSubmitted(true); // Đánh dấu đã nộp bài
+        setIsSubmitted(true);
       })
       .catch((error) => {
         console.error(
@@ -207,7 +212,7 @@ const SkillPracticePage = () => {
   };
   useEffect(() => {
     if (timeLeft === 0 && !isSubmitted) {
-      handleSubmit(); // Gọi hàm nộp bài khi hết giờ
+      handleSubmit();
     }
   }, [timeLeft, isSubmitted]);
 
@@ -362,20 +367,19 @@ const SkillPracticePage = () => {
                               parseInt(e.target.value)
                             )
                           }
-                          disabled={timeLeft === 0}
                           sx={{ display: "flex", flexDirection: "column" }}
                         >
                           {question.options
-                            .filter((option) => option.trim() !== "") // Filter out empty options
-                            .map((option, index) => (
+                            .filter((option: string) => option.trim() !== "")
+                            .map((option: string, index: number) => (
                               <FormControlLabel
                                 key={index}
                                 value={index.toString()}
-                                control={<Radio />}
+                                control={<Radio disabled={timeLeft === 0} />}
                                 label={option}
                                 sx={{
                                   "& .MuiTypography-root": { fontSize: "16px" },
-                                }} // Sửa fontSize của label
+                                }}
                               />
                             ))}
                         </RadioGroup>
@@ -429,7 +433,6 @@ const SkillPracticePage = () => {
                     </FormControl>
                   </Box>
 
-                  {/* Navigation buttons */}
                   <Box
                     sx={{
                       display: "flex",
@@ -458,7 +461,6 @@ const SkillPracticePage = () => {
                 </Box>
               </Box>
 
-              {/* Right Section: Side panel for Question Numbers and Submit button */}
               <Box
                 sx={{
                   flex: 1,
@@ -466,9 +468,7 @@ const SkillPracticePage = () => {
                   display: "flex",
                   flexDirection: "column",
                   gap: "20px",
-                  // paddingX: "20px",
                   backgroundColor: "#fff",
-                  // boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
                 }}
               >
                 <Typography
@@ -488,7 +488,6 @@ const SkillPracticePage = () => {
                   <AccessAlarmIcon sx={{ fontSize: "24px" }} />{" "}
                   {formatTime(timeLeft)}
                 </Typography>
-                {/* Question numbers */}
                 <Box
                   sx={{
                     padding: 1,
@@ -513,21 +512,20 @@ const SkillPracticePage = () => {
                   <Box
                     sx={{
                       display: "flex",
-                      // justifyContent: "center",
                       gap: "8px",
                       marginY: "20px",
                       flexWrap: "wrap",
                     }}
                   >
                     {questions.map((_, index) => {
+                      const answer = answers[index]; // Get the answer object first
                       const isAnswered =
-                        answers[index] &&
-                        (answers[index]?.inputAnswer ||
-                          answers[index]?.selectedAnswers?.length > 0 ||
-                          answers[index]?.selectedAnswerIndex !== undefined); // Câu hỏi đã trả lời khi có giá trị trả lời
+                        answer &&
+                        (answer.inputAnswer ||
+                          (answer.selectedAnswers &&
+                            answer.selectedAnswers.length > 0) ||
+                          answer.selectedAnswerIndex !== undefined);
                       const isCurrent = index === currentPage;
-                      // const isSelected =
-                      //   answers[index]?.selectedAnswerIndex !== undefined;
 
                       return (
                         <Button
@@ -537,11 +535,11 @@ const SkillPracticePage = () => {
                           sx={{
                             backgroundColor: isCurrent
                               ? isAnswered
-                                ? "#99BC4D" // Xanh lá khi đã trả lời
-                                : "#FF9900" // Cam khi chưa trả lời
+                                ? "#99BC4D"
+                                : "#FF9900"
                               : isAnswered
                                 ? "#99BC4D"
-                                : "transparent", // Màu xám khi chưa trả lời
+                                : "transparent",
                             color: isCurrent
                               ? isAnswered
                                 ? "#fff"
@@ -558,7 +556,6 @@ const SkillPracticePage = () => {
                                   ? "#7A9F38"
                                   : "#D9D9D9",
                             },
-                            // border: isSelected ? "2px solid #4CAF50" : "none", // Thêm viền xanh khi đã chọn câu trả lời
                           }}
                         >
                           {index + 1}
@@ -568,7 +565,6 @@ const SkillPracticePage = () => {
                   </Box>
                 </Box>
 
-                {/* Submit button */}
                 <Button
                   variant="contained"
                   color="primary"
@@ -588,8 +584,12 @@ const SkillPracticePage = () => {
         </Box>
       </Box>
 
-      {/* Dialog for quiz results */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="lg">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        fullWidth
+        maxWidth="lg"
+      >
         {dialogOpen && quizResult && (
           <Box
             sx={{
@@ -645,13 +645,12 @@ const SkillPracticePage = () => {
                   />
                 )}
 
-                {/* Multiple Choice Questions */}
                 {question.options &&
                   question.options.length > 0 &&
                   !question.correctAnswers &&
                   question.options.map((option: string, optIndex: number) => {
-                    const isCorrect = question.correctAnswer === option; // For multiple choice, check against `correctAnswer`
-                    const isUserAnswer = question.userAnswer === option; // Check if the user selected this option
+                    const isCorrect = question.correctAnswer === option;
+                    const isUserAnswer = question.userAnswer === option;
 
                     return (
                       <Typography
@@ -661,14 +660,14 @@ const SkillPracticePage = () => {
                           marginBottom: "4px",
                           borderRadius: "5px",
                           backgroundColor: isCorrect
-                            ? "#99BC4D" // Green for correct answers
+                            ? "#99BC4D"
                             : isUserAnswer
-                              ? "#FFCCCB" // Red for incorrect user answers
-                              : "transparent", // No background for other options
+                              ? "#FFCCCB"
+                              : "transparent",
                           textDecoration:
                             isUserAnswer && !isCorrect
                               ? "line-through"
-                              : "none", // Strike-through for wrong answers
+                              : "none",
                         }}
                       >
                         {option}
@@ -676,56 +675,55 @@ const SkillPracticePage = () => {
                     );
                   })}
 
-                {/* Multi-Select Questions */}
                 {question.correctAnswers &&
                   question.correctAnswers.length > 0 &&
                   question.options &&
                   question.options.length > 0 && (
                     <Box>
-                      {[...new Set(question.options)].map(
-                        (option: string, optIndex: number) => {
-                          const isCorrect =
-                            question.correctAnswers.includes(option); // Check if the option is correct
-                          const isUserAnswer =
-                            question.answers?.includes(option); // Check if the user selected this option
-                          const isIncorrectUserAnswer =
-                            isUserAnswer && !isCorrect; // If user selected an incorrect answer
+                      {question.options &&
+                        [...new Set(question.options as string[])].map(
+                          (option: string, optIndex: number) => {
+                            const isCorrect =
+                              question.correctAnswers.includes(option);
+                            const isUserAnswer =
+                              question.answers?.includes(option);
+                            const isIncorrectUserAnswer =
+                              isUserAnswer && !isCorrect;
 
-                          return (
-                            <Typography
-                              key={optIndex}
-                              sx={{
-                                padding: "4px 8px",
-                                marginBottom: "4px",
-                                borderRadius: "5px",
-                                backgroundColor: isCorrect
-                                  ? "#99BC4D" // Green for correct answers
-                                  : isIncorrectUserAnswer
-                                    ? "#FFCCCB" // Red for incorrect user answers
-                                    : "transparent",
-                                textDecoration: isIncorrectUserAnswer
-                                  ? "line-through"
-                                  : "none", // Strike-through for wrong answers
-                              }}
-                            >
-                              {option}
-                            </Typography>
-                          );
-                        }
-                      )}
+                            return (
+                              <Typography
+                                key={optIndex}
+                                sx={{
+                                  padding: "4px 8px",
+                                  marginBottom: "4px",
+                                  borderRadius: "5px",
+                                  backgroundColor: isCorrect
+                                    ? "#99BC4D"
+                                    : isIncorrectUserAnswer
+                                      ? "#FFCCCB"
+                                      : "transparent",
+                                  textDecoration: isIncorrectUserAnswer
+                                    ? "line-through"
+                                    : "none",
+                                }}
+                              >
+                                {option}
+                              </Typography>
+                            );
+                          }
+                        )}
                     </Box>
                   )}
 
-                {/* Fill-in-the-Blank Questions */}
                 {!question.options && question.correctAnswers && (
                   <Box>
                     {question.correctAnswers.map(
                       (correctAnswer: string, ansIndex: number) => {
                         const isCorrect =
                           question.userAnswer?.toLowerCase() ===
-                          correctAnswer.toLowerCase(); // Compare with correct answers
+                          correctAnswer.toLowerCase();
                         const isIncorrectUserAnswer =
-                          question.userAnswer && !isCorrect; // If the user answer is wrong
+                          question.userAnswer && !isCorrect;
 
                         return (
                           <Typography
@@ -735,13 +733,13 @@ const SkillPracticePage = () => {
                               marginBottom: "4px",
                               borderRadius: "5px",
                               backgroundColor: isCorrect
-                                ? "#99BC4D" // Green for correct answers
+                                ? "#99BC4D"
                                 : isIncorrectUserAnswer
-                                  ? "#FFCCCB" // Red for incorrect user answers
+                                  ? "#FFCCCB"
                                   : "transparent",
                               textDecoration: isIncorrectUserAnswer
                                 ? "line-through"
-                                : "none", // Strike-through for wrong answers
+                                : "none",
                             }}
                           >
                             {correctAnswer}
@@ -752,7 +750,6 @@ const SkillPracticePage = () => {
                   </Box>
                 )}
 
-                {/* Display answers only if the answer is incorrect */}
                 {!question.correct && (
                   <Box sx={{ marginTop: "12px" }}>
                     <Typography variant="body1" fontWeight={600}>

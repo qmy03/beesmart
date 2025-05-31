@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import React from "react";
 import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined";
-import CloseIcon from "@mui/icons-material/close";
+import Close from "@mui/icons-material/Close";
 interface DialogComponentProps {
   open: boolean;
   handleClose: () => void;
@@ -122,7 +122,7 @@ const DeleteDialog: React.FC<DialogComponentProps> = ({
               onClick={handleClose}
               sx={{ marginRight: "8px", color: "#9CA8B3" }}
             >
-              <CloseIcon />
+              <Close />
             </IconButton>
           </DialogContent>
         </Box>

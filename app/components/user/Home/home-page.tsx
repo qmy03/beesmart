@@ -24,36 +24,34 @@ const HomePage: React.FC = () => {
       >
         <Box
           sx={{
-            position: "relative", // Tạo ngữ cảnh để căn chỉnh các phần tử con
-            width: "100%", // Chiếm toàn bộ chiều rộng màn hình
-            height: "100vh", // Chiếm toàn bộ chiều cao màn hình
+            position: "relative",
+            width: "100%", 
+            height: "100vh", 
           }}
         >
-          {/* Ảnh */}
           <Box
             sx={{
-              position: "absolute", // Đặt ảnh ở dưới và chiếm toàn bộ diện tích
+              position: "absolute", 
               top: 0,
               left: 0,
-              width: "100%", // Chiếm toàn bộ chiều rộng
-              height: "100%", // Chiếm toàn bộ chiều cao
+              width: "100%", 
+              height: "100%",
             }}
           >
             <Image src="/hero1.png" layout="fill" objectFit="fill" alt="Hero" />
           </Box>
 
-          {/* Text */}
           <Box
             sx={{
-              position: "absolute", // Đặt text lên trên ảnh
-              top: "40%", // Căn giữa theo chiều dọc
-              left: "15vw", // Căn trái
-              transform: "translateY(-50%)", // Căn giữa dọc chính xác
-              color: "#FFFFFF", // Màu chữ
-              zIndex: 1, // Đảm bảo chữ luôn hiển thị trên ảnh
+              position: "absolute", 
+              top: "40%",
+              left: "15vw", 
+              transform: "translateY(-50%)", 
+              color: "#FFFFFF", 
+              zIndex: 1, 
               fontWeight: 700,
               fontSize: "48px",
-              maxWidth: "40%", // Giới hạn chiều rộng để không tràn ra ngoài
+              maxWidth: "40%", 
             }}
           >
             Tự học trực tuyến với BeeSmart
@@ -61,14 +59,14 @@ const HomePage: React.FC = () => {
 
           <Box
             sx={{
-              position: "absolute", // Đặt text lên trên ảnh
-              top: "65%", // Căn theo chiều dọc dưới tiêu đề
-              left: "15vw", // Căn trái
-              transform: "translateY(-50%)", // Căn giữa dọc chính xác
-              color: "#FFFFFF", // Màu chữ
+              position: "absolute", 
+              top: "65%",
+              left: "15vw", 
+              transform: "translateY(-50%)",
+              color: "#FFFFFF", 
               fontSize: "20px",
               fontWeight: 400,
-              maxWidth: "40%", // Giới hạn chiều rộng để không tràn ra ngoài
+              maxWidth: "40%", 
             }}
           >
             Nền tảng học toán dành cho học sinh tiểu học, giúp trẻ khám phá kiến
@@ -77,10 +75,10 @@ const HomePage: React.FC = () => {
 
           <Box
             sx={{
-              position: "absolute", // Đặt nút bấm lên trên ảnh
-              top: "75%", // Vị trí nút
-              left: "15vw", // Căn trái
-              zIndex: 1, // Đảm bảo nút luôn hiển thị trên ảnh
+              position: "absolute", 
+              top: "75%",
+              left: "15vw",
+              zIndex: 1, 
             }}
           >
             <Button
@@ -129,9 +127,9 @@ const HomePage: React.FC = () => {
                 boxShadow: 4,
                 borderRadius: "16px",
                 cursor: "pointer",
-                transition: "transform 0.3s ease-in-out", // Thêm transition để hiệu ứng mượt mà
+                transition: "transform 0.3s ease-in-out",
                 "&:hover": {
-                  transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
+                  transform: "scale(1.1)", 
                 },
               }}
             >
@@ -183,25 +181,22 @@ const HomePage: React.FC = () => {
         </Box>
         <Box
           sx={{
-            position: "relative", // Đặt container ở relative để các box con sử dụng absolute
-            // width: "100vw",
-            height: "auto", // Đảm bảo chiều cao tự động theo kích thước của hình ảnh
-            overflow: "hidden", // Ẩn phần hình ảnh bị tràn ra ngoài nếu có
+            position: "relative", 
+            height: "auto",
+            overflow: "hidden", 
           }}
         >
-          {/* Hình ảnh banner */}
           <img
             src="/banner.png"
-            width="100%" // Chiếm toàn bộ chiều rộng của container
-            height="auto" // Đảm bảo tỷ lệ chiều cao đúng
+            width="100%" 
+            height="auto" 
             style={{
-              objectFit: "contain", // Đảm bảo hình ảnh sẽ bao phủ toàn bộ container mà không bị tràn
-              objectPosition: "center", // Căn giữa hình ảnh
+              objectFit: "contain", 
+              objectPosition: "center", 
             }}
             alt="Banner"
           />
 
-          {/* Các box con */}
           {[
             {
               top: "45%",
@@ -240,7 +235,7 @@ const HomePage: React.FC = () => {
                 position: "absolute",
                 top: box.top,
                 left: box.left,
-                transform: "translate(-50%, -50%)", // Căn giữa box tại vị trí
+                transform: "translate(-50%, -50%)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -257,25 +252,25 @@ const HomePage: React.FC = () => {
         <Box
           sx={{
             display: "flex",
-            justifyContent: "center", // Căn giữa ảnh theo chiều ngang
-            alignItems: "center", // Căn giữa ảnh theo chiều dọc (nếu cần)
-            width: "100%", // Container sẽ chiếm toàn bộ chiều rộng
-            height: "auto", // Tự động điều chỉnh theo nội dung
+            justifyContent: "center", 
+            alignItems: "center", 
+            width: "100%", 
+            height: "auto",
           }}
         >
           <Image
             src="/banner_1.png"
-            width={1440} // Đặt đúng kích thước gốc của ảnh
-            height={315} // Đặt đúng kích thước gốc của ảnh
+            width={1440}
+            height={315} 
             alt="Banner"
           />
         </Box>
         <Box
           sx={{
             display: "flex",
-            flexDirection: "column", // Hiển thị các phần tử theo cột
-            alignItems: "center", // Căn giữa theo chiều ngang
-            justifyContent: "center", // Căn giữa theo chiều dọc
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center", 
           }}
         >
           <Typography
@@ -288,14 +283,13 @@ const HomePage: React.FC = () => {
             Tại sao bạn nên chọn BeeSmart
           </Typography>
 
-          {/* Container chứa các Box con */}
           <Box
             sx={{
               display: "flex",
               gap: "25px",
               padding: "10px",
-              justifyContent: "center", // Căn giữa các phần tử con theo chiều ngang
-              flexWrap: "wrap", // Tự động xuống dòng nếu vượt quá chiều rộng
+              justifyContent: "center", 
+              flexWrap: "wrap",
               cursor: "pointer",
             }}
           >
@@ -321,21 +315,21 @@ const HomePage: React.FC = () => {
                 key={index}
                 sx={{
                   width: "280px",
-                  alignItems: "center", // Căn giữa nội dung trong Box
-                  justifyContent: "center", // Căn giữa nội dung trong Box
-                  textAlign: "center", // Căn giữa nội dung trong Box
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  textAlign: "center",
                   boxShadow: 3,
                   borderRadius: "16px",
                   "&:hover": {
-                    transform: "scale(1.1)", // Tăng kích thước lên 1.5 lần
+                    transform: "scale(1.1)", 
                   },
                 }}
               >
                 <Image
-                  src={item.image} // Đường dẫn ảnh thay đổi theo mảng
+                  src={item.image} 
                   width={270}
                   height={173}
-                  alt={item.text} // Thêm alt mô tả nội dung ảnh
+                  alt={item.text} 
                 />
                 <Typography>{item.text}</Typography>
               </Box>
@@ -345,9 +339,9 @@ const HomePage: React.FC = () => {
         <Box
           sx={{
             display: "flex",
-            flexDirection: "column", // Hiển thị các phần tử theo cột
-            alignItems: "center", // Căn giữa theo chiều ngang
-            justifyContent: "center", // Căn giữa theo chiều dọc
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center", 
             pb: "40px",
           }}
         >
@@ -361,7 +355,6 @@ const HomePage: React.FC = () => {
             Đồng hành cùng BeeSmart
           </Typography>
 
-          {/* Container chứa các Box con */}
           <Box
             sx={{
               display: "flex",
@@ -382,19 +375,19 @@ const HomePage: React.FC = () => {
                 key={index}
                 sx={{
                   width: "120px",
-                  alignItems: "center", // Căn giữa nội dung trong Box
-                  justifyContent: "center", // Căn giữa nội dung trong Box
+                  alignItems: "center", 
+                  justifyContent: "center", 
                   borderRadius: "16px",
                   "&:hover": {
-                    transform: "scale(1.1)", // Tăng kích thước lên khi hover
+                    transform: "scale(1.1)",
                   },
                 }}
               >
                 <Image
-                  src={imageSrc} // Đường dẫn ảnh
+                  src={imageSrc}
                   width={270}
                   height={173}
-                  alt="" // Alt có thể để trống nếu không cần mô tả
+                  alt=""
                 />
               </Box>
             ))}

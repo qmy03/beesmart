@@ -15,7 +15,6 @@ import {
   Checkbox,
   Snackbar,
   Alert,
-  InputAdornment,
 } from "@mui/material";
 import React, { useState, useEffect } from "react";
 import apiService from "@/app/untils/api";
@@ -24,8 +23,8 @@ import Layout from "@/app/components/admin/layout";
 import { Button } from "@/app/components/button";
 import TextField from "@/app/components/textfield";
 import EditIcon from "@mui/icons-material/Edit";
-import CloseIcon from "@mui/icons-material/close";
-import SearchIcon from "@mui/icons-material/Search";
+import Close from "@mui/icons-material/Close";
+
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 
 interface BookType {
@@ -67,8 +66,6 @@ const GradePage = () => {
   const fetchBookTypes = (query = "") => {
     if (accessToken) {
       setIsLoading(true);
-
-      const requestBody = query ? { bookName: query } : {};
 
       apiService
         .get<BookResponse>("/book-types", {
@@ -458,7 +455,7 @@ const GradePage = () => {
                 ? "Chỉnh sửa loại sách"
                 : "Thêm mới loại sách"}
             </Typography>
-            <CloseIcon fontSize="small" onClick={handleCloseDialog} />
+            <Close fontSize="small" onClick={handleCloseDialog} />
           </DialogTitle>
           <DialogContent>
             <TextField

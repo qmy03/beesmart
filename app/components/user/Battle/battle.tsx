@@ -1,53 +1,208 @@
-// import React, { useState, useEffect } from "react";
-// import { useParams } from "next/navigation";
+// import React, { useState, useEffect, useRef } from "react";
+// import { useParams, useRouter } from "next/navigation";
 // import Layout from "@/app/components/user/Home/layout";
 // import { useAuth } from "@/app/hooks/AuthContext";
+// import {
+//   Box,
+//   Typography,
+//   Radio,
+//   RadioGroup,
+//   FormControlLabel,
+//   FormControl,
+//   Dialog,
+//   DialogTitle,
+//   DialogContent,
+//   DialogActions,
+//   Checkbox,
+//   Divider,
+//   Button,
+// } from "@mui/material";
+// import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+// import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
+// import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
+// import TextField from "@/app/components/textfield";
 
 // export default function BattleDetailPage() {
+//     const router = useRouter();
 //     const { battleId } = useParams();
-//     const { userInfo } = useAuth();
+//     const { userInfo, accessToken } = useAuth();
 //     const [battleData, setBattleData] = useState(null);
+//     const [questions, setQuestions] = useState([]);
+//     const [answers, setAnswers] = useState([]);
 //     const [loading, setLoading] = useState(true);
 //     const [error, setError] = useState(null);
 //     const [timeLeft, setTimeLeft] = useState(0);
+//     const [currentPage, setCurrentPage] = useState(0);
+//     const [isSubmitted, setIsSubmitted] = useState(false);
+//     const [dialogOpen, setDialogOpen] = useState(false);
+//     const [battleResult, setBattleResult] = useState(null);
+//     const [websocket, setWebsocket] = useState(null);
+//     const wsRef = useRef(null);
 
-//     // Fetch battle details
+//     // WebSocket connection
 //     useEffect(() => {
-//         const fetchBattleDetails = async () => {
-//             try {
-//                 setLoading(true);
-//                 const response = await fetch(`/api/battles/${battleId}`);
-                
-//                 if (!response.ok) {
-//                     throw new Error('Failed to fetch battle details');
-//                 }
-                
-//                 const result = await response.json();
-//                 setBattleData(result.data);
-                
-//                 // Set initial time (example: 300 seconds = 5 minutes)
-//                 setTimeLeft(300);
-//             } catch (err) {
-//                 setError(err.message);
-//             } finally {
-//                 setLoading(false);
-//             }
-//         };
+//         if (battleId && userInfo && accessToken) {
+//             const ws = new WebSocket(`ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&battle-token=${accessToken}`);
+//             wsRef.current = ws;
+//             setWebsocket(ws);
 
-//         if (battleId) {
-//             fetchBattleDetails();
+//             ws.onopen = () => {
+//                 console.log('WebSocket connected');
+//             };
+
+//             ws.onmessage = (event) => {
+//                 const data = JSON.parse(event.data);
+//                 console.log('WebSocket message received:', data);
+
+//                 switch (data.type) {
+//                     case 'BATTLE_START':
+//                         setBattleData(data.battleData);
+//                         setQuestions(data.questions || []);
+//                         setTimeLeft(data.timeLimit || 300); // 5 minutes default
+//                         setLoading(false);
+//                         break;
+                    
+//                     case 'QUESTION_UPDATE':
+//                         setQuestions(data.questions || []);
+//                         break;
+                    
+//                     case 'BATTLE_UPDATE':
+//                         setBattleData(data.battleData);
+//                         break;
+                    
+//                     case 'BATTLE_END':
+//                         setBattleResult(data.result);
+//                         setDialogOpen(true);
+//                         setIsSubmitted(true);
+//                         break;
+                    
+//                     case 'OPPONENT_ANSWER':
+//                         // Handle opponent's answer if needed
+//                         console.log('Opponent answered:', data);
+//                         break;
+                    
+//                     default:
+//                         console.log('Unknown message type:', data.type);
+//                 }
+//             };
+
+//             ws.onerror = (error) => {
+//                 console.error('WebSocket error:', error);
+//                 setError('Connection error occurred');
+//             };
+
+//             ws.onclose = () => {
+//                 console.log('WebSocket disconnected');
+//             };
+
+//             return () => {
+//                 if (ws.readyState === WebSocket.OPEN) {
+//                     ws.close();
+//                 }
+//             };
 //         }
-//     }, [battleId]);
+//     }, [battleId, userInfo, accessToken]);
 
 //     // Timer countdown
 //     useEffect(() => {
-//         if (timeLeft > 0) {
+//         if (timeLeft > 0 && !isSubmitted) {
 //             const timer = setTimeout(() => {
 //                 setTimeLeft(timeLeft - 1);
 //             }, 1000);
 //             return () => clearTimeout(timer);
+//         } else if (timeLeft === 0 && !isSubmitted) {
+//             handleSubmit();
 //         }
-//     }, [timeLeft]);
+//     }, [timeLeft, isSubmitted]);
+
+//     // Handle answer changes
+//     const handleAnswerChange = (questionIndex, answerIndex) => {
+//         const updatedAnswers = [...answers];
+//         updatedAnswers[questionIndex] = { selectedAnswerIndex: answerIndex };
+//         setAnswers(updatedAnswers);
+        
+//         // Send answer to WebSocket
+//         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify({
+//                 type: 'ANSWER_SUBMIT',
+//                 questionIndex,
+//                 answer: answerIndex,
+//                 timestamp: Date.now()
+//             }));
+//         }
+//     };
+
+//     const handleTextFieldChange = (e) => {
+//         const updatedAnswers = [...answers];
+//         updatedAnswers[currentPage] = {
+//             inputAnswer: e.target.value,
+//         };
+//         setAnswers(updatedAnswers);
+        
+//         // Send answer to WebSocket
+//         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify({
+//                 type: 'ANSWER_SUBMIT',
+//                 questionIndex: currentPage,
+//                 answer: e.target.value,
+//                 timestamp: Date.now()
+//             }));
+//         }
+//     };
+
+//     const handleCheckboxChange = (index, e) => {
+//         const updatedAnswers = [...answers];
+//         const selectedAnswers = updatedAnswers[currentPage]?.selectedAnswers || [];
+
+//         if (e.target.checked) {
+//             selectedAnswers.push(index);
+//         } else {
+//             const idx = selectedAnswers.indexOf(index);
+//             if (idx > -1) selectedAnswers.splice(idx, 1);
+//         }
+
+//         updatedAnswers[currentPage] = {
+//             selectedAnswers,
+//         };
+//         setAnswers(updatedAnswers);
+        
+//         // Send answer to WebSocket
+//         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify({
+//                 type: 'ANSWER_SUBMIT',
+//                 questionIndex: currentPage,
+//                 answer: selectedAnswers,
+//                 timestamp: Date.now()
+//             }));
+//         }
+//     };
+
+//     const handleNext = () => {
+//         if (currentPage < questions.length - 1) {
+//             setCurrentPage(currentPage + 1);
+//         }
+//     };
+
+//     const handlePrevious = () => {
+//         if (currentPage > 0) {
+//             setCurrentPage(currentPage - 1);
+//         }
+//     };
+
+//     const handleSubmit = () => {
+//         if (isSubmitted) return;
+
+//         // Send final submission to WebSocket
+//         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+//             wsRef.current.send(JSON.stringify({
+//                 type: 'BATTLE_SUBMIT',
+//                 answers: answers,
+//                 timestamp: Date.now()
+//             }));
+//         }
+        
+//         setIsSubmitted(true);
+//     };
 
 //     // Format time display
 //     const formatTime = (seconds) => {
@@ -73,10 +228,18 @@
 //     if (loading) {
 //         return (
 //             <Layout>
-//                 <div className="flex flex-col items-center justify-center h-full">
-//                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-//                     <p className="mt-4 text-lg">Loading battle details...</p>
-//                 </div>
+//                 <Box
+//                     sx={{
+//                         display: "flex",
+//                         flexDirection: "column",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                         height: "100vh",
+//                         backgroundColor: "#EFF3E6",
+//                     }}
+//                 >
+//                     <Typography variant="h5">Connecting to battle...</Typography>
+//                 </Box>
 //             </Layout>
 //         );
 //     }
@@ -84,819 +247,455 @@
 //     if (error) {
 //         return (
 //             <Layout>
-//                 <div className="flex flex-col items-center justify-center h-full">
-//                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-//                         <p className="font-bold">Error:</p>
-//                         <p>{error}</p>
-//                     </div>
-//                 </div>
+//                 <Box
+//                     sx={{
+//                         display: "flex",
+//                         flexDirection: "column",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                         height: "100vh",
+//                         backgroundColor: "#EFF3E6",
+//                     }}
+//                 >
+//                     <Typography variant="h5" color="error">{error}</Typography>
+//                 </Box>
 //             </Layout>
 //         );
 //     }
 
 //     const { currentUser, opponent } = getCurrentUserAndOpponent();
+//     const question = questions[currentPage];
+
+//     if (!question) {
+//         return (
+//             <Layout>
+//                 <Box
+//                     sx={{
+//                         display: "flex",
+//                         flexDirection: "column",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                         height: "100vh",
+//                         backgroundColor: "#EFF3E6",
+//                     }}
+//                 >
+//                     <Typography variant="h5">Waiting for questions...</Typography>
+//                 </Box>
+//             </Layout>
+//         );
+//     }
 
 //     return (
 //         <Layout>
-//             <div className="container mx-auto px-4 py-8">
-//                 <div className="max-w-4xl mx-auto">
-//                     <h1 className="text-3xl font-bold text-center mb-8">Battle Arena</h1>
-                    
-//                     {/* Battle Status */}
-//                     <div className="text-center mb-6">
-//                         <span className={`inline-block px-4 py-2 rounded-full text-white font-semibold ${
-//                             battleData?.status === 'ONGOING' ? 'bg-green-500' : 
-//                             battleData?.status === 'COMPLETED' ? 'bg-blue-500' : 'bg-gray-500'
-//                         }`}>
-//                             {battleData?.status}
-//                         </span>
-//                     </div>
+//             <Box
+//                 sx={{
+//                     display: "flex",
+//                     flexDirection: "column",
+//                     backgroundColor: "#EFF3E6",
+//                     padding: "40px 120px",
+//                     height: "100%",
+//                 }}
+//             >
+//                 <Box
+//                     sx={{
+//                         display: "flex",
+//                         flexDirection: "column",
+//                         bgcolor: "#FFFFFF",
+//                         border: "1px solid #ccc",
+//                         borderRadius: 4,
+//                         flex: 1,
+//                     }}
+//                 >
+//                     {/* Header */}
+//                     <Typography
+//                         sx={{
+//                             fontSize: "32px",
+//                             fontWeight: "600",
+//                             textAlign: "center",
+//                             paddingY: "8px",
+//                         }}
+//                     >
+//                         Battle Arena
+//                     </Typography>
+//                     <Divider />
 
-//                     {/* Main Battle Layout */}
-//                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                        
-//                         {/* Current User Box */}
-//                         <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
-//                             <h3 className="text-lg font-semibold text-blue-800 mb-2">You</h3>
-//                             <div className="mb-4">
-//                                 <div className="w-16 h-16 bg-blue-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-//                                     <span className="text-white text-xl font-bold">
-//                                         {currentUser?.username?.charAt(0).toUpperCase() || 'U'}
-//                                     </span>
-//                                 </div>
-//                                 <p className="font-medium text-gray-800">{currentUser?.username || 'Unknown'}</p>
-//                             </div>
-//                             <div className="bg-white rounded-lg p-3">
-//                                 <p className="text-2xl font-bold text-blue-600">{currentUser?.score || 0}</p>
-//                                 <p className="text-sm text-gray-600">Score</p>
-//                             </div>
-//                         </div>
+//                     {/* Battle Status Bar */}
+//                     <Box
+//                         sx={{
+//                             display: "flex",
+//                             justifyContent: "space-between",
+//                             alignItems: "center",
+//                             padding: "16px 40px",
+//                             backgroundColor: "#f5f5f5",
+//                         }}
+//                     >
+//                         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+//                             <Box
+//                                 sx={{
+//                                     width: 40,
+//                                     height: 40,
+//                                     backgroundColor: "#2196F3",
+//                                     borderRadius: "50%",
+//                                     display: "flex",
+//                                     alignItems: "center",
+//                                     justifyContent: "center",
+//                                     color: "white",
+//                                     fontWeight: "bold",
+//                                 }}
+//                             >
+//                                 {currentUser?.username?.charAt(0).toUpperCase() || 'U'}
+//                             </Box>
+//                             <Box>
+//                                 <Typography fontSize="14px" color="gray">You</Typography>
+//                                 <Typography fontWeight="bold">{currentUser?.score || 0} pts</Typography>
+//                             </Box>
+//                         </Box>
 
-//                         {/* Timer Box (Middle) */}
-//                         <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-6 text-center">
-//                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Time Remaining</h3>
-//                             <div className="bg-white rounded-lg p-4 mb-4">
-//                                 <div className={`text-4xl font-mono font-bold ${
-//                                     timeLeft < 60 ? 'text-red-500' : 'text-gray-800'
-//                                 }`}>
-//                                     {formatTime(timeLeft)}
-//                                 </div>
-//                             </div>
-//                             <div className="w-full bg-gray-200 rounded-full h-2">
-//                                 <div 
-//                                     className={`h-2 rounded-full transition-all duration-1000 ${
-//                                         timeLeft < 60 ? 'bg-red-500' : 'bg-green-500'
-//                                     }`}
-//                                     style={{ width: `${(timeLeft / 300) * 100}%` }}
-//                                 ></div>
-//                             </div>
-//                         </div>
+//                         <Typography
+//                             sx={{
+//                                 fontSize: "24px",
+//                                 fontWeight: "bold",
+//                                 color: timeLeft < 60 ? "red" : "#99BC4D",
+//                             }}
+//                         >
+//                             VS
+//                         </Typography>
 
-//                         {/* Opponent Box */}
-//                         <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
-//                             <h3 className="text-lg font-semibold text-red-800 mb-2">Opponent</h3>
-//                             <div className="mb-4">
-//                                 <div className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-//                                     <span className="text-white text-xl font-bold">
-//                                         {opponent?.username?.charAt(0).toUpperCase() || 'O'}
-//                                     </span>
-//                                 </div>
-//                                 <p className="font-medium text-gray-800">{opponent?.username || 'Unknown'}</p>
-//                             </div>
-//                             <div className="bg-white rounded-lg p-3">
-//                                 <p className="text-2xl font-bold text-red-600">{opponent?.score || 0}</p>
-//                                 <p className="text-sm text-gray-600">Score</p>
-//                             </div>
-//                         </div>
-//                     </div>
+//                         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+//                             <Box>
+//                                 <Typography fontSize="14px" color="gray" textAlign="right">Opponent</Typography>
+//                                 <Typography fontWeight="bold" textAlign="right">{opponent?.score || 0} pts</Typography>
+//                             </Box>
+//                             <Box
+//                                 sx={{
+//                                     width: 40,
+//                                     height: 40,
+//                                     backgroundColor: "#f44336",
+//                                     borderRadius: "50%",
+//                                     display: "flex",
+//                                     alignItems: "center",
+//                                     justifyContent: "center",
+//                                     color: "white",
+//                                     fontWeight: "bold",
+//                                 }}
+//                             >
+//                                 {opponent?.username?.charAt(0).toUpperCase() || 'O'}
+//                             </Box>
+//                         </Box>
+//                     </Box>
 
-//                     {/* Battle Info */}
-//                     <div className="mt-8 bg-white rounded-lg shadow-md p-6">
-//                         <h3 className="text-xl font-semibold mb-4">Battle Information</h3>
-//                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                             <div>
-//                                 <p className="text-gray-600">Battle ID:</p>
-//                                 <p className="font-mono text-sm">{battleData?.battleId}</p>
-//                             </div>
-//                             <div>
-//                                 <p className="text-gray-600">Winner:</p>
-//                                 <p className="font-medium">{battleData?.winner || 'TBD'}</p>
-//                             </div>
-//                         </div>
-//                     </div>
+//                     {/* Main Content */}
+//                     <Box
+//                         sx={{
+//                             display: "flex",
+//                             justifyContent: "center",
+//                             padding: "40px",
+//                             gap: "20px",
+//                         }}
+//                     >
+//                         {/* Question Area */}
+//                         <Box
+//                             sx={{
+//                                 flex: 3,
+//                                 display: "flex",
+//                                 flexDirection: "column",
+//                                 border: "1px solid #ccc",
+//                                 borderRadius: 4,
+//                             }}
+//                         >
+//                             <Typography
+//                                 fontSize="16px"
+//                                 fontWeight={700}
+//                                 sx={{
+//                                     padding: "8px 20px",
+//                                     backgroundColor: "#99BC4D",
+//                                     borderTopLeftRadius: "16px",
+//                                     borderTopRightRadius: "16px",
+//                                     color: "#fff",
+//                                 }}
+//                             >
+//                                 Câu hỏi số {currentPage + 1}
+//                             </Typography>
+//                             <Divider />
+//                             <Box
+//                                 sx={{
+//                                     marginBottom: "20px",
+//                                     display: "flex",
+//                                     flexDirection: "column",
+//                                     gap: 2,
+//                                     padding: "20px",
+//                                 }}
+//                             >
+//                                 <Typography fontSize="16px" fontWeight={700}>
+//                                     {question.content}
+//                                 </Typography>
 
-//                     {/* Debug Info (Remove in production) */}
-//                     <div className="mt-4 text-xs text-gray-500">
-//                         <details>
-//                             <summary className="cursor-pointer">Debug Info</summary>
-//                             <pre className="mt-2 bg-gray-100 p-2 rounded text-xs overflow-auto">
-//                                 {JSON.stringify({ userInfo, battleData }, null, 2)}
-//                             </pre>
-//                         </details>
-//                     </div>
-//                 </div>
-//             </div>
+//                                 <FormControl component="fieldset">
+//                                     {question.image && (
+//                                         <img
+//                                             src={question.image}
+//                                             alt="Question"
+//                                             style={{ maxWidth: "50%" }}
+//                                         />
+//                                     )}
+                                    
+//                                     {question.questionType === "FILL_IN_THE_BLANK" && (
+//                                         <TextField
+//                                             value={answers[currentPage]?.inputAnswer || ""}
+//                                             onChange={handleTextFieldChange}
+//                                             sx={{ width: "30%", bgcolor: "white" }}
+//                                             disabled={timeLeft === 0 || isSubmitted}
+//                                         />
+//                                     )}
+                                    
+//                                     {question.questionType === "MULTIPLE_CHOICE" && (
+//                                         <RadioGroup
+//                                             value={answers[currentPage]?.selectedAnswerIndex ?? -1}
+//                                             onChange={(e) => handleAnswerChange(currentPage, parseInt(e.target.value))}
+//                                             disabled={timeLeft === 0 || isSubmitted}
+//                                             sx={{ display: "flex", flexDirection: "column" }}
+//                                         >
+//                                             {question.options
+//                                                 .filter((option) => option.trim() !== "")
+//                                                 .map((option, index) => (
+//                                                     <FormControlLabel
+//                                                         key={index}
+//                                                         value={index.toString()}
+//                                                         control={<Radio />}
+//                                                         label={option}
+//                                                         sx={{
+//                                                             "& .MuiTypography-root": { fontSize: "16px" },
+//                                                         }}
+//                                                     />
+//                                                 ))}
+//                                         </RadioGroup>
+//                                     )}
+
+//                                     {question.questionType === "MULTI_SELECT" && (
+//                                         <Box>
+//                                             {question.options
+//                                                 .filter((option) => option.trim() !== "")
+//                                                 .map((option, index) => (
+//                                                     <FormControlLabel
+//                                                         key={index}
+//                                                         sx={{
+//                                                             display: "flex",
+//                                                             flexDirection: "row",
+//                                                             "& .MuiTypography-root": { fontSize: "16px" },
+//                                                         }}
+//                                                         control={
+//                                                             <Checkbox
+//                                                                 checked={
+//                                                                     answers[currentPage]?.selectedAnswers?.includes(index) || false
+//                                                                 }
+//                                                                 onChange={(e) => handleCheckboxChange(index, e)}
+//                                                                 disabled={timeLeft === 0 || isSubmitted}
+//                                                             />
+//                                                         }
+//                                                         label={option}
+//                                                     />
+//                                                 ))}
+//                                         </Box>
+//                                     )}
+//                                 </FormControl>
+//                             </Box>
+
+//                             {/* Navigation buttons */}
+//                             <Box
+//                                 sx={{
+//                                     display: "flex",
+//                                     justifyContent: "space-between",
+//                                     marginBottom: "20px",
+//                                     paddingX: "20px",
+//                                 }}
+//                             >
+//                                 <Button
+//                                     variant="outlined"
+//                                     onClick={handlePrevious}
+//                                     disabled={currentPage === 0}
+//                                     sx={{ textTransform: "none" }}
+//                                 >
+//                                     <KeyboardDoubleArrowLeftIcon /> Câu hỏi trước
+//                                 </Button>
+//                                 <Button
+//                                     variant="outlined"
+//                                     onClick={handleNext}
+//                                     disabled={currentPage === questions.length - 1}
+//                                     sx={{ textTransform: "none" }}
+//                                 >
+//                                     Câu hỏi sau <KeyboardDoubleArrowRightIcon />
+//                                 </Button>
+//                             </Box>
+//                         </Box>
+
+//                         {/* Side Panel */}
+//                         <Box
+//                             sx={{
+//                                 flex: 1,
+//                                 width: "250px",
+//                                 display: "flex",
+//                                 flexDirection: "column",
+//                                 gap: "20px",
+//                                 backgroundColor: "#fff",
+//                             }}
+//                         >
+//                             {/* Timer */}
+//                             <Typography
+//                                 sx={{
+//                                     textAlign: "center",
+//                                     display: "flex",
+//                                     alignItems: "center",
+//                                     justifyContent: "center",
+//                                     gap: 1,
+//                                     border: "1px solid #ccc",
+//                                     padding: "8px",
+//                                     bgcolor: timeLeft < 60 ? "#ff4444" : "#99BC4D",
+//                                     color: "#fff",
+//                                 }}
+//                                 fontSize="24px"
+//                             >
+//                                 <AccessAlarmIcon sx={{ fontSize: "24px" }} />
+//                                 {formatTime(timeLeft)}
+//                             </Typography>
+
+//                             {/* Question List */}
+//                             <Box
+//                                 sx={{
+//                                     padding: 1,
+//                                     display: "flex",
+//                                     flexDirection: "column",
+//                                     gap: 2,
+//                                     border: "1px solid #ccc",
+//                                     borderRadius: 2,
+//                                 }}
+//                             >
+//                                 <Typography
+//                                     variant="h6"
+//                                     fontWeight={700}
+//                                     sx={{
+//                                         textAlign: "center",
+//                                         borderBottom: "1px dashed #ccc",
+//                                         padding: "8px",
+//                                     }}
+//                                 >
+//                                     Danh sách câu hỏi
+//                                 </Typography>
+//                                 <Box
+//                                     sx={{
+//                                         display: "flex",
+//                                         gap: "8px",
+//                                         marginY: "20px",
+//                                         flexWrap: "wrap",
+//                                     }}
+//                                 >
+//                                     {questions.map((_, index) => {
+//                                         const isAnswered =
+//                                             answers[index] &&
+//                                             (answers[index]?.inputAnswer ||
+//                                                 answers[index]?.selectedAnswers?.length > 0 ||
+//                                                 answers[index]?.selectedAnswerIndex !== undefined);
+//                                         const isCurrent = index === currentPage;
+
+//                                         return (
+//                                             <Button
+//                                                 key={index}
+//                                                 variant="contained"
+//                                                 onClick={() => setCurrentPage(index)}
+//                                                 sx={{
+//                                                     backgroundColor: isCurrent
+//                                                         ? isAnswered
+//                                                             ? "#99BC4D"
+//                                                             : "#FF9900"
+//                                                         : isAnswered
+//                                                             ? "#99BC4D"
+//                                                             : "transparent",
+//                                                     color: isCurrent
+//                                                         ? "#fff"
+//                                                         : isAnswered
+//                                                             ? "#fff"
+//                                                             : "#000",
+//                                                     "&:hover": {
+//                                                         backgroundColor: isCurrent
+//                                                             ? isAnswered
+//                                                                 ? "#7A9F38"
+//                                                                 : "#FF7A00"
+//                                                             : isAnswered
+//                                                                 ? "#7A9F38"
+//                                                                 : "#D9D9D9",
+//                                                     },
+//                                                 }}
+//                                             >
+//                                                 {index + 1}
+//                                             </Button>
+//                                         );
+//                                     })}
+//                                 </Box>
+//                             </Box>
+
+//                             {/* Submit Button */}
+//                             <Button
+//                                 variant="contained"
+//                                 color="primary"
+//                                 onClick={handleSubmit}
+//                                 disabled={timeLeft === 0 || isSubmitted}
+//                                 sx={{
+//                                     textTransform: "none",
+//                                     ":hover": { backgroundColor: "#99BC4D" },
+//                                     color: "#FFF",
+//                                 }}
+//                             >
+//                                 {isSubmitted ? "Đã nộp bài" : "Nộp bài"}
+//                             </Button>
+//                         </Box>
+//                     </Box>
+//                 </Box>
+//             </Box>
+
+//             {/* Battle Result Dialog */}
+//             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
+//                 {dialogOpen && battleResult && (
+//                     <Box sx={{ paddingX: "20px", backgroundColor: "#fff" }}>
+//                         <DialogTitle>
+//                             <Typography fontSize="20px" fontWeight={600} textAlign="center">
+//                                 Kết quả Battle
+//                             </Typography>
+//                         </DialogTitle>
+//                         <DialogContent>
+//                             <Box sx={{ textAlign: "center", marginBottom: "20px" }}>
+//                                 <Typography variant="h4" fontWeight="bold" color={
+//                                     battleResult.winner === userInfo.userId ? "green" : "red"
+//                                 }>
+//                                     {battleResult.winner === userInfo.userId ? "CHIẾN THẮNG!" : "THẤT BẠI!"}
+//                                 </Typography>
+//                             </Box>
+//                             <Box sx={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
+//                                 <Box sx={{ textAlign: "center" }}>
+//                                     <Typography variant="h6">Bạn</Typography>
+//                                     <Typography variant="h4" fontWeight="bold" color="blue">
+//                                         {battleResult.playerScores.find(p => p.userId === userInfo.userId)?.score || 0}
+//                                     </Typography>
+//                                 </Box>
+//                                 <Box sx={{ textAlign: "center" }}>
+//                                     <Typography variant="h6">Đối thủ</Typography>
+//                                     <Typography variant="h4" fontWeight="bold" color="red">
+//                                         {battleResult.playerScores.find(p => p.userId !== userInfo.userId)?.score || 0}
+//                                     </Typography>
+//                                 </Box>
+//                             </Box>
+//                         </DialogContent>
+//                         <DialogActions>
+//                             <Button
+//                                 variant="contained"
+//                                 color="primary"
+//                                 onClick={() => router.push('/battles')}
+//                                 sx={{ textTransform: "none" }}
+//                             >
+//                                 Quay lại danh sách Battle
+//                             </Button>
+//                         </DialogActions>
+//                     </Box>
+//                 )}
+//             </Dialog>
 //         </Layout>
 //     );
 // }
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Layout from "@/app/components/user/Home/layout";
-import { useAuth } from "@/app/hooks/AuthContext";
-import {
-  Box,
-  Typography,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormControl,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Checkbox,
-  Divider,
-  Button,
-} from "@mui/material";
-import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
-import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
-import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
-import TextField from "@/app/components/textfield";
-
-export default function BattleDetailPage() {
-    const router = useRouter();
-    const { battleId } = useParams();
-    const { userInfo, accessToken } = useAuth();
-    const [battleData, setBattleData] = useState(null);
-    const [questions, setQuestions] = useState([]);
-    const [answers, setAnswers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(0);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [battleResult, setBattleResult] = useState(null);
-    const [websocket, setWebsocket] = useState(null);
-    const wsRef = useRef(null);
-
-    // WebSocket connection
-    useEffect(() => {
-        if (battleId && userInfo && accessToken) {
-            const ws = new WebSocket(`ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&battle-token=${accessToken}`);
-            wsRef.current = ws;
-            setWebsocket(ws);
-
-            ws.onopen = () => {
-                console.log('WebSocket connected');
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('WebSocket message received:', data);
-
-                switch (data.type) {
-                    case 'BATTLE_START':
-                        setBattleData(data.battleData);
-                        setQuestions(data.questions || []);
-                        setTimeLeft(data.timeLimit || 300); // 5 minutes default
-                        setLoading(false);
-                        break;
-                    
-                    case 'QUESTION_UPDATE':
-                        setQuestions(data.questions || []);
-                        break;
-                    
-                    case 'BATTLE_UPDATE':
-                        setBattleData(data.battleData);
-                        break;
-                    
-                    case 'BATTLE_END':
-                        setBattleResult(data.result);
-                        setDialogOpen(true);
-                        setIsSubmitted(true);
-                        break;
-                    
-                    case 'OPPONENT_ANSWER':
-                        // Handle opponent's answer if needed
-                        console.log('Opponent answered:', data);
-                        break;
-                    
-                    default:
-                        console.log('Unknown message type:', data.type);
-                }
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                setError('Connection error occurred');
-            };
-
-            ws.onclose = () => {
-                console.log('WebSocket disconnected');
-            };
-
-            return () => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.close();
-                }
-            };
-        }
-    }, [battleId, userInfo, accessToken]);
-
-    // Timer countdown
-    useEffect(() => {
-        if (timeLeft > 0 && !isSubmitted) {
-            const timer = setTimeout(() => {
-                setTimeLeft(timeLeft - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (timeLeft === 0 && !isSubmitted) {
-            handleSubmit();
-        }
-    }, [timeLeft, isSubmitted]);
-
-    // Handle answer changes
-    const handleAnswerChange = (questionIndex, answerIndex) => {
-        const updatedAnswers = [...answers];
-        updatedAnswers[questionIndex] = { selectedAnswerIndex: answerIndex };
-        setAnswers(updatedAnswers);
-        
-        // Send answer to WebSocket
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'ANSWER_SUBMIT',
-                questionIndex,
-                answer: answerIndex,
-                timestamp: Date.now()
-            }));
-        }
-    };
-
-    const handleTextFieldChange = (e) => {
-        const updatedAnswers = [...answers];
-        updatedAnswers[currentPage] = {
-            inputAnswer: e.target.value,
-        };
-        setAnswers(updatedAnswers);
-        
-        // Send answer to WebSocket
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'ANSWER_SUBMIT',
-                questionIndex: currentPage,
-                answer: e.target.value,
-                timestamp: Date.now()
-            }));
-        }
-    };
-
-    const handleCheckboxChange = (index, e) => {
-        const updatedAnswers = [...answers];
-        const selectedAnswers = updatedAnswers[currentPage]?.selectedAnswers || [];
-
-        if (e.target.checked) {
-            selectedAnswers.push(index);
-        } else {
-            const idx = selectedAnswers.indexOf(index);
-            if (idx > -1) selectedAnswers.splice(idx, 1);
-        }
-
-        updatedAnswers[currentPage] = {
-            selectedAnswers,
-        };
-        setAnswers(updatedAnswers);
-        
-        // Send answer to WebSocket
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'ANSWER_SUBMIT',
-                questionIndex: currentPage,
-                answer: selectedAnswers,
-                timestamp: Date.now()
-            }));
-        }
-    };
-
-    const handleNext = () => {
-        if (currentPage < questions.length - 1) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
-
-    const handlePrevious = () => {
-        if (currentPage > 0) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
-
-    const handleSubmit = () => {
-        if (isSubmitted) return;
-
-        // Send final submission to WebSocket
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-                type: 'BATTLE_SUBMIT',
-                answers: answers,
-                timestamp: Date.now()
-            }));
-        }
-        
-        setIsSubmitted(true);
-    };
-
-    // Format time display
-    const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    };
-
-    // Find current user and opponent
-    const getCurrentUserAndOpponent = () => {
-        if (!battleData || !userInfo) return { currentUser: null, opponent: null };
-
-        const currentUser = battleData?.playerScores?.find(
-            player => player.userId === userInfo.userId
-        );
-        const opponent = battleData?.playerScores?.find(
-            player => player.userId !== userInfo.userId
-        );
-
-        return { currentUser, opponent };
-    };
-
-    if (loading) {
-        return (
-            <Layout>
-                <Box
-                    sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh",
-                        backgroundColor: "#EFF3E6",
-                    }}
-                >
-                    <Typography variant="h5">Connecting to battle...</Typography>
-                </Box>
-            </Layout>
-        );
-    }
-
-    if (error) {
-        return (
-            <Layout>
-                <Box
-                    sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh",
-                        backgroundColor: "#EFF3E6",
-                    }}
-                >
-                    <Typography variant="h5" color="error">{error}</Typography>
-                </Box>
-            </Layout>
-        );
-    }
-
-    const { currentUser, opponent } = getCurrentUserAndOpponent();
-    const question = questions[currentPage];
-
-    if (!question) {
-        return (
-            <Layout>
-                <Box
-                    sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100vh",
-                        backgroundColor: "#EFF3E6",
-                    }}
-                >
-                    <Typography variant="h5">Waiting for questions...</Typography>
-                </Box>
-            </Layout>
-        );
-    }
-
-    return (
-        <Layout>
-            <Box
-                sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    backgroundColor: "#EFF3E6",
-                    padding: "40px 120px",
-                    height: "100%",
-                }}
-            >
-                <Box
-                    sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        bgcolor: "#FFFFFF",
-                        border: "1px solid #ccc",
-                        borderRadius: 4,
-                        flex: 1,
-                    }}
-                >
-                    {/* Header */}
-                    <Typography
-                        sx={{
-                            fontSize: "32px",
-                            fontWeight: "600",
-                            textAlign: "center",
-                            paddingY: "8px",
-                        }}
-                    >
-                        Battle Arena
-                    </Typography>
-                    <Divider />
-
-                    {/* Battle Status Bar */}
-                    <Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "16px 40px",
-                            backgroundColor: "#f5f5f5",
-                        }}
-                    >
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                            <Box
-                                sx={{
-                                    width: 40,
-                                    height: 40,
-                                    backgroundColor: "#2196F3",
-                                    borderRadius: "50%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "white",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                {currentUser?.username?.charAt(0).toUpperCase() || 'U'}
-                            </Box>
-                            <Box>
-                                <Typography fontSize="14px" color="gray">You</Typography>
-                                <Typography fontWeight="bold">{currentUser?.score || 0} pts</Typography>
-                            </Box>
-                        </Box>
-
-                        <Typography
-                            sx={{
-                                fontSize: "24px",
-                                fontWeight: "bold",
-                                color: timeLeft < 60 ? "red" : "#99BC4D",
-                            }}
-                        >
-                            VS
-                        </Typography>
-
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                            <Box>
-                                <Typography fontSize="14px" color="gray" textAlign="right">Opponent</Typography>
-                                <Typography fontWeight="bold" textAlign="right">{opponent?.score || 0} pts</Typography>
-                            </Box>
-                            <Box
-                                sx={{
-                                    width: 40,
-                                    height: 40,
-                                    backgroundColor: "#f44336",
-                                    borderRadius: "50%",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    color: "white",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                {opponent?.username?.charAt(0).toUpperCase() || 'O'}
-                            </Box>
-                        </Box>
-                    </Box>
-
-                    {/* Main Content */}
-                    <Box
-                        sx={{
-                            display: "flex",
-                            justifyContent: "center",
-                            padding: "40px",
-                            gap: "20px",
-                        }}
-                    >
-                        {/* Question Area */}
-                        <Box
-                            sx={{
-                                flex: 3,
-                                display: "flex",
-                                flexDirection: "column",
-                                border: "1px solid #ccc",
-                                borderRadius: 4,
-                            }}
-                        >
-                            <Typography
-                                fontSize="16px"
-                                fontWeight={700}
-                                sx={{
-                                    padding: "8px 20px",
-                                    backgroundColor: "#99BC4D",
-                                    borderTopLeftRadius: "16px",
-                                    borderTopRightRadius: "16px",
-                                    color: "#fff",
-                                }}
-                            >
-                                Câu hỏi số {currentPage + 1}
-                            </Typography>
-                            <Divider />
-                            <Box
-                                sx={{
-                                    marginBottom: "20px",
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 2,
-                                    padding: "20px",
-                                }}
-                            >
-                                <Typography fontSize="16px" fontWeight={700}>
-                                    {question.content}
-                                </Typography>
-
-                                <FormControl component="fieldset">
-                                    {question.image && (
-                                        <img
-                                            src={question.image}
-                                            alt="Question"
-                                            style={{ maxWidth: "50%" }}
-                                        />
-                                    )}
-                                    
-                                    {question.questionType === "FILL_IN_THE_BLANK" && (
-                                        <TextField
-                                            value={answers[currentPage]?.inputAnswer || ""}
-                                            onChange={handleTextFieldChange}
-                                            sx={{ width: "30%", bgcolor: "white" }}
-                                            disabled={timeLeft === 0 || isSubmitted}
-                                        />
-                                    )}
-                                    
-                                    {question.questionType === "MULTIPLE_CHOICE" && (
-                                        <RadioGroup
-                                            value={answers[currentPage]?.selectedAnswerIndex ?? -1}
-                                            onChange={(e) => handleAnswerChange(currentPage, parseInt(e.target.value))}
-                                            disabled={timeLeft === 0 || isSubmitted}
-                                            sx={{ display: "flex", flexDirection: "column" }}
-                                        >
-                                            {question.options
-                                                .filter((option) => option.trim() !== "")
-                                                .map((option, index) => (
-                                                    <FormControlLabel
-                                                        key={index}
-                                                        value={index.toString()}
-                                                        control={<Radio />}
-                                                        label={option}
-                                                        sx={{
-                                                            "& .MuiTypography-root": { fontSize: "16px" },
-                                                        }}
-                                                    />
-                                                ))}
-                                        </RadioGroup>
-                                    )}
-
-                                    {question.questionType === "MULTI_SELECT" && (
-                                        <Box>
-                                            {question.options
-                                                .filter((option) => option.trim() !== "")
-                                                .map((option, index) => (
-                                                    <FormControlLabel
-                                                        key={index}
-                                                        sx={{
-                                                            display: "flex",
-                                                            flexDirection: "row",
-                                                            "& .MuiTypography-root": { fontSize: "16px" },
-                                                        }}
-                                                        control={
-                                                            <Checkbox
-                                                                checked={
-                                                                    answers[currentPage]?.selectedAnswers?.includes(index) || false
-                                                                }
-                                                                onChange={(e) => handleCheckboxChange(index, e)}
-                                                                disabled={timeLeft === 0 || isSubmitted}
-                                                            />
-                                                        }
-                                                        label={option}
-                                                    />
-                                                ))}
-                                        </Box>
-                                    )}
-                                </FormControl>
-                            </Box>
-
-                            {/* Navigation buttons */}
-                            <Box
-                                sx={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    marginBottom: "20px",
-                                    paddingX: "20px",
-                                }}
-                            >
-                                <Button
-                                    variant="outlined"
-                                    onClick={handlePrevious}
-                                    disabled={currentPage === 0}
-                                    sx={{ textTransform: "none" }}
-                                >
-                                    <KeyboardDoubleArrowLeftIcon /> Câu hỏi trước
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    onClick={handleNext}
-                                    disabled={currentPage === questions.length - 1}
-                                    sx={{ textTransform: "none" }}
-                                >
-                                    Câu hỏi sau <KeyboardDoubleArrowRightIcon />
-                                </Button>
-                            </Box>
-                        </Box>
-
-                        {/* Side Panel */}
-                        <Box
-                            sx={{
-                                flex: 1,
-                                width: "250px",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "20px",
-                                backgroundColor: "#fff",
-                            }}
-                        >
-                            {/* Timer */}
-                            <Typography
-                                sx={{
-                                    textAlign: "center",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 1,
-                                    border: "1px solid #ccc",
-                                    padding: "8px",
-                                    bgcolor: timeLeft < 60 ? "#ff4444" : "#99BC4D",
-                                    color: "#fff",
-                                }}
-                                fontSize="24px"
-                            >
-                                <AccessAlarmIcon sx={{ fontSize: "24px" }} />
-                                {formatTime(timeLeft)}
-                            </Typography>
-
-                            {/* Question List */}
-                            <Box
-                                sx={{
-                                    padding: 1,
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    gap: 2,
-                                    border: "1px solid #ccc",
-                                    borderRadius: 2,
-                                }}
-                            >
-                                <Typography
-                                    variant="h6"
-                                    fontWeight={700}
-                                    sx={{
-                                        textAlign: "center",
-                                        borderBottom: "1px dashed #ccc",
-                                        padding: "8px",
-                                    }}
-                                >
-                                    Danh sách câu hỏi
-                                </Typography>
-                                <Box
-                                    sx={{
-                                        display: "flex",
-                                        gap: "8px",
-                                        marginY: "20px",
-                                        flexWrap: "wrap",
-                                    }}
-                                >
-                                    {questions.map((_, index) => {
-                                        const isAnswered =
-                                            answers[index] &&
-                                            (answers[index]?.inputAnswer ||
-                                                answers[index]?.selectedAnswers?.length > 0 ||
-                                                answers[index]?.selectedAnswerIndex !== undefined);
-                                        const isCurrent = index === currentPage;
-
-                                        return (
-                                            <Button
-                                                key={index}
-                                                variant="contained"
-                                                onClick={() => setCurrentPage(index)}
-                                                sx={{
-                                                    backgroundColor: isCurrent
-                                                        ? isAnswered
-                                                            ? "#99BC4D"
-                                                            : "#FF9900"
-                                                        : isAnswered
-                                                            ? "#99BC4D"
-                                                            : "transparent",
-                                                    color: isCurrent
-                                                        ? "#fff"
-                                                        : isAnswered
-                                                            ? "#fff"
-                                                            : "#000",
-                                                    "&:hover": {
-                                                        backgroundColor: isCurrent
-                                                            ? isAnswered
-                                                                ? "#7A9F38"
-                                                                : "#FF7A00"
-                                                            : isAnswered
-                                                                ? "#7A9F38"
-                                                                : "#D9D9D9",
-                                                    },
-                                                }}
-                                            >
-                                                {index + 1}
-                                            </Button>
-                                        );
-                                    })}
-                                </Box>
-                            </Box>
-
-                            {/* Submit Button */}
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleSubmit}
-                                disabled={timeLeft === 0 || isSubmitted}
-                                sx={{
-                                    textTransform: "none",
-                                    ":hover": { backgroundColor: "#99BC4D" },
-                                    color: "#FFF",
-                                }}
-                            >
-                                {isSubmitted ? "Đã nộp bài" : "Nộp bài"}
-                            </Button>
-                        </Box>
-                    </Box>
-                </Box>
-            </Box>
-
-            {/* Battle Result Dialog */}
-            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="md">
-                {dialogOpen && battleResult && (
-                    <Box sx={{ paddingX: "20px", backgroundColor: "#fff" }}>
-                        <DialogTitle>
-                            <Typography fontSize="20px" fontWeight={600} textAlign="center">
-                                Kết quả Battle
-                            </Typography>
-                        </DialogTitle>
-                        <DialogContent>
-                            <Box sx={{ textAlign: "center", marginBottom: "20px" }}>
-                                <Typography variant="h4" fontWeight="bold" color={
-                                    battleResult.winner === userInfo.userId ? "green" : "red"
-                                }>
-                                    {battleResult.winner === userInfo.userId ? "CHIẾN THẮNG!" : "THẤT BẠI!"}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: "flex", justifyContent: "space-around", marginBottom: "20px" }}>
-                                <Box sx={{ textAlign: "center" }}>
-                                    <Typography variant="h6">Bạn</Typography>
-                                    <Typography variant="h4" fontWeight="bold" color="blue">
-                                        {battleResult.playerScores.find(p => p.userId === userInfo.userId)?.score || 0}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ textAlign: "center" }}>
-                                    <Typography variant="h6">Đối thủ</Typography>
-                                    <Typography variant="h4" fontWeight="bold" color="red">
-                                        {battleResult.playerScores.find(p => p.userId !== userInfo.userId)?.score || 0}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        </DialogContent>
-                        <DialogActions>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => router.push('/battles')}
-                                sx={{ textTransform: "none" }}
-                            >
-                                Quay lại danh sách Battle
-                            </Button>
-                        </DialogActions>
-                    </Box>
-                )}
-            </Dialog>
-        </Layout>
-    );
-}

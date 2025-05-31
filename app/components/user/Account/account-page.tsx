@@ -34,6 +34,38 @@ import TextField from "../../textfield";
 import { useRouter, usePathname } from "next/navigation";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+
+interface ApiResponse<T = any> {
+  status?: number;
+  message?: string;
+  data?: T;
+}
+
+interface UserInfo {
+  userId: string;
+  fullName: string;
+  username: string;
+  email: string;
+  dateOfBirth: string;
+  role: string;
+  grade?: string;
+}
+
+interface QuizRecord {
+  recordId: string;
+  quizName: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  points: number;
+  timeSpent: number;
+  createdAt: string;
+}
+
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
 const AccountPage: React.FC = () => {
   const [grades, setGrades] = useState<any[]>([]);
   const [studentInfo, setStudentInfo] = useState({
@@ -110,7 +142,7 @@ const AccountPage: React.FC = () => {
     setErrorConfirmPassword(null); // Reset lỗi trước đó
 
     try {
-      const response = await apiService.post(
+      const response = await apiService.post<ApiResponse>(
         "/users/change-password",
         { oldPassword, newPassword },
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -129,7 +161,7 @@ const AccountPage: React.FC = () => {
         setSnackbarSeverity("error");
         setOpenSnackbar(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Đổi mật khẩu thất bại!";
       // Kiểm tra cụ thể lỗi validation
@@ -146,10 +178,10 @@ const AccountPage: React.FC = () => {
   };
 
   const handleChangePage = (
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>,
+    event: React.MouseEvent<HTMLButtonElement> | null,
     newPage: number
   ) => {
-    setPage(newPage); // Cập nhật trang khi người dùng thay đổi trang
+    setPage(newPage);
   };
 
   const handleChangeRowsPerPage = (
@@ -163,7 +195,7 @@ const AccountPage: React.FC = () => {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await apiService.get("/users/user-info", {
+        const response = await apiService.get<ApiResponse>("/users/user-info", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -212,7 +244,7 @@ const AccountPage: React.FC = () => {
         dateOfBirth: formatDate(editableInfo.dateOfBirth), // Chuyển đổi ngày trước khi gửi
       };
       console.log(updatedInfo);
-      const response = await apiService.put(
+      const response = await apiService.put<ApiResponse>(
         "http://localhost:8080/api/users/user-info",
         updatedInfo,
         {
@@ -246,7 +278,7 @@ const AccountPage: React.FC = () => {
   const id = userInfo?.userId;
   console.log(id);
   // Fetch lịch sử làm bài với phân trang
-  const formatTimeSpent = (timeInSeconds) => {
+  const formatTimeSpent = (timeInSeconds: number) => {
     const minutes = Math.floor(timeInSeconds / 60); // Get the minutes
     const seconds = timeInSeconds % 60; // Get the remaining seconds
     return `${minutes}' ${seconds}s`; // Return formatted time
@@ -255,7 +287,7 @@ const AccountPage: React.FC = () => {
     if (activeTab === "Lịch sử làm bài" && userInfo?.userId) {
       const fetchQuizHistory = async () => {
         try {
-          const response = await apiService.get(
+          const response = await apiService.get<ApiResponse>(
             `/statistics/user/${userInfo.userId}/quiz-records`,
             {
               headers: {
@@ -288,9 +320,9 @@ const AccountPage: React.FC = () => {
   useEffect(() => {
     const fetchGrades = async () => {
       try {
-        const response = await apiService.get("/grades");
+        const response = await apiService.get<ApiResponse>("/grades");
         if (response?.data) {
-          setGrades(response.data);
+          setGrades(response.data.data.grades);
         }
       } catch (error) {
         console.error("Error fetching grades:", error);
@@ -300,9 +332,7 @@ const AccountPage: React.FC = () => {
     fetchGrades();
   }, []);
 
-  // Handle student registration
   const handleRegisterStudent = async () => {
-    // Basic frontend validation
     if (
       !studentInfo.fullName ||
       !studentInfo.username ||
@@ -316,7 +346,7 @@ const AccountPage: React.FC = () => {
     }
 
     try {
-      const response = await apiService.post(
+      const response = await apiService.post<ApiResponse>(
         `/users/parent/create-student`,
         studentInfo,
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -334,7 +364,7 @@ const AccountPage: React.FC = () => {
         );
         setSnackbarSeverity("error");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "Error creating student:",
         error.response?.data || error.message
@@ -892,7 +922,7 @@ const AccountPage: React.FC = () => {
                     value={confirmNewPassword}
                     onChange={(e) => setConfirmNewPassword(e.target.value)}
                     error={!!errorConfirmPassword}
-                    helperText={errorConfirmPassword}
+                    helperText={errorConfirmPassword || undefined}
                     fullWidth
                     sx={{
                       ".MuiFormHelperText-root.Mui-error": {

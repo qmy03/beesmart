@@ -14,7 +14,6 @@ import {
   DialogActions,
   IconButton,
 } from "@mui/material";
-// import CloseIcon from "@mui/icons-material/Close";
 import { Button } from "../../button";
 import SearchIcon from "@mui/icons-material/Search";
 import TextField from "../../textfield";
@@ -23,6 +22,71 @@ import apiService from "@/app/untils/api";
 import VideoThumbnail from "../../capture-frame";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
+interface BookType {
+  bookId: string;
+  bookName: string;
+}
+
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
+
+interface Lesson {
+  lessonId: string;
+  lessonName: string;
+  content: string;
+  viewCount?: number;
+}
+
+interface Quiz {
+  quizId: string;
+  title: string;
+  quizDuration: number;
+}
+
+interface Topic {
+  topicId: string;
+  topicName: string;
+  lessons: Lesson[];
+  quizzes: Quiz[];
+}
+
+interface ApiResponse<T> {
+  data: T;
+  message?: string;
+}
+
+interface GradesResponse {
+  grades: Grade[];
+}
+
+interface BookTypesResponse {
+  bookTypes: BookType[];
+}
+
+interface SubjectsResponse {
+  subjects: Subject[];
+}
+
+interface TopicsResponse {
+  topics: Topic[];
+}
+
+interface LessonsAndQuizzesResponse {
+  lessons: Lesson[];
+  quizzes: Quiz[];
+}
+
+interface QuizzesResponse {
+  quizzes: Quiz[];
+}
+
 const SkillListPage: React.FC = () => {
   const { accessToken, userInfo } = useAuth();
   const gradeUser = userInfo?.grade;
@@ -62,13 +126,13 @@ const SkillListPage: React.FC = () => {
   };
 
   useEffect(() => {
-    apiService.get("/grades").then((response) => {
+    apiService.get<ApiResponse<GradesResponse>>("/grades").then((response) => {
       setGrades(response.data.data.grades);
     });
   }, []);
 
   useEffect(() => {
-    apiService.get("/subjects").then((response) => {
+    apiService.get<ApiResponse<SubjectsResponse>>("/subjects").then((response) => {
       setSubjects(response.data.data.subjects);
       if (response.data.data.subjects && response.data.data.subjects.length > 0) {
         setSelectedSubjectId(response.data.data.subjects[0].subjectId);
@@ -78,7 +142,7 @@ const SkillListPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    apiService.get("/book-types").then((response) => {
+    apiService.get<ApiResponse<BookTypesResponse>>("/book-types").then((response) => {
       setBookTypes(response.data.data.bookTypes);
       if (response.data.data.bookTypes && response.data.data.bookTypes.length > 0) {
         setSelectedBookTypeId(response.data.data.bookTypes[0].bookId);
@@ -118,7 +182,7 @@ const SkillListPage: React.FC = () => {
     setLoading(true);
 
     apiService
-      .get(
+      .get<ApiResponse<TopicsResponse>>(
         `/topics?grade=${selectedGradeName}&semester=${selectedTerm}&bookType=${selectedBookTypeName}&subject=${selectedSubjectName}`
       )
       .then((response) => {
@@ -154,7 +218,7 @@ const SkillListPage: React.FC = () => {
     setLoading(true);
 
     apiService
-      .get(`/topics/${topicId}/lessons-and-quizzes`)
+      .get<ApiResponse<LessonsAndQuizzesResponse>>(`/topics/${topicId}/lessons-and-quizzes`)
       .then((response) => {
         console.log("responseLQ", response);
         const lessonsData = response.data.data.lessons || [];
@@ -256,7 +320,7 @@ const SkillListPage: React.FC = () => {
     console.log("lessonId", lessonId);
     // Fetch quizzes for this lesson and open the dialog
     apiService
-      .get(`/lessons/${lessonId}/quizzes`)
+      .get<ApiResponse<LessonsAndQuizzesResponse>>(`/lessons/${lessonId}/quizzes`)
       .then((response) => {
         console.log("response", response);
         setQuizzes(response.data.data.quizzes);

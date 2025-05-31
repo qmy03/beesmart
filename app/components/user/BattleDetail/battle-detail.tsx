@@ -23,13 +23,33 @@ import {
 } from "@mui/material";
 import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
 import TextField from "../../textfield";
+interface PlayerScore {
+  userId: string;
+  score: number;
+}
 
+interface BattleData {
+  playerScores: PlayerScore[];
+}
+
+interface ApiResponse<T> {
+  data: T;
+  success?: boolean;
+  message?: string;
+}
+interface PlayerInfo {
+  userId: string;
+  username: string;
+  score: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  avatar?: string;
+}
 export default function BattleDetailPage() {
   const { accessToken, userInfo } = useAuth();
   const { battleId } = useParams();
   const router = useRouter();
-
-  // Battle state
+  // const [isBothAnswered, setIsBothAnswered] = useState(false);
   const [question, setQuestion] = useState<any>(null);
   const [opponentScore, setOpponentScore] = useState(0);
   const [playerScore, setPlayerScore] = useState(0);
@@ -49,42 +69,71 @@ export default function BattleDetailPage() {
   const [showResultDialog, setShowResultDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [playerInfo, setPlayerInfo] = useState<any>(null);
-  const [opponentInfo, setOpponentInfo] = useState<any>(null);
+  const [playerInfo, setPlayerInfo] = useState<PlayerInfo | null>(null);
+  const [opponentInfo, setOpponentInfo] = useState<PlayerInfo | null>(null);
   const [playerLastAnswerCorrect, setPlayerLastAnswerCorrect] = useState<
     boolean | null
   >(null);
+  const [currentQuestionAnswer, setCurrentQuestionAnswer] = useState<any>(null);
+  const [loadingQuestion, setLoadingQuestion] = useState(false);
+
   const getPlayerStatusMessage = (isCorrect: boolean | null) => {
     if (isCorrect === null) return;
     return isCorrect
       ? "Tuyệt vời! Tiếp tục phát huy nhé!"
       : "Đừng nản lòng! Cố gắng lên nào!";
   };
-  const [loadingQuestion, setLoadingQuestion] = useState(false);
 
   useEffect(() => {
     if (!accessToken || !battleId || !userInfo?.userId) return;
 
     const fetchBattleInfo = async () => {
       try {
-        const response = await apiService.get(`/battles/${battleId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await apiService.get<ApiResponse<BattleData>>(
+          `/battles/${battleId}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
 
         const battleData = response.data.data;
-
         console.log("Battle data:", battleData);
         setBattleInfo(battleData);
         if (battleData.playerScores && battleData.playerScores.length >= 2) {
-          const currentPlayer = battleData.playerScores.find(
-            (p: any) => p.userId === userInfo.userId
-          );
-          const opponent = battleData.playerScores.find(
-            (p: any) => p.userId !== userInfo.userId
+          const currentPlayer: PlayerScore | undefined =
+            battleData.playerScores.find(
+              (p: any) => p.userId === userInfo.userId
+            );
+          const opponent: PlayerScore | undefined =
+            battleData.playerScores.find(
+              (p: any) => p.userId !== userInfo.userId
+            );
+
+          setPlayerInfo(
+            currentPlayer
+              ? {
+                  userId: currentPlayer.userId,
+                  username: userInfo?.username || "Player",
+                  score: currentPlayer.score,
+                  correctAnswers: currentPlayer?.correctAnswers || 0, // Lấy từ API
+                  incorrectAnswers: currentPlayer?.incorrectAnswers || 0, // Lấy từ API
+                  avatar: undefined,
+                }
+              : null
           );
 
-          setPlayerInfo(currentPlayer);
-          setOpponentInfo(opponent);
+          setOpponentInfo(
+            opponent
+              ? {
+                  userId: opponent.userId,
+                  username: opponent.username || "Opponent", // Lấy username từ API
+                  score: opponent.score,
+                  correctAnswers: opponent.correctAnswers || 0, // Lấy từ API
+                  incorrectAnswers: opponent.incorrectAnswers || 0, // Lấy từ API
+                  avatar: undefined,
+                }
+              : null
+          );
 
           setPlayerScore(currentPlayer?.score || 0);
           setOpponentScore(opponent?.score || 0);
@@ -94,7 +143,6 @@ export default function BattleDetailPage() {
         setError("Failed to load battle information");
       }
     };
-
     fetchBattleInfo();
 
     const socket = new WebSocket(
@@ -125,6 +173,10 @@ export default function BattleDetailPage() {
           case "SCORE_UPDATE":
             updateScores(msg);
             break;
+          case "ANSWER_RESULT":
+            // Xử lý kết quả câu trả lời từ server
+            handleAnswerResult(msg);
+            break;
           case "END":
             handleBattleEnd(msg);
             break;
@@ -142,6 +194,9 @@ export default function BattleDetailPage() {
             }
             break;
           case "WAITING_FOR_OPPONENT":
+            break;
+          case "BOTH_ANSWERED":
+            handleBothAnswered();
             break;
           default:
             if (msg.battleId && msg.status) {
@@ -177,7 +232,39 @@ export default function BattleDetailPage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [accessToken, battleId, userInfo?.userId]);
+  const handleAnswerResult = (msg: any) => {
+    // msg có thể chứa thông tin như:
+    // { userId, questionId, isCorrect, score, ... }
+    if (msg.userId === userInfo?.userId) {
+      setPlayerLastAnswerCorrect(msg.isCorrect);
+    }
+  };
+  const handleBothAnswered = async () => {
+    if (!battleId || !accessToken) return;
 
+    // setIsBothAnswered(true);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    setLoadingQuestion(true);
+    try {
+      await apiService.post(
+        `/battles/${battleId}/nextQuestion`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching next question:", error);
+      setError("Failed to load the next question");
+    } finally {
+      setLoadingQuestion(false);
+      // setIsBothAnswered(false);
+    }
+  };
   const fetchFirstQuestion = async () => {
     if (!battleId || !accessToken) return;
 
@@ -296,8 +383,9 @@ export default function BattleDetailPage() {
     setIsAnswered(false);
     setSelectedAnswer(null);
     setSelectedAnswers([]);
-    setTextAnswer(""); 
+    setTextAnswer("");
     setPlayerLastAnswerCorrect(null);
+    setCurrentQuestionAnswer(null);
     if (msg.currentQuestion !== undefined) {
       setQuestionNumber(msg.currentQuestion);
     }
@@ -358,36 +446,109 @@ export default function BattleDetailPage() {
         }
       );
       console.log("Time-expired answer submitted successfully:", res);
-      setPlayerLastAnswerCorrect(false);
+      // setPlayerLastAnswerCorrect(false);
+      if (res.data && res.data.isCorrect !== undefined) {
+        setPlayerLastAnswerCorrect(res.data.isCorrect);
+      } else {
+        setPlayerLastAnswerCorrect(false); // Mặc định là sai nếu hết time
+      }
     } catch (error) {
       console.error("Error submitting time-expired answer:", error);
       setError("Failed to submit answer");
     }
   };
   useEffect(() => {
- 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
+  // const updateScores = (msg: any) => {
+  //   if (msg.playerScores && userInfo?.userId) {
+  //     const myScore: PlayerScore | undefined = msg.playerScores.find(
+  //       (p: any) => p.userId === userInfo.userId
+  //     );
+  //     const opponent: PlayerScore | undefined = msg.playerScores.find(
+  //       (p: any) => p.userId !== userInfo.userId
+  //     );
+
+  //     // if (isAnswered) {
+  //     //   if (myScore && playerScore < myScore.score) {
+  //     //     setPlayerLastAnswerCorrect(true);
+  //     //   } else {
+  //     //     setPlayerLastAnswerCorrect(false);
+  //     //   }
+  //     // }
+
+  //     setPlayerScore(myScore?.score || 0);
+  //     setOpponentScore(opponent?.score || 0);
+
+  //     // Transform PlayerScore to PlayerInfo or set null
+  //     setPlayerInfo(
+  //       myScore
+  //         ? {
+  //             userId: myScore.userId,
+  //             username: playerInfo?.username || userInfo?.username || "Player", // Use existing username or fallback
+  //             score: myScore.score,
+  //             correctAnswers: playerInfo?.correctAnswers || 0, // Preserve or default
+  //             incorrectAnswers: playerInfo?.incorrectAnswers || 0, // Preserve or default
+  //             avatar: playerInfo?.avatar, // Preserve if exists
+  //           }
+  //         : null
+  //     );
+
+  //     setOpponentInfo(
+  //       opponent
+  //         ? {
+  //             userId: opponent.userId,
+  //             username: opponentInfo?.username || "Opponent", // Use existing or fallback
+  //             score: opponent.score,
+  //             correctAnswers: opponentInfo?.correctAnswers || 0, // Preserve or default
+  //             incorrectAnswers: opponentInfo?.incorrectAnswers || 0, // Preserve or default
+  //             avatar: opponentInfo?.avatar, // Preserve if exists
+  //           }
+  //         : null
+  //     );
+  //   }
+  // };
   const updateScores = (msg: any) => {
     if (msg.playerScores && userInfo?.userId) {
-      const myScore = msg.playerScores.find(
+      const myScore: PlayerScore | undefined = msg.playerScores.find(
         (p: any) => p.userId === userInfo.userId
       );
-      const opponent = msg.playerScores.find(
+      const opponent: PlayerScore | undefined = msg.playerScores.find(
         (p: any) => p.userId !== userInfo.userId
       );
-      if (isAnswered) {
-        if (myScore && playerScore < myScore.score) {
-          setPlayerLastAnswerCorrect(true);
-        } else {
-          setPlayerLastAnswerCorrect(false);
-        }
-      }
+
       setPlayerScore(myScore?.score || 0);
       setOpponentScore(opponent?.score || 0);
+
+      setPlayerInfo(
+        myScore
+          ? {
+              userId: myScore.userId,
+              username: playerInfo?.username || userInfo?.username || "Player",
+              score: myScore.score,
+              correctAnswers: myScore.correctAnswers || 0, // Lấy từ msg
+              incorrectAnswers: myScore.incorrectAnswers || 0, // Lấy từ msg
+              avatar: playerInfo?.avatar,
+            }
+          : null
+      );
+
+      setOpponentInfo(
+        opponent
+          ? {
+              userId: opponent.userId,
+              username:
+                opponentInfo?.username || opponent.username || "Opponent", // Lấy username từ msg nếu có
+              score: opponent.score,
+              correctAnswers: opponent.correctAnswers || 0, // Lấy từ msg
+              incorrectAnswers: opponent.incorrectAnswers || 0, // Lấy từ msg
+              avatar: opponentInfo?.avatar,
+            }
+          : null
+      );
     }
   };
 
@@ -458,7 +619,7 @@ export default function BattleDetailPage() {
       const timeTaken = 30 - timer;
 
       let payload;
-
+      setCurrentQuestionAnswer(answerOption);
       if (question.type === "MULTIPLE_CHOICE") {
         payload = {
           userId: userInfo.userId,
@@ -492,9 +653,21 @@ export default function BattleDetailPage() {
       }
 
       console.log("Submitting answer:", payload); // Debugging line
-      await apiService.post(`/battles/${battleId}/answer`, payload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      // await apiService.post(`/battles/${battleId}/answer`, payload, {
+      //   headers: { Authorization: `Bearer ${accessToken}` },
+      // });
+      const response = await apiService.post(
+        `/battles/${battleId}/answer`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      // Xử lý kết quả trả lời từ response
+      if (response.data && response.data.isCorrect !== undefined) {
+        setPlayerLastAnswerCorrect(response.data.isCorrect);
+      }
     } catch (error) {
       console.error("Error submitting answer:", error);
       setError("Failed to submit answer");
@@ -619,7 +792,7 @@ export default function BattleDetailPage() {
           </Box>
           <Divider />
 
-          {error && (
+          {/* {error && (
             <Box
               sx={{
                 bgcolor: "#FFEBEE",
@@ -631,7 +804,7 @@ export default function BattleDetailPage() {
             >
               {error}
             </Box>
-          )}
+          )} */}
 
           {/* Battle Header - Scores */}
           {battleInfo && (
@@ -676,6 +849,16 @@ export default function BattleDetailPage() {
                     <Typography fontWeight={700}>
                       You ({playerInfo?.username || "Player"})
                     </Typography>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Đúng: </Typography>
+                      <Typography>{playerInfo?.correctAnswers || 0}</Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Sai: </Typography>
+                      <Typography>
+                        {playerInfo?.incorrectAnswers || 0}
+                      </Typography>
+                    </Box>
                     <Box sx={{ display: "flex", gap: "2px" }}>
                       <Typography fontWeight={600}>Điểm: </Typography>
                       <Typography>{playerScore}</Typography>
@@ -756,6 +939,18 @@ export default function BattleDetailPage() {
                       Opponent ({opponentInfo?.username || "Opponent"})
                     </Typography>
                     <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Đúng: </Typography>
+                      <Typography>
+                        {opponentInfo?.correctAnswers || 0}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
+                      <Typography fontWeight={600}>Sai: </Typography>
+                      <Typography>
+                        {opponentInfo?.incorrectAnswers || 0}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: "flex", gap: "2px" }}>
                       <Typography fontWeight={600}>Điểm:</Typography>
                       <Typography>{opponentScore} </Typography>
                     </Box>
@@ -820,10 +1015,10 @@ export default function BattleDetailPage() {
                     position: "relative",
                     backgroundColor:
                       playerLastAnswerCorrect === true
-                        ? "#e8f5e9" 
+                        ? "#e8f5e9"
                         : playerLastAnswerCorrect === false
                           ? "#ffebee"
-                          : "#f5f5f5", 
+                          : "#f5f5f5",
                     borderRadius: 1,
                     padding: "12px 16px",
                     boxShadow: "0px 1px 3px rgba(0,0,0,0.1)",
@@ -839,7 +1034,7 @@ export default function BattleDetailPage() {
                       borderBottom: "8px solid transparent",
                       borderRight:
                         playerLastAnswerCorrect === true
-                          ? "10px solid #e8f5e9" 
+                          ? "10px solid #e8f5e9"
                           : playerLastAnswerCorrect === false
                             ? "10px solid #ffebee"
                             : "10px solid #f5f5f5",
@@ -1226,7 +1421,7 @@ export default function BattleDetailPage() {
                         </Typography>
                       )}
 
-                      {isAnswered && (
+                      {/* {isAnswered && (
                         // <Box
                         //   sx={{
                         //     marginTop: 4,
@@ -1241,7 +1436,37 @@ export default function BattleDetailPage() {
                         //   </Typography>
                         // </Box>
                         <></>
+                      )} */}
+                      {isAnswered && (
+                        <Box
+                          sx={{
+                            marginTop: 4,
+                            padding: 2,
+                            backgroundColor: "#E8F5E9",
+                            borderRadius: 2,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Typography>
+                            Waiting for opponent to answer...
+                          </Typography>
+                        </Box>
                       )}
+                      {/* {isBothAnswered && (
+                        <Box
+                          sx={{
+                            marginTop: 4,
+                            padding: 2,
+                            backgroundColor: "#E8F5E9",
+                            borderRadius: 2,
+                            textAlign: "center",
+                          }}
+                        >
+                          <Typography>
+                            Both players answered! Loading next question...
+                          </Typography>
+                        </Box>
+                      )} */}
                     </Box>
                   ) : (
                     <Box
@@ -1480,8 +1705,13 @@ export default function BattleDetailPage() {
                     <Typography fontWeight={600}>
                       {playerInfo?.username || "You"}
                     </Typography>
-                    <Typography>Số câu trả lời đúng: </Typography>
-                    <Typography>Số câu trả lời sai: </Typography>
+                    <Typography>
+                      Số câu trả lời đúng: {playerInfo?.correctAnswers || 0}
+                    </Typography>
+
+                    <Typography>
+                      Số câu trả lời sai: {playerInfo?.incorrectAnswers || 0}
+                    </Typography>
                     <Typography>Điểm: {playerScore}</Typography>
                   </Box>
                 </Box>
@@ -1506,8 +1736,10 @@ export default function BattleDetailPage() {
                     <Typography fontWeight={600}>
                       {opponentInfo?.username || "Opponent"}
                     </Typography>
-                    <Typography>Số câu trả lời đúng: </Typography>
-                    <Typography>Số câu trả lời sai: </Typography>
+                    <Typography>
+                      Số câu trả lời đúng: {opponentInfo?.correctAnswers || 0}
+                    </Typography>
+                    <Typography>Số câu trả lời sai: {opponentInfo?.incorrectAnswers || 0}</Typography>
                     <Typography>Điểm: {opponentScore}</Typography>
                   </Box>
                 </Box>

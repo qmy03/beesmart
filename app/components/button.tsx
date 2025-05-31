@@ -5,6 +5,8 @@ import theme from './theme';
 interface ButtonProps extends MuiButtonProps {
   variant?: "contained" | "outlined" | "text";
   color?: "primary" | "error" | "secondary";
+  target?: string;
+  rel?: string;
 }
 
 export function Button({ children, variant = "contained", color = "primary", ...rest }: ButtonProps) {

@@ -13,6 +13,7 @@ interface TextFieldProps extends Omit<MuiTextFieldProps, "InputProps"> {
   type?: string;
   maxLength?: number;
   endAdornment?: React.ReactNode;
+  InputProps?: any;
   error?: boolean;
   helperText?: string;
   FormHelperTextProps?: any; // Add this line

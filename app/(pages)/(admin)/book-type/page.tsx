@@ -1,8 +1,6 @@
 "use client";
-import Layout from "@/app/components/admin/layout";
-import { Button } from "@/app/components/button";
-import { AuthProvider, useAuth } from "@/app/hooks/AuthContext";
-import { Box, Typography } from "@mui/material";
+
+import { AuthProvider } from "@/app/hooks/AuthContext";
 import React from "react";
 import GradePage from "./component/grade-page";
 const Page = () => {

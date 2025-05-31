@@ -27,7 +27,19 @@ const QuizViewsBarChart = ({
 }) => {
   const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const colors = ["#1877F2", "#8E33FF", "#00B8D9", "#FF5630", "#22C55E"];
-
+  const CustomTick = ({ x, y, payload }: any) => (
+    <text
+      x={x}
+      y={y}
+      dy={16}
+      textAnchor="end"
+      transform={`rotate(-45, ${x}, ${y})`}
+      fontSize={12}
+      fill="#666"
+    >
+      {payload.value}
+    </text>
+  );
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
       {/* <CardContent
@@ -118,7 +130,7 @@ const QuizViewsBarChart = ({
               <XAxis
                 dataKey="date"
                 interval={0}
-                tick={{ fontSize: 12, angle: -45, textAnchor: "end" }}
+                tick={<CustomTick />}
                 height={60}
               />
               <YAxis />

@@ -29,7 +29,7 @@ import theme from "@/app/components/theme";
 import TextField from "@/app/components/textfield";
 import DialogPopup from "./dialog-popup";
 import EditIcon from "@mui/icons-material/Edit";
-import CloseIcon from "@mui/icons-material/close";
+import Close from "@mui/icons-material/Close";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 interface Grade {
   gradeId: string;
@@ -679,7 +679,7 @@ const LessonPage = () => {
               <InputAdornment position="end">
                 {searchKeyword && (
                   <IconButton onClick={() => setSearchKeyword("")} edge="end">
-                    <CloseIcon fontSize="small" />
+                    <Close fontSize="small" />
                   </IconButton>
                 )}
               </InputAdornment>

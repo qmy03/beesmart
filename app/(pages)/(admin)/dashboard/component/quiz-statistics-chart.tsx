@@ -1,11 +1,19 @@
 import { useAuth } from "@/app/hooks/AuthContext";
+import { Box } from "@mui/material";
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
 const COLORS = ["#1877f2", "#ff5630", "#ffab00", "#5119b7", "#22C55E"];
 
 const QuizStatisticsChart = () => {
-  const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
+
   const [quizStatistics, setQuizStatistics] = useState<{
     [key: string]: number;
   }>({});
@@ -56,24 +64,28 @@ const QuizStatisticsChart = () => {
   }, [accessToken]);
 
   return (
-    <PieChart width={400} height={400}>
-      <Pie
-        data={chartData}
-        dataKey="value"
-        nameKey="label"
-        cx="50%"
-        cy="50%"
-        outerRadius={150}
-        fill="#8884d8"
-        label
-      >
-        {chartData.map((entry, index) => (
-          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-        ))}
-      </Pie>
-      <Tooltip />
-      <Legend />
-    </PieChart>
+    <Box
+      sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+    >
+      <PieChart width={400} height={400}>
+        <Pie
+          data={chartData}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy="50%"
+          outerRadius={150}
+          fill="#8884d8"
+          label
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </Box>
   );
 };
 export default QuizStatisticsChart;

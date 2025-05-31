@@ -10,7 +10,7 @@ import {
 import TextField from "@/app/components/textfield";
 import { Button } from "@/app/components/button";
 import apiService from "@/app/untils/api";
-import { Close } from "@mui/icons-material";
+import Close from '@mui/icons-material/Close';
 
 interface DialogPopupProps {
   open: boolean;

@@ -37,9 +37,21 @@ const QuizAverageBarChart = ({
 
   // Kiểm tra và xử lý data trước khi transform
   const chartData = data && Array.isArray(data) ? transformData(data) : [];
-  
+
   console.log(chartData);
-  
+  const CustomTick = ({ x, y, payload }: any) => (
+    <text
+      x={x}
+      y={y}
+      dy={16}
+      textAnchor="end"
+      transform={`rotate(-45, ${x}, ${y})`}
+      fontSize={12}
+      fill="#666"
+    >
+      {payload.value}
+    </text>
+  );
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
@@ -116,7 +128,7 @@ const QuizAverageBarChart = ({
                 <XAxis
                   dataKey="date"
                   interval={0}
-                  tick={{ fontSize: 12, angle: -45, textAnchor: "end" }}
+                  tick={<CustomTick />}
                   height={60}
                 />
                 <YAxis />
@@ -146,13 +158,13 @@ const QuizAverageBarChart = ({
                 }}
               >
                 <Typography color="text.secondary">
-                  Không có dữ liệu để hiển thị
+                  Đang tải dữ liệu...
                 </Typography>
               </Box>
             )}
           </Box>
         </Box>
-        
+
         <Box
           sx={{
             mt: 2,

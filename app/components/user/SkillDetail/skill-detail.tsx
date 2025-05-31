@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import apiService from "@/app/untils/api"; // Ensure you have the apiService for calling APIs
+import apiService from "@/app/untils/api"; 
 import Layout from "@/app/components/user/Home/layout";
 import {
   Box,
@@ -13,39 +13,55 @@ import {
 } from "@mui/material";
 import { Button } from "../../button";
 import ErrorIcon from "@mui/icons-material/Error";
-import CloseIcon from "@mui/icons-material/close";
+import Close from "@mui/icons-material/Close";
 import { useAuth } from "@/app/hooks/AuthContext";
+interface Lesson {
+  lessonId: string;
+  lessonName: string;
+  content: string;
+  viewCount: number;
+}
 
+interface Quiz {
+  quizId: string;
+  title: string;
+}
+
+interface ApiResponse<T> {
+  data: T;
+  message?: string;
+}
+
+interface QuizzesResponse {
+  quizzes: Quiz[];
+}
 const SkillDetailPage = () => {
   const { accessToken } = useAuth();
-  const { lessonId } = useParams(); // Get lessonId from the URL
+  const { lessonId } = useParams(); 
   const searchParams = useSearchParams();
-  const router = useRouter(); // Router for navigation
+  const router = useRouter();
   const [lesson, setLesson] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [quizzes, setQuizzes] = useState<any[]>([]); // State to store quizzes
-  const [dialogOpen, setDialogOpen] = useState<boolean>(false); // Dialog open/close state
-  const [error, setError] = useState<string | null>(null); // State to store error message
-  const [isTokenReady, setIsTokenReady] = useState(false); // New state for tracking token readiness
+  const [quizzes, setQuizzes] = useState<any[]>([]); 
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false); 
+  const [error, setError] = useState<string | null>(null);
+  const [isTokenReady, setIsTokenReady] = useState(false); 
   const grade = searchParams.get("grade");
 
   useEffect(() => {
-    // Set the token as ready after a short delay to check for the accessToken availability
     const tokenInterval = setInterval(() => {
       if (accessToken) {
         setIsTokenReady(true);
-        clearInterval(tokenInterval); // Stop checking once the token is available
+        clearInterval(tokenInterval); 
       }
-    }, 100); // Check every 100ms
+    }, 100); 
 
-    return () => clearInterval(tokenInterval); // Clear interval when the component is unmounted or token is found
+    return () => clearInterval(tokenInterval); 
   }, [accessToken]);
 
   useEffect(() => {
-    // If token is not ready, do not proceed with fetching data
     if (!isTokenReady) return;
 
-    // If no accessToken, show error and stop loading
     if (!accessToken) {
       setError("Vui lòng đăng nhập để tiếp tục xem bài học.");
       setLoading(false);
@@ -55,7 +71,7 @@ const SkillDetailPage = () => {
     if (lessonId) {
       setLoading(true);
       apiService
-        .get(`/lessons/${lessonId}`, {
+        .get<ApiResponse<Lesson>>(`/lessons/${lessonId}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
@@ -68,9 +84,8 @@ const SkillDetailPage = () => {
           setLoading(false);
         });
 
-      // Fetch quizzes related to the lesson
       apiService
-        .get(`/lessons/${lessonId}/quizzes`, {
+        .get<ApiResponse<QuizzesResponse>>(`/lessons/${lessonId}/quizzes`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
@@ -80,10 +95,8 @@ const SkillDetailPage = () => {
           console.error("Error fetching quizzes:", error);
         });
     }
-  }, [lessonId, accessToken, isTokenReady]); // Add isTokenReady to the dependencies
-
+  }, [lessonId, accessToken, isTokenReady]);
   const handleQuizClick = (quizId: string) => {
-    // Navigate to SkillPracticePage with the selected quizId
     router.push(`/skill-practice/${quizId}`);
   };
 
@@ -105,7 +118,7 @@ const SkillDetailPage = () => {
             alignItems: "center",
             justifyContent: "center",
             height: "50vh",
-            backgroundColor: "rgba(0, 0, 0, 0.5)", // Lớp phủ tối
+            backgroundColor: "rgba(0, 0, 0, 0.5)", 
           }}
         >
           <Box
@@ -197,7 +210,7 @@ const SkillDetailPage = () => {
           <Typography sx={{ flexGrow: 1, fontSize: "20px", fontWeight: 700 }}>
             Chọn Quiz
           </Typography>
-          <CloseIcon onClick={handleCloseDialog} />
+          <Close onClick={handleCloseDialog} />
         </DialogTitle>
         <DialogContent>
           <Typography sx={{ paddingBottom: 3 }}>

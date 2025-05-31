@@ -3,6 +3,7 @@ import React from "react";
 import Layout from "@/app/components/user/Home/layout";
 import { Box, CssBaseline, Typography } from "@mui/material";
 import theme from "@/app/components/theme";
+import Image from "next/image";
 
 const HomePage: React.FC = () => {
   return (
@@ -46,15 +47,33 @@ const HomePage: React.FC = () => {
             <strong>1. Đăng ký tài khoản:</strong> Nhấp vào nút "Đăng ký" ở góc
             phải trên cùng, sau đó điền đầy đủ thông tin cần thiết.
           </Typography>
-          <img src="/home-page.png"></img>
+          <Image
+            src="/home-page.png"
+            alt="Homepage screenshot"
+            layout="responsive"
+            width={800}
+            height={400}
+          />
           <Typography paragraph pt={1} pl={2} fontSize="16px">
             <strong>a. Đăng ký tài khoản học sinh:</strong>
           </Typography>
-          <img src="/sign-up-page.png"></img>
+          <Image
+            src="/sign-up-page.png"
+            alt="Homepage screenshot"
+            layout="responsive"
+            width={800}
+            height={400}
+          />
           <Typography paragraph pt={1} pl={2} fontSize="16px">
             <strong>b. Đăng ký tài khoản phụ huynh:</strong>
           </Typography>
-          <img src="/sign-up-parent.png"></img>
+          <Image
+            src="/sign-up-parent.png"
+            alt="Homepage screenshot"
+            layout="responsive"
+            width={800}
+            height={400}
+          />
           <Typography paragraph pt={1} fontSize="16px">
             <strong>2. Đăng nhập:</strong> Sử dụng email và mật khẩu của bạn để
             truy cập nền tảng.
@@ -64,13 +83,25 @@ const HomePage: React.FC = () => {
             tra, hoặc trò chơi học tập từ menu chính. Bạn có thể truy cập nội
             dung phù hợp với trình độ của mình.
           </Typography>
-          <img src="/login-page.png"></img>
+          <Image
+            src="/login-page.png"
+            alt="Homepage screenshot"
+            layout="responsive"
+            width={800}
+            height={400}
+          ></Image>
           <Typography paragraph fontSize="16px" pt={2}>
             <strong>4. Theo dõi tiến độ:</strong> Tại trang cá nhân, bạn có thể
             theo dõi thành tích học tập của mình và xem những nội dung đã hoàn
             thành.
           </Typography>
-          <img src="/homework-history.png"></img>
+          <Image
+            src="/homework-history.png"
+            alt="Homepage screenshot"
+            layout="responsive"
+            width={800}
+            height={400}
+          ></Image>
           <Typography paragraph fontSize="16px" pt={2}>
             Nếu bạn gặp bất kỳ khó khăn nào trong quá trình sử dụng, vui lòng
             liên hệ với đội ngũ hỗ trợ của chúng tôi qua email:{" "}

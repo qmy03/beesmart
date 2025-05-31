@@ -23,6 +23,16 @@ import Person4Icon from "@mui/icons-material/Person4";
 import FaceIcon from "@mui/icons-material/Face";
 import apiService from "@/app/untils/api";
 import { useAuth } from "@/app/hooks/AuthContext";
+type Grade = {
+  gradeId: string;
+  gradeName: string;
+};
+
+type GradesResponse = {
+  data: {
+    grades: Grade[];
+  };
+};
 const SignUpForm: React.FC = () => {
   const { isLoading, setIsLoading } = useAuth();
   const [showResendDialog, setShowResendDialog] = useState(false);
@@ -39,7 +49,7 @@ const SignUpForm: React.FC = () => {
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
-  const [grades, setGrades] = useState([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [selectedGrade, setSelectedGrade] = useState("");
   const {
     userName,
@@ -56,11 +66,12 @@ const SignUpForm: React.FC = () => {
     setPasswordAgain,
     setEmail,
     register,
-  } = useSignupForm((message, isError) => {
+  } = useSignupForm((message) => {
     setSnackbarMessage(message);
-    setSnackbarSeverity(isError ? "error" : "success");
+    setSnackbarSeverity("success"); // Mặc định nếu không có isError
     setSnackbarOpen(true);
   });
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -93,7 +104,7 @@ const SignUpForm: React.FC = () => {
   useEffect(() => {
     const fetchGrades = async () => {
       try {
-        const response = await apiService.get("/grades");
+        const response = await apiService.get<GradesResponse>("/grades");
         setGrades(response.data.data.grades);
         setSelectedGrade(response.data.data.grades[0]?.gradeId || ""); // Set default grade
       } catch (error) {

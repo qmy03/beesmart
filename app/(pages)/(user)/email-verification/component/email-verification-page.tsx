@@ -8,6 +8,9 @@ import { Box, Typography } from "@mui/material";
 import Image from "next/image";
 import { Button } from "@/app/components/button";
 import TextField from "@/app/components/textfield";
+interface VerifyResponse {
+  message: string;
+}
 
 const EmailVerification = () => {
   const searchParams = useSearchParams();
@@ -26,18 +29,16 @@ const EmailVerification = () => {
         .get(`/auth/verify?token=${token}`)
         .then((response) => {
           console.log("res", response);
+          const data = response.data as VerifyResponse;
           setStatus("success");
-          setMessage(response.data.message);
+          setMessage(data.message);
           setTimeout(() => router.push("/login"), 3000); // Điều hướng sau 3 giây
         })
         .catch((error) => {
-          if (status !== "success") {
-            // setStatus("error");
-            setMessage(
-              error.response?.data?.message ||
-                "Không thể xác thực email của bạn."
-            );
-          }
+          setStatus("error");
+          setMessage(
+            error.response?.data?.message || "Không thể xác thực email của bạn."
+          );
         });
     } else if (!token && status === "loading") {
       setStatus("error");
@@ -52,7 +53,7 @@ const EmailVerification = () => {
     }
 
     apiService
-      .get(`/auth/resend-confirm-email?email=${email}`)
+      .get<VerifyResponse>(`/auth/resend-confirm-email?email=${email}`)
       .then((response) => {
         setMessage(response.data.message || "Email xác thực đã được gửi lại.");
       })

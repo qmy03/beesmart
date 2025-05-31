@@ -22,7 +22,7 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import Layout from "@/app/components/admin/layout";
 import { Button } from "@/app/components/button";
 import TextField from "@/app/components/textfield";
-import CloseIcon from "@mui/icons-material/close";
+import Close from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 import ProgressOverlay from "@/app/components/progress-Overlay";
@@ -471,7 +471,7 @@ const SubjectPage = () => {
             <Typography fontSize="24px" fontWeight={600} sx={{ flexGrow: 1 }}>
               {editMode === "edit" ? "Chỉnh sửa môn học" : "Thêm mới môn học"}
             </Typography>
-            <CloseIcon fontSize="small" onClick={handleCloseDialog} />
+            <Close fontSize="small" onClick={handleCloseDialog} />
           </DialogTitle>
           <DialogContent>
             <TextField

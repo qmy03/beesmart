@@ -35,7 +35,19 @@ const LessonViewsBarChart = ({
 }) => {
   const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const colors = ["#1877F2", "#8E33FF", "#00B8D9", "#FF5630", "#22C55E"];
-
+  const CustomTick = ({ x, y, payload }: any) => (
+    <text
+      x={x}
+      y={y}
+      dy={16}
+      textAnchor="end"
+      transform={`rotate(-45, ${x}, ${y})`}
+      fontSize={12}
+      fill="#666"
+    >
+      {payload.value}
+    </text>
+  );
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
@@ -97,36 +109,51 @@ const LessonViewsBarChart = ({
           }}
         >
           <Box sx={{ width: 1400 }}>
-            <LineChart
-              width={1400}
-              height={400}
-              data={data}
-              margin={{top: 10, right: 30, left: -15 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                interval={0}
-                tick={{ fontSize: 12, angle: -45, textAnchor: "end" }}
-                height={60}
-              />
-              <YAxis />
-              <Tooltip
-                formatter={(value, name) => [`${value} lượt`, name]}
-                labelFormatter={(label) => `Ngày ${label}`}
-                cursor={data && data.length > 0 ? undefined : false}
-              />
-              {classes.map((cls, index) => (
-                <Line
-                  key={cls}
-                  type="monotone"
-                  dataKey={cls}
-                  stroke={colors[index]}
-                  strokeWidth={2}
-                  activeDot={{ r: 6 }}
+            {data && data.length > 0 ? (
+              <LineChart
+                width={1400}
+                height={400}
+                data={data}
+                margin={{ top: 10, right: 30, left: -15 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  interval={0}
+                  tick={<CustomTick />}
+                  height={60}
                 />
-              ))}
-            </LineChart>
+                <YAxis />
+                <Tooltip
+                  formatter={(value, name) => [`${value} lượt`, name]}
+                  labelFormatter={(label) => `Ngày ${label}`}
+                  cursor={data && data.length > 0 ? undefined : false}
+                />
+                {classes.map((cls, index) => (
+                  <Line
+                    key={cls}
+                    type="monotone"
+                    dataKey={cls}
+                    stroke={colors[index]}
+                    strokeWidth={2}
+                    activeDot={{ r: 6 }}
+                  />
+                ))}
+              </LineChart>
+            ) : (
+              <Box
+                sx={{
+                  height: 400,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography color="text.secondary">
+                  Đang tải dữ liệu...
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
 
@@ -173,7 +200,9 @@ const LessonViewsBarChart = ({
                   }}
                 />
               </Box>
-              <Typography fontSize={16} color={colors[index]}>{cls}</Typography>
+              <Typography fontSize={16} color={colors[index]}>
+                {cls}
+              </Typography>
             </Box>
           ))}
         </Box>

@@ -49,7 +49,6 @@ import SportsIcon from "@mui/icons-material/Sports";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 
-// Interface for Notification
 interface Notification {
   notificationId: string;
   title: string;
@@ -60,37 +59,71 @@ interface Notification {
   createdAt: string;
 }
 
+interface ApiResponse<T = any> {
+  data: T;
+  message?: string;
+  status?: number;
+}
+
+interface LessonData {
+  lessonId: string;
+  lessonName: string;
+  viewCount: number;
+}
+
+interface LessonsResponse {
+  lessons: LessonData[];
+}
+
+interface BattleResponse {
+  battleId: string;
+}
+
+interface NotificationResponse {
+  data: Notification[];
+}
+
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
+interface GradesResponse {
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  grades: Grade[];
+}
+
 const SideNav: React.FC = () => {
   const { accessToken, logoutUser, userInfo } = useAuth();
   const pathname = usePathname();
   const role = userInfo?.role;
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] =
+    useState<null | HTMLElement>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const websocketRef = useRef<WebSocket | null>(null);
   const [websocketConnected, setWebsocketConnected] = useState<boolean>(false);
 
-  // Menu dropdown state
   const [dropdownEl, setDropdownEl] = useState<null | HTMLElement>(null);
   const [grades, setGrades] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [isHovered, setIsHovered] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [options, setOptions] = useState([]);
+  const [options, setOptions] = useState<LessonData[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [battleAcceptedDialog, setBattleAcceptedDialog] = useState<{
     open: boolean;
     battleId: string | null;
   }>({ open: false, battleId: null });
 
-  // Connect to WebSocket when user is logged in
   useEffect(() => {
     if (accessToken && userInfo) {
       connectWebSocket();
-      // Initial HTTP fetch as a fallback
       fetchNotifications();
       return () => {
         if (websocketRef.current) {
@@ -100,21 +133,28 @@ const SideNav: React.FC = () => {
     }
   }, [accessToken, userInfo]);
 
-  // Fetch existing notifications from the backend
   const fetchNotifications = async () => {
     try {
-      const response = await apiService.get("/notifications", {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      const response = await apiService.get<ApiResponse<Notification[]>>(
+        "/notifications",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
       console.log("HTTP Notification response:", response);
-      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      if (Array.isArray(response.data?.data)) {
         setNotifications(response.data.data);
-        const unread = response.data.data.filter((notification: Notification) => !notification.read).length;
+        const unread = response.data.data.filter(
+          (notification: Notification) => !notification.read
+        ).length;
         setUnreadCount(unread);
       } else {
-        console.error("Unexpected notification response format:", response.data);
+        console.error(
+          "Unexpected notification response format:",
+          response.data
+        );
         setNotifications([]);
         setUnreadCount(0);
       }
@@ -125,106 +165,123 @@ const SideNav: React.FC = () => {
     }
   };
 
-  // Connect to WebSocket for real-time notifications
   const connectWebSocket = () => {
     if (!accessToken) return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications?noti-token=${accessToken}`;
-    
+
     console.log("Connecting to notification WebSocket:", wsUrl);
-    
-    if (websocketRef.current && websocketRef.current.readyState !== WebSocket.CLOSED) {
+
+    if (
+      websocketRef.current &&
+      websocketRef.current.readyState !== WebSocket.CLOSED
+    ) {
       websocketRef.current.close();
     }
-    
+
     websocketRef.current = new WebSocket(wsUrl);
-    
+
     websocketRef.current.onopen = () => {
       console.log("Notification WebSocket connection established");
       setWebsocketConnected(true);
-      websocketRef.current?.send(JSON.stringify({ 
-        type: 'GET_NOTIFICATIONS' 
-      }));
-      // Set a timeout to fallback to HTTP if WebSocket doesn't respond
+      websocketRef.current?.send(
+        JSON.stringify({
+          type: "GET_NOTIFICATIONS",
+        })
+      );
       setTimeout(() => {
         if (notifications.length === 0) {
-          console.log("WebSocket did not return notifications, falling back to HTTP");
+          console.log(
+            "WebSocket did not return notifications, falling back to HTTP"
+          );
           fetchNotifications();
         }
-      }, 3000); // Wait 3 seconds for WebSocket response
+      }, 3000);
     };
-    
+
     websocketRef.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         console.log("WebSocket message received:", data);
-        
-        if (data.type === 'NEW_NOTIFICATION') {
-          const audio = new Audio('/notification-sound.mp3');
-          audio.play().catch(e => console.log('Sound play error:', e));
-          setNotifications(prev => [data.notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-          
-          if ("Notification" in window && Notification.permission === "granted") {
+
+        if (data.type === "NEW_NOTIFICATION") {
+          const audio = new Audio("/notification-sound.mp3");
+          audio.play().catch((e) => console.log("Sound play error:", e));
+          setNotifications((prev) => [data.notification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
             new Notification(data.notification.title, {
-              body: data.notification.message
+              body: data.notification.message,
             });
           }
-        } else if (data.type === 'NOTIFICATION_READ') {
-          setNotifications(prev => 
-            prev.map(notification => 
-              notification.notificationId === data.notificationId 
-                ? { ...notification, read: true } 
+        } else if (data.type === "NOTIFICATION_READ") {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.notificationId === data.notificationId
+                ? { ...notification, read: true }
                 : notification
             )
           );
-          setUnreadCount(prev => {
-            const notification = notifications.find(n => n.notificationId === data.notificationId);
+          setUnreadCount((prev) => {
+            const notification = notifications.find(
+              (n) => n.notificationId === data.notificationId
+            );
             if (notification && !notification.read) {
               return Math.max(0, prev - 1);
             }
             return prev;
           });
-        } else if (data.type === 'ALL_NOTIFICATIONS') {
+        } else if (data.type === "ALL_NOTIFICATIONS") {
           setNotifications(data.notifications || []);
-          const unread = (data.notifications || []).filter((notification: Notification) => !notification.read).length;
+          const unread = (data.notifications || []).filter(
+            (notification: Notification) => !notification.read
+          ).length;
           setUnreadCount(unread);
-        } else if (data.type === 'UNREAD_NOTIFICATIONS') {
-          setNotifications(prev => {
-            const existingIds = new Set(prev.map(n => n.notificationId));
-            const newNotifications = data.notifications.filter((n: Notification) => !existingIds.has(n.notificationId));
+        } else if (data.type === "UNREAD_NOTIFICATIONS") {
+          setNotifications((prev) => {
+            const existingIds = new Set(prev.map((n) => n.notificationId));
+            const newNotifications = data.notifications.filter(
+              (n: Notification) => !existingIds.has(n.notificationId)
+            );
             return [...newNotifications, ...prev];
           });
           setUnreadCount(data.notifications.length);
-        } else if (data.type === 'ALL_NOTIFICATIONS_DELETED') {
+        } else if (data.type === "ALL_NOTIFICATIONS_DELETED") {
           setNotifications([]);
           setUnreadCount(0);
-        } else if (data.type === 'UNREAD_COUNT') {
+        } else if (data.type === "UNREAD_COUNT") {
           setUnreadCount(data.data.count || 0);
-        } else if (data.type === 'BATTLE_INVITATION_ACCEPTED') {
-          console.log('Battle invitation accepted, showing dialog and redirecting to battle:', data.battleId);
+        } else if (data.type === "BATTLE_INVITATION_ACCEPTED") {
+          console.log(
+            "Battle invitation accepted, showing dialog and redirecting to battle:",
+            data.battleId
+          );
           setBattleAcceptedDialog({ open: true, battleId: data.battleId });
           setTimeout(() => {
             setBattleAcceptedDialog({ open: false, battleId: null });
             router.push(`/battle-detail/${data.battleId}`);
           }, 2000);
-        } else if (data.type === 'ERROR') {
+        } else if (data.type === "ERROR") {
           console.error("WebSocket error message:", data.message);
-          fetchNotifications(); // Fallback to HTTP on error
+          fetchNotifications();
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
-        fetchNotifications(); // Fallback to HTTP on parse error
+        fetchNotifications();
       }
     };
-    
+
     websocketRef.current.onerror = (error) => {
       console.error("WebSocket error:", error);
       setWebsocketConnected(false);
-      fetchNotifications(); // Fallback to HTTP
+      fetchNotifications();
     };
-    
+
     websocketRef.current.onclose = (event) => {
       console.log("WebSocket connection closed with code:", event.code);
       setWebsocketConnected(false);
@@ -232,83 +289,85 @@ const SideNav: React.FC = () => {
         console.log("Attempting to reconnect in 5 seconds...");
         setTimeout(connectWebSocket, 5000);
       }
-      fetchNotifications(); // Fallback to HTTP on close
+      fetchNotifications();
     };
   };
 
-  // Handle marking a notification as read
   const handleMarkAsRead = async (notificationId: string, link?: string) => {
     try {
-      await apiService.put(`/notifications/${notificationId}/read`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      await apiService.put(
+        `/notifications/${notificationId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
-      
-      // Update UI immediately
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.notificationId === notificationId 
-            ? { ...notification, read: true } 
+      );
+
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.notificationId === notificationId
+            ? { ...notification, read: true }
             : notification
         )
       );
-      
-      // Decrease unread count
-      setUnreadCount(prev => Math.max(0, prev - 1));
-      
-      // Navigate to the link if provided
-      if (link.startsWith("/topics/") && link.includes("/lessons-and-quizzes")) {
-        const match = link.match(/^\/topics\/([^/]+)\/lessons-and-quizzes$/);
-        const topicId = match ? match[1] : null;
 
-        if (topicId) {
-          sessionStorage.setItem("notificationTopicId", topicId);
+      setUnreadCount((prev) => Math.max(0, prev - 1));
 
-          if (pathname === "/skill-list") {
-            // Force a full reload (like pressing F5)
-            window.location.href = "/skill-list";
+      // Safe link handling
+      if (link) {
+        if (
+          link.startsWith("/topics/") &&
+          link.includes("/lessons-and-quizzes")
+        ) {
+          const match = link.match(/^\/topics\/([^/]+)\/lessons-and-quizzes$/);
+          const topicId = match ? match[1] : null;
+
+          if (topicId) {
+            sessionStorage.setItem("notificationTopicId", topicId);
+
+            if (pathname === "/skill-list") {
+              window.location.href = "/skill-list";
+            } else {
+              router.push("/skill-list");
+            }
           } else {
-            router.push("/skill-list");
+            router.push(link);
           }
         } else {
-          router.push(link); // fallback
+          router.push(link);
         }
-      } else {
-        router.push(link);
       }
 
-
-      
-      // Close notification dropdown
       setNotificationAnchorEl(null);
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
   };
 
-  // Handle marking all notifications as read
   const handleMarkAllAsRead = async () => {
     try {
-      await apiService.put('/notifications/read-all', {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      await apiService.put(
+        "/notifications/read-all",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
-      
-      // Update UI immediately
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
       );
-      
-      // Reset unread count
+
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, read: true }))
+      );
+
       setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
     }
   };
 
-    // Add these functions to control the dialog
   const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
   };
@@ -317,71 +376,66 @@ const SideNav: React.FC = () => {
     setDeleteDialogOpen(false);
   };
 
-  // Modify the existing handleDeleteAllNotifications function
   const handleDeleteAllNotifications = async () => {
     try {
-      await apiService.delete('/notifications/delete-all', {
+      await apiService.delete("/notifications/delete-all", {
         headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
-      
-      // Update UI immediately
+
       setNotifications([]);
       setUnreadCount(0);
-      // Close the dialog after deletion
       closeDeleteDialog();
     } catch (error) {
       console.error("Error deleting all notifications:", error);
     }
   };
 
-  // Handle retaking a quiz
   const handleRetakeQuiz = async (notificationId: string, link: string) => {
-    // Mark as read first
     try {
-      await apiService.put(`/notifications/${notificationId}/read`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      await apiService.put(
+        `/notifications/${notificationId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
-      
-      // Update UI immediately
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.notificationId === notificationId 
-            ? { ...notification, read: true } 
+      );
+
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.notificationId === notificationId
+            ? { ...notification, read: true }
             : notification
         )
       );
-      
-      // Decrease unread count if needed
-      setUnreadCount(prev => {
-        const notification = notifications.find(n => n.notificationId === notificationId);
+
+      setUnreadCount((prev) => {
+        const notification = notifications.find(
+          (n) => n.notificationId === notificationId
+        );
         if (notification && !notification.read) {
           return Math.max(0, prev - 1);
         }
         return prev;
       });
-      
-      // Navigate to retake the quiz
+
       if (link) {
         router.push(link);
       }
-      
-      // Close notification dropdown
+
       setNotificationAnchorEl(null);
     } catch (error) {
       console.error("Error handling quiz retake:", error);
     }
   };
 
-  // Handle clicking the notification bell
   const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchorEl(event.currentTarget);
   };
 
-  // Handle closing the notification dropdown
   const handleNotificationClose = () => {
     setNotificationAnchorEl(null);
   };
@@ -395,8 +449,15 @@ const SideNav: React.FC = () => {
     const fetchLessons = async () => {
       setLoading(true);
       try {
-        const response = await apiService.get(`/lessons?search=${searchText}`);
-        setOptions(response.data.data.lessons || []);
+        const response = await apiService.get<ApiResponse<LessonsResponse>>(
+          `/lessons?search=${searchText}`
+        );
+        // Fix 2: Add proper null checking and type assertion
+        if (response.data && response.data.data && response.data.data.lessons) {
+          setOptions(response.data.data.lessons);
+        } else {
+          setOptions([]);
+        }
       } catch (error) {
         console.error("Error fetching lessons:", error);
         setOptions([]);
@@ -405,8 +466,8 @@ const SideNav: React.FC = () => {
       }
     };
 
-    const debounceFetch = setTimeout(fetchLessons, 500); // Thực hiện debounce
-    return () => clearTimeout(debounceFetch); // Hủy bỏ timeout khi người dùng nhập tiếp
+    const debounceFetch = setTimeout(fetchLessons, 500);
+    return () => clearTimeout(debounceFetch);
   }, [searchText]);
   const handleMouseEnter = (event: React.MouseEvent<HTMLElement>) => {
     setDropdownEl(event.currentTarget);
@@ -425,15 +486,20 @@ const SideNav: React.FC = () => {
     const fetchGrades = async () => {
       setLoading(true);
       try {
-        const response = await apiService.get("/grades");
-        // Extracting gradeName from response
-        const gradeNames = response.data.map(
-          (grade: { gradeName: string }) => grade.gradeName
-        );
-        setGrades(gradeNames); // Store gradeNames in state
-        setError(""); // Clear any previous error
+        const response =
+          await apiService.get<ApiResponse<GradesResponse>>("/grades");
+        if (response.data && response.data.data && response.data.data.grades) {
+          const gradeNames = response.data.data.grades.map(
+            (grade: Grade) => grade.gradeName
+          );
+          setGrades(gradeNames);
+        } else {
+          setGrades([]);
+        }
+        setError("");
       } catch (error) {
         setError("Failed to load grades.");
+        setGrades([]);
       } finally {
         setLoading(false);
       }
@@ -458,56 +524,59 @@ const SideNav: React.FC = () => {
     handleMenuClose();
   };
 
-  // Check if notification popover is open
   const notificationOpen = Boolean(notificationAnchorEl);
-  const notificationId = notificationOpen ? 'notification-popover' : undefined;
-
+  const notificationId = notificationOpen ? "notification-popover" : undefined;
   const handleBattleInvitationAction = async (
-    notificationId: string, 
-    invitationId: string, 
-    action: 'accept' | 'decline'
+    notificationId: string,
+    invitationId: string | undefined,
+    action: "accept" | "decline"
   ) => {
+    // Fix: Add proper validation for invitationId
+    if (!invitationId) {
+      console.error("Invalid invitation ID");
+      return;
+    }
+
     try {
-      // First mark the notification as read
-      await apiService.put(`/notifications/${notificationId}/read`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      await apiService.put(
+        `/notifications/${notificationId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
-      // Then handle the invitation action
-      const response = await apiService.post(`/battle-invitations/${invitationId}/${action}`, {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
+      const response = await apiService.post<ApiResponse<BattleResponse>>(
+        `/battle-invitations/${invitationId}/${action}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
-      });
+      );
 
-      // Update UI immediately
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.notificationId === notificationId 
-            ? { ...notification, read: true } 
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.notificationId === notificationId
+            ? { ...notification, read: true }
             : notification
         )
       );
-      
-      // Decrease unread count
-      setUnreadCount(prev => Math.max(0, prev - 1));
 
-      if (action === 'accept' && response.data?.data?.battleId) {
-        // Navigate to battle if accepted
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+
+      if (action === "accept" && response.data?.data?.battleId) {
         router.push(`/battle-detail/${response.data.data.battleId}`);
       }
-      
-      // Close notification dropdown
+
       setNotificationAnchorEl(null);
-      
-      // Show success message (optional)
+
       console.log(`Battle invitation ${action}ed successfully`);
-      
     } catch (error) {
       console.error(`Error ${action}ing battle invitation:`, error);
-      // You might want to show an error toast here
     }
   };
 
@@ -523,7 +592,6 @@ const SideNav: React.FC = () => {
             marginX: "40px",
           }}
         >
-          {/* Hàng 1: Thông tin liên hệ */}
           <Box
             sx={{
               display: "flex",
@@ -552,7 +620,6 @@ const SideNav: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Hàng 2: Logo, Search, Đăng nhập/Đăng ký */}
           <Box
             sx={{
               display: "flex",
@@ -562,7 +629,6 @@ const SideNav: React.FC = () => {
               gap: 2,
             }}
           >
-            {/* Logo */}
             <img
               src="/logo.png"
               alt="Logo"
@@ -626,7 +692,6 @@ const SideNav: React.FC = () => {
               )}
             />
 
-            {/* Buttons - Conditionally render based on accessToken */}
             <Box
               sx={{
                 display: "flex",
@@ -638,8 +703,7 @@ const SideNav: React.FC = () => {
               {accessToken && userInfo ? (
                 <>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    {/* Notification Bell */}
-                    <IconButton 
+                    <IconButton
                       onClick={handleNotificationClick}
                       size="large"
                       aria-describedby={notificationId}
@@ -648,70 +712,76 @@ const SideNav: React.FC = () => {
                         <NotificationsIcon sx={{ color: "#99BC4D" }} />
                       </Badge>
                     </IconButton>
-                    
-                    {/* Notification Popover */}
+
                     <Popover
-                        id={notificationId}
-                        open={notificationOpen}
-                        anchorEl={notificationAnchorEl}
-                        onClose={handleNotificationClose}
-                        anchorOrigin={{
-                          vertical: 'bottom',
-                          horizontal: 'right',
-                        }}
-                        transformOrigin={{
-                          vertical: 'top',
-                          horizontal: 'right',
-                        }}
-                        disableScrollLock={true} // Add this to prevent body scroll locking
-                        sx={{
-                          '& .MuiPopover-paper': {
-                            overflow: 'hidden' // Add this to prevent Popover paper's default scrollbar
-                          }
-                        }}
-                      >
+                      id={notificationId}
+                      open={notificationOpen}
+                      anchorEl={notificationAnchorEl}
+                      onClose={handleNotificationClose}
+                      anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right",
+                      }}
+                      transformOrigin={{
+                        vertical: "top",
+                        horizontal: "right",
+                      }}
+                      disableScrollLock={true}
+                      sx={{
+                        "& .MuiPopover-paper": {
+                          overflow: "hidden",
+                        },
+                      }}
+                    >
                       <Box sx={{ width: 350 }}>
-                        <Box sx={{ 
-                          p: 2, 
-                          bgcolor: '#f5f5f5', 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <Typography sx={{ fontWeight: 'bold' }}>
+                        <Box
+                          sx={{
+                            p: 2,
+                            bgcolor: "#f5f5f5",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography sx={{ fontWeight: "bold" }}>
                             Thông báo
                           </Typography>
-                          <Box sx={{ display: 'flex' }}>
+                          <Box sx={{ display: "flex" }}>
                             <Tooltip title="Đánh dấu tất cả đã đọc">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={handleMarkAllAsRead}
-                                sx={{ 
-                                  '&:hover': { 
-                                    bgcolor: 'rgba(153, 188, 77, 0.1)' 
+                                sx={{
+                                  "&:hover": {
+                                    bgcolor: "rgba(153, 188, 77, 0.1)",
                                   },
-                                  mr: 1
+                                  mr: 1,
                                 }}
                               >
-                                <DoneAllIcon fontSize="small" sx={{ color: '#99BC4D' }} />
+                                <DoneAllIcon
+                                  fontSize="small"
+                                  sx={{ color: "#99BC4D" }}
+                                />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Xóa tất cả thông báo">
-                              <IconButton 
-                                size="small" 
+                              <IconButton
+                                size="small"
                                 onClick={openDeleteDialog}
-                                sx={{ 
-                                  '&:hover': { 
-                                    bgcolor: 'rgba(220, 0, 0, 0.1)' 
-                                  } 
+                                sx={{
+                                  "&:hover": {
+                                    bgcolor: "rgba(220, 0, 0, 0.1)",
+                                  },
                                 }}
                               >
-                                <DeleteSweepIcon fontSize="small" sx={{ color: '#ff5252' }} />
+                                <DeleteSweepIcon
+                                  fontSize="small"
+                                  sx={{ color: "#ff5252" }}
+                                />
                               </IconButton>
                             </Tooltip>
                           </Box>
                         </Box>
-                        {/* Confirmation Dialog for Delete All */}
                         <Dialog
                           open={deleteDialogOpen}
                           onClose={closeDeleteDialog}
@@ -727,59 +797,91 @@ const SideNav: React.FC = () => {
                             </DialogContentText>
                           </DialogContent>
                           <DialogActions>
-                            <Button onClick={closeDeleteDialog} color="primary" variant="outlined">
+                            <Button
+                              onClick={closeDeleteDialog}
+                              color="primary"
+                              variant="outlined"
+                            >
                               Hủy
                             </Button>
-                            <Button onClick={handleDeleteAllNotifications} color="error" variant="contained" autoFocus>
+                            <Button
+                              onClick={handleDeleteAllNotifications}
+                              color="error"
+                              variant="contained"
+                              autoFocus
+                            >
                               Xóa tất cả
                             </Button>
                           </DialogActions>
                         </Dialog>
                         <Divider />
                         {notifications.length === 0 ? (
-                          <Typography sx={{ p: 2, textAlign: 'center', color: 'gray' }}>
+                          <Typography
+                            sx={{ p: 2, textAlign: "center", color: "gray" }}
+                          >
                             Không có thông báo nào
                           </Typography>
                         ) : (
-                          <List 
-                            sx={{ 
-                              maxHeight: 400, 
-                              overflow: 'auto', 
+                          <List
+                            sx={{
+                              maxHeight: 400,
+                              overflow: "auto",
                               padding: 0,
                               paddingBottom: 0,
-                              '&::-webkit-scrollbar': {
-                                width: '6px'
+                              "&::-webkit-scrollbar": {
+                                width: "6px",
                               },
-                              '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: 'rgba(153, 188, 77, 0.5)',
-                                borderRadius: '4px'
+                              "&::-webkit-scrollbar-thumb": {
+                                backgroundColor: "rgba(153, 188, 77, 0.5)",
+                                borderRadius: "4px",
                               },
-                              '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                              "&::-webkit-scrollbar-track": {
+                                backgroundColor: "rgba(0, 0, 0, 0.05)",
                                 marginTop: 1,
-                                marginBottom: 1
-                              }
+                                marginBottom: 1,
+                              },
                             }}
                           >
                             {notifications.map((notification) => (
                               <React.Fragment key={notification.notificationId}>
-                                <ListItem 
+                                <ListItem
                                   component="div"
-                                  sx={{ 
-                                    bgcolor: notification.read ? 'white' : '#f0f8ff',
-                                    '&:hover': { bgcolor: '#e8f4f8' },
-                                    cursor: 'pointer',
-                                    display: 'block',
-                                    padding: '8px 16px'
+                                  sx={{
+                                    bgcolor: notification.read
+                                      ? "white"
+                                      : "#f0f8ff",
+                                    "&:hover": { bgcolor: "#e8f4f8" },
+                                    cursor: "pointer",
+                                    display: "block",
+                                    padding: "8px 16px",
                                   }}
                                 >
-                                  <ListItemText 
+                                  <ListItemText
                                     primary={
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {notification.type === 'BATTLE_INVITATION' && (
-                                          <SportsIcon sx={{ color: '#ff9800', fontSize: 18 }} />
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                        }}
+                                      >
+                                        {notification.type ===
+                                          "BATTLE_INVITATION" && (
+                                          <SportsIcon
+                                            sx={{
+                                              color: "#ff9800",
+                                              fontSize: 18,
+                                            }}
+                                          />
                                         )}
-                                        <Typography variant="subtitle2" sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}>
+                                        <Typography
+                                          variant="subtitle2"
+                                          sx={{
+                                            fontWeight: notification.read
+                                              ? "normal"
+                                              : "bold",
+                                          }}
+                                        >
                                           {notification.title}
                                         </Typography>
                                       </Box>
@@ -794,36 +896,53 @@ const SideNav: React.FC = () => {
                                       </Typography>
                                     }
                                   />
-                                  <Box sx={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    mt: 1
-                                  }}>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {notification.createdAt 
-                                        ? new Date(notification.createdAt).toLocaleString('vi-VN', {
-                                            year: 'numeric',
-                                            month: '2-digit',
-                                            day: '2-digit',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      mt: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {notification.createdAt
+                                        ? new Date(
+                                            notification.createdAt
+                                          ).toLocaleString("vi-VN", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
                                           })
-                                        : 'Vừa xong'}
-                                    </Typography>                         
-                                    {/* Battle invitation specific actions */}
-                                    {notification.type === 'BATTLE_INVITATION' && !notification.read ? (
-                                      <Box sx={{ display: 'flex', gap: 1 }}>
+                                        : "Vừa xong"}
+                                    </Typography>
+                                    {notification.type ===
+                                      "BATTLE_INVITATION" &&
+                                    !notification.read ? (
+                                      <Box sx={{ display: "flex", gap: 1 }}>
                                         <IconButton
                                           size="small"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const invitationId = notification.link.split('/').pop();
-                                            handleBattleInvitationAction(notification.notificationId, invitationId, 'accept');
+                                            const invitationId =
+                                              notification.link
+                                                .split("/")
+                                                .pop();
+                                            handleBattleInvitationAction(
+                                              notification.notificationId,
+                                              invitationId,
+                                              "accept"
+                                            );
                                           }}
-                                          sx={{ 
-                                            color: '#4caf50',
-                                            '&:hover': { bgcolor: 'rgba(76, 175, 80, 0.1)' }
+                                          sx={{
+                                            color: "#4caf50",
+                                            "&:hover": {
+                                              bgcolor: "rgba(76, 175, 80, 0.1)",
+                                            },
                                           }}
                                         >
                                           <CheckCircleIcon fontSize="small" />
@@ -832,30 +951,45 @@ const SideNav: React.FC = () => {
                                           size="small"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const invitationId = notification.link.split('/').pop();
-                                            handleBattleInvitationAction(notification.notificationId, invitationId, 'decline');
+                                            const invitationId =
+                                              notification.link
+                                                .split("/")
+                                                .pop();
+                                            handleBattleInvitationAction(
+                                              notification.notificationId,
+                                              invitationId,
+                                              "decline"
+                                            );
                                           }}
-                                          sx={{ 
-                                            color: '#f44336',
-                                            '&:hover': { bgcolor: 'rgba(244, 67, 54, 0.1)' }
+                                          sx={{
+                                            color: "#f44336",
+                                            "&:hover": {
+                                              bgcolor: "rgba(244, 67, 54, 0.1)",
+                                            },
                                           }}
                                         >
                                           <CancelIcon fontSize="small" />
                                         </IconButton>
                                       </Box>
-                                    ) : (notification.type !== 'BATTLE_INVITATION' && (notification.type === 'QUIZ_FAILED' || notification.type === 'QUIZ_RETAKE')) ? (
-                                      <Typography 
-                                        variant="caption" 
+                                    ) : notification.type !==
+                                        "BATTLE_INVITATION" &&
+                                      (notification.type === "QUIZ_FAILED" ||
+                                        notification.type === "QUIZ_RETAKE") ? (
+                                      <Typography
+                                        variant="caption"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleRetakeQuiz(notification.notificationId, notification.link);
+                                          handleRetakeQuiz(
+                                            notification.notificationId,
+                                            notification.link
+                                          );
                                         }}
-                                        sx={{ 
-                                          color: '#99BC4D',
-                                          cursor: 'pointer',
-                                          '&:hover': {
-                                            textDecoration: 'underline'
-                                          }
+                                        sx={{
+                                          color: "#99BC4D",
+                                          cursor: "pointer",
+                                          "&:hover": {
+                                            textDecoration: "underline",
+                                          },
                                         }}
                                       >
                                         Làm lại
@@ -864,38 +998,59 @@ const SideNav: React.FC = () => {
                                   </Box>
                                   <Dialog
                                     open={battleAcceptedDialog.open}
-                                    onClose={() => {}} // Prevent manual closing
+                                    onClose={() => {}}
                                     aria-labelledby="battle-accepted-dialog-title"
                                     aria-describedby="battle-accepted-dialog-description"
                                     maxWidth="sm"
                                     fullWidth
                                   >
-                                    <DialogTitle id="battle-accepted-dialog-title" sx={{ textAlign: 'center', color: '#4caf50' }}>
+                                    <DialogTitle
+                                      id="battle-accepted-dialog-title"
+                                      sx={{
+                                        textAlign: "center",
+                                        color: "#4caf50",
+                                      }}
+                                    >
                                       🎉 Thách đấu được chấp nhận!
                                     </DialogTitle>
-                                    <DialogContent sx={{ textAlign: 'center', py: 3 }}>
-                                      <DialogContentText id="battle-accepted-dialog-description" sx={{ fontSize: '16px' }}>
-                                        Đối thủ đã chấp nhận lời thách đấu của bạn.<br />
+                                    <DialogContent
+                                      sx={{ textAlign: "center", py: 3 }}
+                                    >
+                                      <DialogContentText
+                                        id="battle-accepted-dialog-description"
+                                        sx={{ fontSize: "16px" }}
+                                      >
+                                        Đối thủ đã chấp nhận lời thách đấu của
+                                        bạn.
+                                        <br />
                                         Đang chuyển đến trang battle...
                                       </DialogContentText>
                                       <Box sx={{ mt: 2 }}>
-                                        <CircularProgress size={30} sx={{ color: '#4caf50' }} />
+                                        <CircularProgress
+                                          size={30}
+                                          sx={{ color: "#4caf50" }}
+                                        />
                                       </Box>
                                     </DialogContent>
                                   </Dialog>
-                                  
-                                  {/* Click handler for non-battle notifications */}
-                                  {notification.type !== 'BATTLE_INVITATION' && (
-                                    <Box 
-                                      onClick={() => handleMarkAsRead(notification.notificationId, notification.link)}
-                                      sx={{ 
-                                        position: 'absolute', 
-                                        top: 0, 
-                                        left: 0, 
-                                        right: 0, 
-                                        bottom: 0, 
-                                        cursor: 'pointer' 
-                                      }} 
+
+                                  {notification.type !==
+                                    "BATTLE_INVITATION" && (
+                                    <Box
+                                      onClick={() =>
+                                        handleMarkAsRead(
+                                          notification.notificationId,
+                                          notification.link
+                                        )
+                                      }
+                                      sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        cursor: "pointer",
+                                      }}
                                     />
                                   )}
                                 </ListItem>
@@ -906,7 +1061,7 @@ const SideNav: React.FC = () => {
                         )}
                       </Box>
                     </Popover>
-                    
+
                     <Avatar
                       sx={{
                         border: "2px solid #BB9066",
@@ -1022,7 +1177,7 @@ const SideNav: React.FC = () => {
             justifyContent: "center",
             alignItem: "center",
           }}
-          onMouseLeave={handleMouseLeave} // Đóng menu khi rời chuột khỏi khu vực
+          onMouseLeave={handleMouseLeave}
         >
           <Menu
             sx={{
@@ -1037,7 +1192,7 @@ const SideNav: React.FC = () => {
             anchorEl={dropdownEl}
             open={Boolean(dropdownEl)}
             onClose={handleMouseLeave}
-            disableScrollLock // Tắt scroll lock để menu không làm ảnh hưởng cuộn trang
+            disableScrollLock
             anchorOrigin={{
               vertical: "bottom",
               horizontal: "left",

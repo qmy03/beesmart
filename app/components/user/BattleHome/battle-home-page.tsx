@@ -8,6 +8,64 @@ import apiService from "@/app/untils/api";
 import Layout from "@/app/components/user/Home/layout";
 import { Box, LinearProgress, MenuItem, TextField } from "@mui/material";
 import Image from "next/image";
+interface OnlineUser {
+  userId: string;
+  username: string;
+  wins?: number;
+  losses?: number;
+  role?: string;
+  grade?: string;
+}
+
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
+
+interface Grade {
+  gradeId: string;
+  gradeName: string;
+}
+
+interface UserInfo {
+  username: string;
+  role: string;
+  grade: string;
+  userId: string;
+  wins?: number;
+  losses?: number;
+}
+
+interface ApiResponse<T = any> {
+  data?: T;
+  status?: number;
+  message?: string;
+}
+
+interface OnlineUsersResponse {
+  users: OnlineUser[];
+}
+
+interface SubjectsResponse {
+  subjects: Subject[];
+}
+
+interface GradesResponse {
+  grades: Grade[];
+}
+
+interface WebSocketMessage {
+  type: string;
+  battleId?: string;
+  message?: string;
+}
+
+interface BattleInvitationRequest {
+  inviteeId: string;
+  gradeId: string;
+  subjectId: string;
+  topic: string;
+}
 
 export default function BattlePage() {
   const [usersOnline, setUsersOnline] = useState<any[]>([]);
@@ -40,7 +98,6 @@ export default function BattlePage() {
 
         const users = response.data?.data?.users || [];
 
-        // ✅ Lọc ra user khác với user hiện tại
         const filteredUsers = users.filter(
           (user: any) => user.userId !== userInfo?.userId
         );
@@ -53,7 +110,6 @@ export default function BattlePage() {
 
     fetchOnlineUsers();
   }, [accessToken]);
-  // Fetch subjects and grades on mount
   useEffect(() => {
     if (!accessToken) return;
 
@@ -90,7 +146,6 @@ export default function BattlePage() {
     fetchData();
   }, [accessToken]);
 
-  // Handle countdown
   useEffect(() => {
     if (matching) {
       intervalRef.current = setInterval(() => {
@@ -103,7 +158,6 @@ export default function BattlePage() {
     return () => clearInterval(intervalRef.current as NodeJS.Timeout);
   }, [matching]);
 
-  // Cleanup socket on unmount
   useEffect(() => {
     return () => {
       if (socketRef.current) {
@@ -211,7 +265,7 @@ export default function BattlePage() {
 
   return (
     <Layout>
-      <Box className="p-6">
+      <Box >
         <Box
           sx={{
             backgroundImage: 'url("/battle.png")',
@@ -239,8 +293,8 @@ export default function BattlePage() {
                 display: "flex",
                 gap: 4,
                 mt: 4,
-                justifyContent: "center",
-                flexGrow: 1,
+                justifyContent: "space-between",
+                flex: 1,
               }}
             >
               <Box
@@ -272,21 +326,27 @@ export default function BattlePage() {
                 >
                   {userInfo?.username?.[0].toUpperCase()}
                 </Box>
-                <div className="font-semibold">
+                <Box
+                  sx={{ bgcolor: "#CCC", borderRadius: 3, padding: "4px 32px" }}
+                  className="font-semibold"
+                >
                   {userInfo?.username || "Tên người dùng"}
-                </div>
-                <div>Thắng: {userInfo?.wins || 0}</div>
-                <div>Thua: {userInfo?.losses || 0}</div>
+                </Box>
+                <div>Trận thắng: {userInfo?.wins || 0}</div>
+                <div>Trận thua: {userInfo?.losses || 0}</div>
               </Box>
 
               <Box
                 sx={{
-                  mt: 4,
+                  flex: 2,
                   p: 2,
                   border: "1px solid #ccc",
                   borderRadius: "8px",
-                  flex: 2,
                   backgroundColor: "white",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 {selectedOpponent ? (
@@ -339,19 +399,22 @@ export default function BattlePage() {
                     </Button> */}
                   </>
                 ) : (
-                  <div>Hãy chọn người tham dự đấu trường để thách đấu</div>
+                  <Box sx={{ textAlign: "center", fontSize: "16px"}}>
+                    Hãy chọn người tham dự đấu trường để thách đấu
+                  </Box>
                 )}
               </Box>
 
               <Box
                 sx={{
+                  flex: 1,
+                  p: 2,
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  backgroundColor: "white",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 2,
-                  bgcolor: "white",
-                  p: 2,
-                  borderRadius: "8px",
-                  flex: 1,
+                  alignItems: "center",
                 }}
               >
                 <TextField
@@ -377,19 +440,24 @@ export default function BattlePage() {
                           alignItems: "center",
                           justifyContent: "space-between",
                           gap: 1,
-                          p: 1,
+                          paddingY: 1,
                           borderRadius: "8px",
                           cursor: "pointer",
                           "&:hover": { backgroundColor: "#f0f0f0" },
                         }}
                       >
                         <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            position: "relative",
+                          }}
                         >
                           <Box
                             sx={{
-                              width: 36,
-                              height: 36,
+                              width: 30,
+                              height: 30,
                               borderRadius: "50%",
                               backgroundColor: "#1976d2",
                               display: "flex",
@@ -398,9 +466,23 @@ export default function BattlePage() {
                               color: "white",
                               fontSize: "16px",
                               fontWeight: "bold",
+                              position: "relative",
                             }}
                           >
                             {user.username[0].toUpperCase()}
+                            {/* Green dot for online status */}
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                backgroundColor: "#22c55e", // Tailwind's green-500 equivalent
+                                border: "1px solid white", // White border for better visibility
+                                position: "absolute",
+                                bottom: 0,
+                                right: 0,
+                              }}
+                            />
                           </Box>
                           <span>{user.username}</span>
                         </Box>
@@ -409,7 +491,7 @@ export default function BattlePage() {
                           onClick={() => sendBattleInvitation(user.userId)}
                           disabled={!selectedSubject || !selectedGrade}
                         >
-                          Thách đấu
+                          Mời
                         </Button>
                       </Box>
                     ))}
