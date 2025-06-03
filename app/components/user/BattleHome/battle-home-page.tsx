@@ -43,15 +43,21 @@ interface ApiResponse<T = any> {
 }
 
 interface OnlineUsersResponse {
-  users: OnlineUser[];
+  data?: {
+    users: OnlineUser[];
+  };
 }
 
 interface SubjectsResponse {
-  subjects: Subject[];
+  data?: {
+    subjects: Subject[];
+  };
 }
 
 interface GradesResponse {
-  grades: Grade[];
+  data?: {
+    grades: Grade[];
+  };
 }
 
 interface WebSocketMessage {
@@ -90,11 +96,15 @@ export default function BattlePage() {
 
     const fetchOnlineUsers = async () => {
       try {
-        const response = await apiService.get("/battles/get-online-list", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
+        const response: ApiResponse<OnlineUsersResponse> = await apiService.get(
+          "/battles/get-online-list",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        console.log("Online Users Response:", response);
 
         const users = response.data?.data?.users || [];
 
@@ -116,10 +126,10 @@ export default function BattlePage() {
     const fetchData = async () => {
       try {
         const [subjectsRes, gradesRes] = await Promise.all([
-          apiService.get("/subjects", {
+          apiService.get<SubjectsResponse>("/subjects", {
             headers: { Authorization: `Bearer ${accessToken}` },
           }),
-          apiService.get("/grades", {
+          apiService.get<GradesResponse>("/grades", {
             headers: { Authorization: `Bearer ${accessToken}` },
           }),
         ]);
@@ -240,7 +250,7 @@ export default function BattlePage() {
         topic: "Battle Challenge", // You can customize this or make it dynamic
       };
 
-      const response = await apiService.post(
+      const response = await apiService.post<ApiResponse>(
         "/battle-invitations/send",
         invitationRequest,
         {
@@ -265,7 +275,7 @@ export default function BattlePage() {
 
   return (
     <Layout>
-      <Box >
+      <Box>
         <Box
           sx={{
             backgroundImage: 'url("/battle.png")',
@@ -399,7 +409,7 @@ export default function BattlePage() {
                     </Button> */}
                   </>
                 ) : (
-                  <Box sx={{ textAlign: "center", fontSize: "16px"}}>
+                  <Box sx={{ textAlign: "center", fontSize: "16px" }}>
                     Hãy chọn người tham dự đấu trường để thách đấu
                   </Box>
                 )}
