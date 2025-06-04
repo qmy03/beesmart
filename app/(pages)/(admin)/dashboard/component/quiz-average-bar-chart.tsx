@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "recharts";
 
-const transformData = (rawData: any) => {
+const transformData = (rawData: any, type: "quiz" | "arena") => {
   return rawData.map((item: any) => ({
     date: item.date,
     ...item.averages,
@@ -24,6 +24,8 @@ const QuizAverageBarChart = ({
   selectedSubject,
   setSelectedSubject,
   subjects1,
+  type,
+  loading,
 }: {
   data: any;
   month: number;
@@ -31,14 +33,29 @@ const QuizAverageBarChart = ({
   selectedSubject: string;
   setSelectedSubject: React.Dispatch<React.SetStateAction<string>>;
   subjects1: { subjectId: string; subjectName: string }[];
+  type: "quiz" | "arena";
+  loading?: boolean;
 }) => {
   const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const colors = ["#FF6B6B", "#4ECDC4", "#1A535C", "#FF8C00", "#2E8B57"];
-
-  // Kiểm tra và xử lý data trước khi transform
-  const chartData = data && Array.isArray(data) ? transformData(data) : [];
+  const title =
+    type === "quiz"
+      ? `Điểm trung bình quiz trong tháng ${month}/${year}`
+      : `Điểm trung bình đấu trường trong tháng ${month}/${year}`;
+  const chartData =
+    data && Array.isArray(data) ? transformData(data, type) : [];
 
   console.log(chartData);
+  const calculateChartWidth = (dataLength: number) => {
+    const minWidth = 450; // Độ rộng tối thiểu
+    const maxWidth = 1400; // Độ rộng tối đa
+    const widthPerDay = 45; // Độ rộng cho mỗi ngày
+    
+    const calculatedWidth = Math.max(minWidth, dataLength * widthPerDay);
+    return Math.min(calculatedWidth, maxWidth);
+  };
+
+  const chartWidth = calculateChartWidth(chartData?.length || 0);
   const CustomTick = ({ x, y, payload }: any) => (
     <text
       x={x}
@@ -53,7 +70,7 @@ const QuizAverageBarChart = ({
     </text>
   );
   return (
-    <Card variant="outlined" sx={{ width: "100%" }}>
+    <Box sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
         <Box
           sx={{
@@ -65,7 +82,7 @@ const QuizAverageBarChart = ({
           }}
         >
           <Typography fontWeight={600} gutterBottom fontSize={20}>
-            Điểm trung bình quiz trong tháng {month}/{year}
+            {title}
           </Typography>
           <TextField
             select
@@ -73,7 +90,7 @@ const QuizAverageBarChart = ({
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
             sx={{ maxWidth: 200 }}
-            disabled={!subjects1 || subjects1.length === 0} // Disable khi chưa có data
+            disabled={!subjects1 || subjects1.length === 0}
           >
             {subjects1 && subjects1.length > 0 ? (
               subjects1.map((subject) => (
@@ -116,10 +133,23 @@ const QuizAverageBarChart = ({
             },
           }}
         >
-          <Box sx={{ width: 1400 }}>
-            {chartData && chartData.length > 0 ? (
+          {loading ? (
+            <Box
+              sx={{
+                height: 400,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Typography color="text.secondary">
+                Đang tải dữ liệu...
+              </Typography>
+            </Box>
+          ) : chartData && chartData.length > 0 ? (
+            <Box sx={{ minWidth: chartWidth }}>
               <LineChart
-                width={1400}
+                width={chartWidth}
                 height={400}
                 data={chartData}
                 margin={{ top: 10, right: 30, left: -15 }}
@@ -148,21 +178,21 @@ const QuizAverageBarChart = ({
                   />
                 ))}
               </LineChart>
-            ) : (
-              <Box
-                sx={{
-                  height: 400,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Typography color="text.secondary">
-                  Đang tải dữ liệu...
-                </Typography>
-              </Box>
-            )}
-          </Box>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                height: 400,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Typography color="text.secondary">
+                Đang tải dữ liệu...
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         <Box
@@ -180,14 +210,13 @@ const QuizAverageBarChart = ({
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
+                gap: "3px",
               }}
             >
-              {/* Line with dot in center */}
               <Box
                 sx={{
                   position: "relative",
-                  width: 35,
+                  width: 30,
                   height: 2,
                   backgroundColor: colors[index],
                   borderRadius: 2,
@@ -214,7 +243,7 @@ const QuizAverageBarChart = ({
           ))}
         </Box>
       </CardContent>
-    </Card>
+    </Box>
   );
 };
 

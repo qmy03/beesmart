@@ -77,8 +77,8 @@ export default function BattlePage() {
   const [usersOnline, setUsersOnline] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOpponent, setSelectedOpponent] = useState<any | null>(null);
-
-  const { accessToken, userInfo } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const { userInfo } = useAuth();
   console.log("User Info:", userInfo);
   console.log("Access Token:", accessToken);
   const router = useRouter();

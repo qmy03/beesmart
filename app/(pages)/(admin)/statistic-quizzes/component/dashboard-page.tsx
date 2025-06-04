@@ -23,6 +23,7 @@ interface Subject {
 }
 
 const StatisticQuizzesPage = () => {
+  const accessToken = localStorage.getItem("accessToken");
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
   >([]);
@@ -33,7 +34,6 @@ const StatisticQuizzesPage = () => {
   const [selectedYear, setSelectedYear] = useState<string>(
     `${new Date().getFullYear()}`
   );
-  const { accessToken } = useAuth();
   const [quizAverageData, setQuizAverageData] = useState<
     { date: string; averages: { [key: string]: number } }[]
   >([]);

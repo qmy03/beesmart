@@ -24,13 +24,14 @@ import Image from "next/image";
 
 const Sidebar: React.FC = () => {
   const { logoutUser } = useAuth();
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const token = localStorage.getItem("accessToken");
+  //     setAccessToken(token);
+  //   }
+  // }, []);
+  const accessToken = localStorage.getItem("accessToken");
 
   const userInfo = localStorage.getItem("userInfo");
 

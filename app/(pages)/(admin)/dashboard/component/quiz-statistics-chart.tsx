@@ -1,19 +1,13 @@
 import { useAuth } from "@/app/hooks/AuthContext";
-import { Box } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
 const COLORS = ["#1877f2", "#ff5630", "#ffab00", "#5119b7", "#22C55E"];
 
 const QuizStatisticsChart = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
-
+  const accessToken = localStorage.getItem("accessToken");
+  const [loading, setLoading] = useState(true);
   const [quizStatistics, setQuizStatistics] = useState<{
     [key: string]: number;
   }>({});
@@ -38,7 +32,7 @@ const QuizStatisticsChart = () => {
           );
 
           const data = await response.json();
-
+          console.log("Response status:", data);
           if (data.status === 200) {
             const processedData = {
               "Lớp 1": data.data["Lớp 1"] || 0,
@@ -62,10 +56,21 @@ const QuizStatisticsChart = () => {
 
     fetchQuizStatistics();
   }, [accessToken]);
-
+if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+        <CircularProgress />
+      </Box>
+    );
+  }
   return (
     <Box
-      sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+      }}
     >
       <PieChart width={400} height={400}>
         <Pie
@@ -82,7 +87,7 @@ const QuizStatisticsChart = () => {
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip />
+        <Tooltip formatter={(value) => `${value}%`} />
         <Legend />
       </PieChart>
     </Box>

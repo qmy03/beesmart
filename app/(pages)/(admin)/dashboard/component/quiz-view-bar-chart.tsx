@@ -42,27 +42,6 @@ const QuizViewsBarChart = ({
   );
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
-      {/* <CardContent
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          minWidth: "900px",
-          "&::-webkit-scrollbar": {
-            height: "6px", // Đặt chiều cao của thanh cuộn ngang
-          },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#888", // Màu của thanh kéo
-            borderRadius: "10px", // Làm tròn góc
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            backgroundColor: "#555", // Màu khi hover
-          },
-          "&::-webkit-scrollbar-track": {
-            backgroundColor: "#f1f1f1", // Màu nền của thanh cuộn
-          },
-        }}
-      > */}
       <CardContent sx={{ p: 2 }}>
         <Box
           sx={{
@@ -170,7 +149,6 @@ const QuizViewsBarChart = ({
                 gap: 1,
               }}
             >
-              {/* Line with dot in center */}
               <Box
                 sx={{
                   position: "relative",

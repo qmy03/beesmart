@@ -46,7 +46,8 @@ interface PlayerInfo {
   avatar?: string;
 }
 export default function BattleDetailPage() {
-  const { accessToken, userInfo } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const { userInfo } = useAuth();
   const { battleId } = useParams();
   const router = useRouter();
   // const [isBothAnswered, setIsBothAnswered] = useState(false);
@@ -1739,7 +1740,9 @@ export default function BattleDetailPage() {
                     <Typography>
                       Số câu trả lời đúng: {opponentInfo?.correctAnswers || 0}
                     </Typography>
-                    <Typography>Số câu trả lời sai: {opponentInfo?.incorrectAnswers || 0}</Typography>
+                    <Typography>
+                      Số câu trả lời sai: {opponentInfo?.incorrectAnswers || 0}
+                    </Typography>
                     <Typography>Điểm: {opponentScore}</Typography>
                   </Box>
                 </Box>

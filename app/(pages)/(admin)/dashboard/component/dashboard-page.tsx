@@ -14,6 +14,8 @@ import SubjectIcon from "@mui/icons-material/Subject";
 import { useEffect, useState } from "react";
 import { SvgIconComponent } from "@mui/icons-material";
 import QuizScoreChart from "./quiz-score-chart";
+import BattleScoreChart from "./battle-score-chart";
+import BattleStatisticsChart from "./battle-statistics-chart";
 
 interface SummaryDataItem {
   title: string;
@@ -32,7 +34,8 @@ interface Subject {
 }
 
 const DashboardPage = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
+  const accessToken = localStorage.getItem("accessToken");
   const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
   const [subjects, setSubjects] = useState<
     { subjectId: string; subjectName: string }[]
@@ -44,7 +47,9 @@ const DashboardPage = () => {
   const [quizAverageData, setQuizAverageData] = useState<
     { date: string; averages: { [key: string]: number } }[]
   >([]);
-
+  const [battleAverageData, setBattleAverageData] = useState<
+    { date: string; averages: { [key: string]: number } }[]
+  >([]);
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
 
@@ -53,15 +58,19 @@ const DashboardPage = () => {
     useState<string>("");
   const [selectedSubjectForQuizAverage, setSelectedSubjectForQuizAverage] =
     useState<string>("");
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
+  const [selectedSubjectForBattleAverage, setSelectedSubjectForBattleAverage] =
+    useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const token = localStorage.getItem("accessToken");
+  //     setAccessToken(token);
+  //   }
+  // }, []);
 
   useEffect(() => {
     const fetchSubjects = async () => {
+      setLoading(true);
       try {
         const response = (await apiService.get("/subjects")) as {
           data: {
@@ -81,22 +90,24 @@ const DashboardPage = () => {
         if (data.length > 0) {
           setSelectedSubjectForLessonView(data[0].subjectName);
           setSelectedSubjectForQuizAverage(data[0].subjectName);
+          setSelectedSubjectForBattleAverage(data[0].subjectName);
         }
       } catch (error) {
         console.error("Lỗi khi lấy danh sách môn học:", error);
+      } finally {
+        setLoading(false); // Kết thúc tải
       }
     };
     fetchSubjects();
   }, []);
 
-  // 3. Fetch Summary Statistics
   useEffect(() => {
     const fetchSummary = async () => {
       if (!accessToken) {
         console.error("Access token is missing");
         return;
       }
-
+      setLoading(true);
       try {
         const headers = {
           "Content-Type": "application/json",
@@ -159,79 +170,189 @@ const DashboardPage = () => {
         ]);
       } catch (error) {
         console.error("Error fetching summary:", error);
+      } finally {
+        setLoading(false); // Kết thúc tải
       }
     };
 
     fetchSummary();
   }, [accessToken]);
 
-  // 4. Fetch Quiz Average Chart - sử dụng selectedSubjectForQuizAverage
+  // useEffect(() => {
+  //   const fetchQuizAverageData = async () => {
+  //     if (!accessToken || !selectedSubjectForQuizAverage) return;
+  //     setLoading(true);
+  //     try {
+  //       const res = await fetch(
+  //         `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForQuizAverage}`,
+  //         {
+  //           headers: {
+  //             "Content-Type": "application/json",
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //         }
+  //       );
+
+  //       const data = await res.json();
+  //       if (data.status === 200) {
+  //         const chartData = Object.keys(data.data).map((date) => ({
+  //           date,
+  //           averages: data.data[date],
+  //         }));
+  //         setQuizAverageData(chartData);
+  //       } else {
+  //         console.error("Lỗi khi lấy quiz average:", data.message);
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching quiz averages:", err);
+  //     } finally {
+  //       setLoading(false); // Kết thúc tải
+  //     }
+  //   };
+
+  //   fetchQuizAverageData();
+  // }, [accessToken, selectedSubjectForQuizAverage]);
+  // useEffect(() => {
+  //   const fetchBattleAverageData = async () => {
+  //     if (!accessToken || !selectedSubjectForBattleAverage) return;
+  //     setLoading(true);
+  //     try {
+  //       const res = await fetch(
+  //         `http://localhost:8080/api/statistics/admin/battle-average-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForBattleAverage}`,
+  //         {
+  //           headers: {
+  //             "Content-Type": "application/json",
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //         }
+  //       );
+
+  //       const data = await res.json();
+  //       if (data.status === 200) {
+  //         const chartData = Object.keys(data.data).map((date) => ({
+  //           date,
+  //           averages: data.data[date],
+  //         }));
+  //         setBattleAverageData(chartData);
+  //       } else {
+  //         console.error("Lỗi khi lấy quiz average:", data.message);
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching quiz averages:", err);
+  //     } finally {
+  //       setLoading(false); // Kết thúc tải
+  //     }
+  //   };
+
+  //   fetchBattleAverageData();
+  // }, [accessToken, selectedSubjectForBattleAverage]); // Thêm dependency selectedSubjectForQuizAverage
+  // useEffect(() => {
+  //   const fetchLessonViewData = async () => {
+  //     if (!accessToken || !selectedSubjectForLessonView) return;
+  //     setLoading(true);
+  //     try {
+  //       const res = await fetch(
+  //         `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForLessonView}`,
+  //         {
+  //           headers: {
+  //             "Content-Type": "application/json",
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //         }
+  //       );
+
+  //       const data = await res.json();
+  //       if (data.status === 200) {
+  //         const chartData = Object.keys(data.data).map((date) => ({
+  //           date,
+  //           ...data.data[date],
+  //         }));
+  //         setLessonViewData(chartData);
+  //       } else {
+  //         console.error("Lỗi khi lấy lesson view:", data.message);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching lesson view data:", error);
+  //     } finally {
+  //       setLoading(false); // Kết thúc tải
+  //     }
+  //   };
+
+  //   fetchLessonViewData();
+  // }, [accessToken, selectedSubjectForLessonView]);
   useEffect(() => {
-    const fetchQuizAverageData = async () => {
-      if (!accessToken || !selectedSubjectForQuizAverage) return;
+    const fetchAllChartData = async () => {
+      if (
+        !accessToken ||
+        !selectedSubjectForLessonView ||
+        !selectedSubjectForQuizAverage ||
+        !selectedSubjectForBattleAverage
+      )
+        return;
 
+      setLoading(true);
       try {
-        const res = await fetch(
-          `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForQuizAverage}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        };
 
-        const data = await res.json();
-        if (data.status === 200) {
-          const chartData = Object.keys(data.data).map((date) => ({
+        const [lessonRes, quizRes, battleRes] = await Promise.all([
+          fetch(
+            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForLessonView}`,
+            { headers }
+          ),
+          fetch(
+            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForQuizAverage}`,
+            { headers }
+          ),
+          fetch(
+            `http://localhost:8080/api/statistics/admin/battle-average-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForBattleAverage}`,
+            { headers }
+          ),
+        ]);
+
+        const lessonData = await lessonRes.json();
+        const quizData = await quizRes.json();
+        const battleData = await battleRes.json();
+
+        if (lessonData.status === 200) {
+          const lessonChart = Object.keys(lessonData.data).map((date) => ({
             date,
-            averages: data.data[date],
+            ...lessonData.data[date],
           }));
-          setQuizAverageData(chartData);
-        } else {
-          console.error("Lỗi khi lấy quiz average:", data.message);
+          setLessonViewData(lessonChart);
         }
-      } catch (err) {
-        console.error("Error fetching quiz averages:", err);
-      }
-    };
 
-    fetchQuizAverageData();
-  }, [accessToken, selectedSubjectForQuizAverage]); // Thêm dependency selectedSubjectForQuizAverage
-
-  // 5. Fetch Lesson View Data - sử dụng selectedSubjectForLessonView
-  useEffect(() => {
-    const fetchLessonViewData = async () => {
-      if (!accessToken || !selectedSubjectForLessonView) return;
-
-      try {
-        const res = await fetch(
-          `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}&subject=${selectedSubjectForLessonView}`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        const data = await res.json();
-        if (data.status === 200) {
-          const chartData = Object.keys(data.data).map((date) => ({
+        if (quizData.status === 200) {
+          const quizChart = Object.keys(quizData.data).map((date) => ({
             date,
-            ...data.data[date],
+            averages: quizData.data[date],
           }));
-          setLessonViewData(chartData);
-        } else {
-          console.error("Lỗi khi lấy lesson view:", data.message);
+          setQuizAverageData(quizChart);
+        }
+
+        if (battleData.status === 200) {
+          const battleChart = Object.keys(battleData.data).map((date) => ({
+            date,
+            averages: battleData.data[date],
+          }));
+          setBattleAverageData(battleChart);
         }
       } catch (error) {
-        console.error("Error fetching lesson view data:", error);
+        console.error("Lỗi khi lấy dữ liệu tổng:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchLessonViewData();
-  }, [accessToken, selectedSubjectForLessonView]);
+    fetchAllChartData();
+  }, [
+    accessToken,
+    selectedSubjectForLessonView,
+    selectedSubjectForQuizAverage,
+    selectedSubjectForBattleAverage,
+  ]);
 
   return (
     <Layout>
@@ -275,40 +396,75 @@ const DashboardPage = () => {
             selectedSubject={selectedSubjectForLessonView}
             setSelectedSubject={setSelectedSubjectForLessonView}
             subjects={subjects}
+            loading={loading}
           />
         </Card>
-
-        <Card sx={{ my: 1, flexGrow: 1, borderRadius: 2, boxShadow: 3 }}>
-          <QuizAverageBarChart
-            data={quizAverageData}
-            month={currentMonth}
-            year={currentYear}
-            selectedSubject={selectedSubjectForQuizAverage}
-            setSelectedSubject={setSelectedSubjectForQuizAverage}
-            subjects1={subjects}
-          />
-        </Card>
-        <Card sx={{ my: 1, flexGrow: 1, borderRadius: 2, boxShadow: 3 }}>
-          <QuizScoreChart />
-        </Card>
-
-        <Card
-          variant="outlined"
-          sx={{
-            mb: 4,
-            borderRadius: 2,
-            display: "flex",
-            flexDirection: "column",
-            // alignItems: "center",
-            padding: 3,
-            boxShadow: 3,
-          }}
-        >
-          <Typography fontWeight={600} fontSize="20px">
-            Tỉ lệ phần trăm làm bài quiz theo từng lớp
-          </Typography>
-          <QuizStatisticsChart />
-        </Card>
+        <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
+          <Card
+            sx={{
+              my: 1,
+              borderRadius: 2,
+              display: "flex",
+              flexDirection: "column",
+              padding: 3,
+              boxShadow: 3,
+              flex: 1,
+            }}
+          >
+            <Typography fontWeight={600} fontSize="20px">
+              Tỉ lệ phần trăm làm bài quiz theo từng lớp
+            </Typography>
+            <QuizStatisticsChart />
+          </Card>
+          <Card
+            sx={{
+              my: 1,
+              borderRadius: 2,
+              display: "flex",
+              flexDirection: "column",
+              padding: 3,
+              boxShadow: 3,
+              flex: 1,
+            }}
+          >
+            <Typography fontWeight={600} fontSize="20px">
+              Tỉ lệ phần trăm học sinh tham gia đấu trường
+            </Typography>
+            <BattleStatisticsChart />
+          </Card>
+        </Box>
+        <Box sx={{ display: "flex", gap: 2, flex: 1 }}>
+          <Card sx={{ my: 1, flex: 1, borderRadius: 2, boxShadow: 3 }}>
+            <QuizAverageBarChart
+              data={quizAverageData}
+              month={currentMonth}
+              year={currentYear}
+              selectedSubject={selectedSubjectForQuizAverage}
+              setSelectedSubject={setSelectedSubjectForQuizAverage}
+              subjects1={subjects}
+              type={"quiz"}
+            />
+          </Card>
+          <Card sx={{ my: 1, flex: 1, borderRadius: 2, boxShadow: 3 }}>
+            <QuizAverageBarChart
+              data={battleAverageData}
+              month={currentMonth}
+              year={currentYear}
+              selectedSubject={selectedSubjectForBattleAverage}
+              setSelectedSubject={setSelectedSubjectForBattleAverage}
+              subjects1={subjects}
+              type={"arena"}
+            />
+          </Card>
+        </Box>
+        <Box sx={{ display: "flex", gap: 2, flex: 1 }}>
+          <Card sx={{ my: 1, flex: 1, borderRadius: 2, boxShadow: 3 }}>
+            <QuizScoreChart />
+          </Card>
+          <Card sx={{ my: 1, flex: 1, borderRadius: 2, boxShadow: 3 }}>
+            <BattleScoreChart />
+          </Card>
+        </Box>
       </Box>
     </Layout>
   );
