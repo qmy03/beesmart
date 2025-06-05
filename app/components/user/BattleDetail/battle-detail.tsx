@@ -50,7 +50,6 @@ export default function BattleDetailPage() {
   const { userInfo } = useAuth();
   const { battleId } = useParams();
   const router = useRouter();
-  // const [isBothAnswered, setIsBothAnswered] = useState(false);
   const [question, setQuestion] = useState<any>(null);
   const [opponentScore, setOpponentScore] = useState(0);
   const [playerScore, setPlayerScore] = useState(0);
@@ -78,8 +77,16 @@ export default function BattleDetailPage() {
   const [currentQuestionAnswer, setCurrentQuestionAnswer] = useState<any>(null);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
 
-  const getPlayerStatusMessage = (isCorrect: boolean | null) => {
-    if (isCorrect === null) return;
+  const getPlayerStatusMessage = (
+    isCorrect: boolean | null,
+    isAnswered: boolean
+  ) => {
+    if (isAnswered) {
+      return "Chờ đợi đối thủ...";
+    }
+    if (isCorrect === null) {
+      return "Hãy trả lời câu hỏi bên dưới!";
+    }
     return isCorrect
       ? "Tuyệt vời! Tiếp tục phát huy nhé!"
       : "Đừng nản lòng! Cố gắng lên nào!";
@@ -99,7 +106,10 @@ export default function BattleDetailPage() {
 
         const battleData = response.data.data;
         console.log("Battle data:", battleData);
-        setBattleInfo(battleData);
+        setBattleInfo({
+          ...battleData,
+          lastQuestionId: battleData.lastQuestionId || null, // Lấy từ API nếu có
+        });
         if (battleData.playerScores && battleData.playerScores.length >= 2) {
           const currentPlayer: PlayerScore | undefined =
             battleData.playerScores.find(
@@ -175,7 +185,6 @@ export default function BattleDetailPage() {
             updateScores(msg);
             break;
           case "ANSWER_RESULT":
-            // Xử lý kết quả câu trả lời từ server
             handleAnswerResult(msg);
             break;
           case "END":
@@ -222,7 +231,6 @@ export default function BattleDetailPage() {
           `ws://localhost:8080/ws/battle?battleId=${battleId}&userId=${userInfo.userId}&battle-token=${accessToken}`
         );
         setWs(newSocket);
-        // Set up new socket event handlers
       }, 1000);
     };
 
@@ -234,16 +242,14 @@ export default function BattleDetailPage() {
     };
   }, [accessToken, battleId, userInfo?.userId]);
   const handleAnswerResult = (msg: any) => {
-    // msg có thể chứa thông tin như:
-    // { userId, questionId, isCorrect, score, ... }
     if (msg.userId === userInfo?.userId) {
       setPlayerLastAnswerCorrect(msg.isCorrect);
     }
   };
+
   const handleBothAnswered = async () => {
     if (!battleId || !accessToken) return;
 
-    // setIsBothAnswered(true);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -251,19 +257,27 @@ export default function BattleDetailPage() {
 
     setLoadingQuestion(true);
     try {
-      await apiService.post(
+      const response = await apiService.post(
         `/battles/${battleId}/nextQuestion`,
         {},
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
+      console.log("Next question requested:", response.data);
+
+      setTimeout(() => {
+        if (!question || question.questionId === battleInfo?.lastQuestionId) {
+          console.warn("No new question received after request. Retrying...");
+          setError("Failed to load new question. Retrying...");
+          fetchFirstQuestion();
+        }
+      }, 5000);
     } catch (error) {
       console.error("Error fetching next question:", error);
       setError("Failed to load the next question");
     } finally {
       setLoadingQuestion(false);
-      // setIsBothAnswered(false);
     }
   };
   const fetchFirstQuestion = async () => {
@@ -278,7 +292,6 @@ export default function BattleDetailPage() {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
-      // The server will send the question via WebSocket
     } catch (error) {
       console.error("Error fetching first question:", error);
       setError("Failed to load the first question. Please try refreshing.");
@@ -287,98 +300,16 @@ export default function BattleDetailPage() {
     }
   };
 
-  // const handleNewQuestion = (msg: any) => {
-  //   setQuestion(msg.question);
-  //   setTimer(30);
-  //   setIsAnswered(false);
-  //   setSelectedAnswer(null);
-
-  //   // Update question number if provided
-  //   if (msg.currentQuestion !== undefined) {
-  //     setQuestionNumber(msg.currentQuestion);
-  //   }
-  //   if (msg.totalQuestions !== undefined) {
-  //     setTotalQuestions(msg.totalQuestions);
-  //   }
-
-  //   // Reset timer for new question
-  //   if (timerRef.current) clearInterval(timerRef.current);
-
-  //   timerRef.current = setInterval(() => {
-  //     setTimer((prev) => {
-  //       if (prev <= 1) {
-  //         clearInterval(timerRef.current!);
-
-  //         // 👇 Ensure this runs correctly by wrapping in setTimeout
-  //         setTimeout(() => {
-  //           if (!isAnswered && question?.questionId) {
-  //             console.log("⏰ Timer expired. Sending null answer...");
-  //             handleAnswer(null);
-  //           }
-  //         }, 50); // Delay slightly to ensure state updates flush
-
-  //         return 0;
-  //       }
-
-  //       return prev - 1;
-  //     });
-  //   }, 1000);
-  // };
-  // const handleNewQuestion = (msg: any) => {
-  //   setQuestion({
-  //     ...msg.question,
-  //     type: msg.type, // Add the type from the root message object to the question
-  //   });
-  //   setTimer(30);
-  //   setIsAnswered(false);
-  //   setSelectedAnswer(null);
-  //   setSelectedAnswers([]); // Reset selected answers for multi-select questions
-  //   setTextAnswer(""); // Reset text answer for fill-in-the-blank questions
-
-  //   // Update question number if provided
-  //   if (msg.currentQuestion !== undefined) {
-  //     setQuestionNumber(msg.currentQuestion);
-  //   }
-  //   if (msg.totalQuestions !== undefined) {
-  //     setTotalQuestions(msg.totalQuestions);
-  //   }
-
-  //   // Reset timer for new question
-  //   if (timerRef.current) clearInterval(timerRef.current);
-
-  //   timerRef.current = setInterval(() => {
-  //     setTimer((prev) => {
-  //       if (prev <= 1) {
-  //         clearInterval(timerRef.current!);
-
-  //         // 👇 Ensure this runs correctly by wrapping in setTimeout
-  //         // setTimeout(() => {
-  //         //   if (!isAnswered && msg.question?.questionId) {
-  //         //     console.log("⏰ Timer expired. Sending null answer...");
-  //         //     handleAnswer(null);
-  //         //   }
-  //         // }, 50); // Delay slightly to ensure state updates flush
-  //         setTimeout(() => {
-  //           console.log("Current isAnswered state:", isAnswered);
-  //           console.log("Current question state:", question);
-  //           if (!isAnswered && msg.question?.questionId) {
-  //             console.log("⏰ Timer expired. Sending null answer...");
-  //             handleAnswer(null);
-  //           }
-  //         }, 50);
-
-  //         return 0;
-  //       }
-
-  //       return prev - 1;
-  //     });
-  //   }, 1000);
-  // };
-
   const handleNewQuestion = (msg: any) => {
+    if (msg.question?.questionId === question?.questionId) {
+      console.warn("Received duplicate question:", msg.question.questionId);
+      setError("Received duplicate question. Please wait or refresh.");
+      return;
+    }
+
     setQuestion({
       ...msg.question,
-      type: msg.type, // Add the type from the root message object to the question
+      type: msg.type,
     });
     setTimer(30);
     setIsAnswered(false);
@@ -387,6 +318,7 @@ export default function BattleDetailPage() {
     setTextAnswer("");
     setPlayerLastAnswerCorrect(null);
     setCurrentQuestionAnswer(null);
+
     if (msg.currentQuestion !== undefined) {
       setQuestionNumber(msg.currentQuestion);
     }
@@ -395,24 +327,19 @@ export default function BattleDetailPage() {
     }
 
     if (timerRef.current) clearInterval(timerRef.current);
-
     timerRef.current = setInterval(() => {
       setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
-
           const currentQuestion = msg.question;
-
           setTimeout(() => {
             if (!isAnswered && currentQuestion?.questionId) {
               console.log("⏰ Timer expired. Sending null answer...");
               handleTimeExpiredAnswer(currentQuestion);
             }
           }, 100);
-
           return 0;
         }
-
         return prev - 1;
       });
     }, 1000);
@@ -447,11 +374,10 @@ export default function BattleDetailPage() {
         }
       );
       console.log("Time-expired answer submitted successfully:", res);
-      // setPlayerLastAnswerCorrect(false);
       if (res.data && res.data.isCorrect !== undefined) {
         setPlayerLastAnswerCorrect(res.data.isCorrect);
       } else {
-        setPlayerLastAnswerCorrect(false); // Mặc định là sai nếu hết time
+        setPlayerLastAnswerCorrect(false);
       }
     } catch (error) {
       console.error("Error submitting time-expired answer:", error);
@@ -464,54 +390,6 @@ export default function BattleDetailPage() {
     };
   }, []);
 
-  // const updateScores = (msg: any) => {
-  //   if (msg.playerScores && userInfo?.userId) {
-  //     const myScore: PlayerScore | undefined = msg.playerScores.find(
-  //       (p: any) => p.userId === userInfo.userId
-  //     );
-  //     const opponent: PlayerScore | undefined = msg.playerScores.find(
-  //       (p: any) => p.userId !== userInfo.userId
-  //     );
-
-  //     // if (isAnswered) {
-  //     //   if (myScore && playerScore < myScore.score) {
-  //     //     setPlayerLastAnswerCorrect(true);
-  //     //   } else {
-  //     //     setPlayerLastAnswerCorrect(false);
-  //     //   }
-  //     // }
-
-  //     setPlayerScore(myScore?.score || 0);
-  //     setOpponentScore(opponent?.score || 0);
-
-  //     // Transform PlayerScore to PlayerInfo or set null
-  //     setPlayerInfo(
-  //       myScore
-  //         ? {
-  //             userId: myScore.userId,
-  //             username: playerInfo?.username || userInfo?.username || "Player", // Use existing username or fallback
-  //             score: myScore.score,
-  //             correctAnswers: playerInfo?.correctAnswers || 0, // Preserve or default
-  //             incorrectAnswers: playerInfo?.incorrectAnswers || 0, // Preserve or default
-  //             avatar: playerInfo?.avatar, // Preserve if exists
-  //           }
-  //         : null
-  //     );
-
-  //     setOpponentInfo(
-  //       opponent
-  //         ? {
-  //             userId: opponent.userId,
-  //             username: opponentInfo?.username || "Opponent", // Use existing or fallback
-  //             score: opponent.score,
-  //             correctAnswers: opponentInfo?.correctAnswers || 0, // Preserve or default
-  //             incorrectAnswers: opponentInfo?.incorrectAnswers || 0, // Preserve or default
-  //             avatar: opponentInfo?.avatar, // Preserve if exists
-  //           }
-  //         : null
-  //     );
-  //   }
-  // };
   const updateScores = (msg: any) => {
     if (msg.playerScores && userInfo?.userId) {
       const myScore: PlayerScore | undefined = msg.playerScores.find(
@@ -530,8 +408,8 @@ export default function BattleDetailPage() {
               userId: myScore.userId,
               username: playerInfo?.username || userInfo?.username || "Player",
               score: myScore.score,
-              correctAnswers: myScore.correctAnswers || 0, // Lấy từ msg
-              incorrectAnswers: myScore.incorrectAnswers || 0, // Lấy từ msg
+              correctAnswers: myScore.correctAnswers || 0,
+              incorrectAnswers: myScore.incorrectAnswers || 0,
               avatar: playerInfo?.avatar,
             }
           : null
@@ -542,10 +420,10 @@ export default function BattleDetailPage() {
           ? {
               userId: opponent.userId,
               username:
-                opponentInfo?.username || opponent.username || "Opponent", // Lấy username từ msg nếu có
+                opponentInfo?.username || opponent.username || "Opponent",
               score: opponent.score,
-              correctAnswers: opponent.correctAnswers || 0, // Lấy từ msg
-              incorrectAnswers: opponent.incorrectAnswers || 0, // Lấy từ msg
+              correctAnswers: opponent.correctAnswers || 0,
+              incorrectAnswers: opponent.incorrectAnswers || 0,
               avatar: opponentInfo?.avatar,
             }
           : null
@@ -559,14 +437,17 @@ export default function BattleDetailPage() {
     setBattleResults(msg.results || null);
     if (timerRef.current) clearInterval(timerRef.current);
 
-    // Show results dialog after a short delay
     setTimeout(() => {
       setShowResultDialog(true);
     }, 1000);
   };
 
   const updateBattleState = (battleResponse: any) => {
-    setBattleInfo(battleResponse);
+    setBattleInfo({
+      ...battleResponse,
+      lastQuestionId:
+        battleResponse.lastQuestionId || question?.questionId || null,
+    });
     updateScores(battleResponse);
 
     if (battleResponse.status === "ENDED") {
@@ -578,31 +459,6 @@ export default function BattleDetailPage() {
     }
   };
 
-  // const handleAnswer = async (answerOption: string | null) => {
-  //   if (!question || !userInfo?.userId || isAnswered) return;
-
-  //   try {
-  //     setIsAnswered(true);
-  //     const timeTaken = 30 - timer;
-
-  //     await apiService.post(
-  //       `/battles/${battleId}/answer`,
-  //       {
-  //         userId: userInfo.userId,
-  //         questionId: question.questionId,
-  //         answer: answerOption,
-  //         timeTaken,
-  //       },
-  //       {
-  //         headers: { Authorization: `Bearer ${accessToken}` },
-  //       }
-  //     );
-  //     // The server will send the next question when both players have answered
-  //   } catch (error) {
-  //     console.error("Error submitting answer:", error);
-  //     setError("Failed to submit answer");
-  //   }
-  // };
   const handleAnswer = async (answerOption: string | null | string[]) => {
     console.log("handleAnswer called with:", {
       question: question,
@@ -621,6 +477,7 @@ export default function BattleDetailPage() {
 
       let payload;
       setCurrentQuestionAnswer(answerOption);
+
       if (question.type === "MULTIPLE_CHOICE") {
         payload = {
           userId: userInfo.userId,
@@ -629,12 +486,11 @@ export default function BattleDetailPage() {
           timeTaken,
         };
       } else if (question.type === "MULTI_SELECT") {
-        // For multi-select, use the answers field
         const selectedOptions = Array.isArray(answerOption) ? answerOption : [];
         payload = {
           userId: userInfo.userId,
           questionId: question.questionId,
-          answers: selectedOptions, // Use answers field for arrays
+          answers: selectedOptions,
           timeTaken,
         };
       } else if (question.type === "FILL_IN_THE_BLANK") {
@@ -653,10 +509,8 @@ export default function BattleDetailPage() {
         };
       }
 
-      console.log("Submitting answer:", payload); // Debugging line
-      // await apiService.post(`/battles/${battleId}/answer`, payload, {
-      //   headers: { Authorization: `Bearer ${accessToken}` },
-      // });
+      console.log("Submitting answer:", payload);
+
       const response = await apiService.post(
         `/battles/${battleId}/answer`,
         payload,
@@ -665,13 +519,13 @@ export default function BattleDetailPage() {
         }
       );
 
-      // Xử lý kết quả trả lời từ response
       if (response.data && response.data.isCorrect !== undefined) {
         setPlayerLastAnswerCorrect(response.data.isCorrect);
       }
     } catch (error) {
       console.error("Error submitting answer:", error);
       setError("Failed to submit answer");
+      setIsAnswered(false);
     }
   };
 
@@ -687,12 +541,10 @@ export default function BattleDetailPage() {
     const newSelectedAnswers = [...selectedAnswers];
 
     if (e.target.checked) {
-      // Thêm câu trả lời vào danh sách nếu được chọn
       if (!newSelectedAnswers.includes(index)) {
         newSelectedAnswers.push(index);
       }
     } else {
-      // Xóa câu trả lời khỏi danh sách nếu bỏ chọn
       const idx = newSelectedAnswers.indexOf(index);
       if (idx > -1) {
         newSelectedAnswers.splice(idx, 1);
@@ -702,22 +554,6 @@ export default function BattleDetailPage() {
     setSelectedAnswers(newSelectedAnswers);
   };
 
-  // Handler cho việc submit câu trả lời MULTI_SELECT
-  // const handleMultiSelectSubmit = () => {
-  //   if (selectedAnswers.length > 0) {
-  //     const selectedOptions = selectedAnswers.map(
-  //       (index) => question.options[index]
-  //     );
-  //     handleAnswer(selectedOptions);
-  //   } else {
-  //     handleAnswer(null);
-  //   }
-  // };
-
-  // // Handler cho việc submit câu trả lời FILL_IN_THE_BLANK
-  // const handleTextSubmit = () => {
-  //   handleAnswer(textAnswer);
-  // };
   const handleMultiSelectSubmit = () => {
     if (!question) return;
 
@@ -753,9 +589,11 @@ export default function BattleDetailPage() {
   const formatTime = (seconds: number) => {
     return `${seconds.toString().padStart(2, "0")}`;
   };
-  const getBeeImage = (isCorrect: boolean | null) => {
-    if (isCorrect === null) return "/bee-2.png"; // Default/waiting
-    return isCorrect ? "/bee-1.png" : "/bee-3.png"; // Correct/Incorrect
+  const getBeeImage = (isCorrect: boolean | null, isAnswered: boolean) => {
+    if (!isAnswered) return "/bee-2.png";
+
+    if (isCorrect === null) return "/bee-2.png";
+    return isCorrect ? "/bee-1.png" : "/bee-3.png";
   };
   return (
     <Layout>
@@ -793,21 +631,6 @@ export default function BattleDetailPage() {
           </Box>
           <Divider />
 
-          {/* {error && (
-            <Box
-              sx={{
-                bgcolor: "#FFEBEE",
-                color: "#D32F2F",
-                padding: 2,
-                margin: 2,
-                borderRadius: 1,
-              }}
-            >
-              {error}
-            </Box>
-          )} */}
-
-          {/* Battle Header - Scores */}
           {battleInfo && (
             <>
               <Box
@@ -815,14 +638,11 @@ export default function BattleDetailPage() {
                   display: "flex",
                   justifyContent: "space-between",
                   padding: "16px",
-                  // borderBottom: "1px solid #E0E0E0",
                 }}
               >
                 <Box
                   sx={{
-                    // textAlign: "center",
                     display: "flex",
-                    // flexDirection: "column",
                     alignItems: "center",
                     backgroundColor: "#E8F5E9",
                     padding: 2,
@@ -832,9 +652,6 @@ export default function BattleDetailPage() {
                   }}
                 >
                   <Avatar
-                    // src={playerInfo?.avatar || ""}
-                    // alt={playerInfo?.username || "You"}
-                    // sx={{ width: 50, height: 50, }}
                     sx={{
                       border: "2px solid #BB9066",
                       color: "#BB9066",
@@ -845,7 +662,6 @@ export default function BattleDetailPage() {
                     {playerInfo?.username?.[0]?.toUpperCase() || "Y"}
                   </Avatar>
 
-                  {/* <Typography sx={{ fontSize: "24px" }}>{playerScore}</Typography> */}
                   <Box>
                     <Typography fontWeight={700}>
                       You ({playerInfo?.username || "Player"})
@@ -868,10 +684,6 @@ export default function BattleDetailPage() {
                 </Box>
 
                 <Box sx={{ textAlign: "center", width: "20%" }}>
-                  {/* <Typography fontWeight={700} sx={{ fontSize: "20px" }}>
-                  {battleInfo.battleId}
-                </Typography> */}
-                  {/* Timer display */}
                   <Box
                     sx={{
                       display: "flex",
@@ -907,9 +719,7 @@ export default function BattleDetailPage() {
 
                 <Box
                   sx={{
-                    // textAlign: "center",
                     display: "flex",
-                    // flexDirection: "column",
                     alignItems: "center",
                     backgroundColor: "#E8F5E9",
                     padding: 2,
@@ -919,9 +729,6 @@ export default function BattleDetailPage() {
                   }}
                 >
                   <Avatar
-                    // src={playerInfo?.avatar || ""}
-                    // alt={playerInfo?.username || "You"}
-                    // sx={{ width: 50, height: 50, }}
                     sx={{
                       border: "2px solid #BB9066",
                       color: "#BB9066",
@@ -931,10 +738,6 @@ export default function BattleDetailPage() {
                   >
                     {opponentInfo?.username?.[0]?.toUpperCase() || "O"}
                   </Avatar>
-
-                  {/* <Typography sx={{ fontSize: "24px" }}>
-                  {opponentScore}
-                </Typography> */}
                   <Box>
                     <Typography fontWeight={700}>
                       Opponent ({opponentInfo?.username || "Opponent"})
@@ -958,39 +761,7 @@ export default function BattleDetailPage() {
                   </Box>
                 </Box>
               </Box>
-              {/* <Box
-                sx={{
-                  paddingX: "16px",
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  // flexDirection: "column",
-                  alignItems: "center",
-                  width: "100%",
-                  gap: 2,
-                }}
-              >
-                <img
-                  src={getBeeImage(playerLastAnswerCorrect)}
-                  alt="Player status"
-                  style={{ height: "60px", marginBottom: "8px" }}
-                />
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: "14px",
-                      textAlign: "center",
-                      color:
-                        playerLastAnswerCorrect === true
-                          ? "#4CAF50"
-                          : playerLastAnswerCorrect === false
-                            ? "#F44336"
-                            : "#757575",
-                    }}
-                  >
-                    {getPlayerStatusMessage(playerLastAnswerCorrect)}
-                  </Typography>
-                </Box>
-              </Box> */}
+
               <Box
                 sx={{
                   paddingX: "16px",
@@ -1001,16 +772,13 @@ export default function BattleDetailPage() {
                   gap: 2,
                 }}
               >
-                {/* Mascot/character image */}
                 <Box>
                   <img
-                    src={getBeeImage(playerLastAnswerCorrect)}
+                    src={getBeeImage(playerLastAnswerCorrect, isAnswered)}
                     alt="Player status"
                     style={{ height: "60px" }}
                   />
                 </Box>
-
-                {/* Message bubble with arrow */}
                 <Box
                   sx={{
                     position: "relative",
@@ -1047,20 +815,22 @@ export default function BattleDetailPage() {
                       fontSize: "14px",
                       color:
                         playerLastAnswerCorrect === true
-                          ? "#4CAF50" // Green text for correct
+                          ? "#4CAF50"
                           : playerLastAnswerCorrect === false
-                            ? "#F44336" // Red text for incorrect
-                            : "#757575", // Gray text for neutral
+                            ? "#F44336"
+                            : "#757575",
                     }}
                   >
-                    {getPlayerStatusMessage(playerLastAnswerCorrect)}
+                    {getPlayerStatusMessage(
+                      playerLastAnswerCorrect,
+                      isAnswered
+                    )}
                   </Typography>
                 </Box>
               </Box>
             </>
           )}
 
-          {/* Waiting for opponent screen */}
           {battleInfo?.status !== "ONGOING" && !finished && (
             <Box
               sx={{
@@ -1108,7 +878,6 @@ export default function BattleDetailPage() {
             </Box>
           )}
 
-          {/* Question section */}
           {battleInfo?.status === "ONGOING" && !finished && (
             <Box sx={{ padding: "8px 16px" }}>
               <Box
@@ -1118,7 +887,6 @@ export default function BattleDetailPage() {
                   gap: "20px",
                 }}
               >
-                {/* Left Section: Question Area */}
                 <Box
                   sx={{
                     flex: 1,
@@ -1128,7 +896,6 @@ export default function BattleDetailPage() {
                     borderRadius: 4,
                   }}
                 >
-                  {/* Question header */}
                   <Box
                     sx={{
                       display: "flex",
@@ -1144,21 +911,8 @@ export default function BattleDetailPage() {
                     <Typography fontSize="16px" fontWeight={700}>
                       Câu hỏi {questionNumber}/{totalQuestions}
                     </Typography>
-                    {/* <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                      }}
-                    >
-                      <AccessAlarmIcon sx={{ fontSize: "20px" }} />
-                      <Typography fontSize="16px" fontWeight={700}>
-                        {formatTime(timer)}
-                      </Typography>
-                    </Box> */}
                   </Box>
 
-                  {/* Timer bar */}
                   <Box
                     sx={{
                       width: "100%",
@@ -1178,7 +932,6 @@ export default function BattleDetailPage() {
 
                   <Divider />
 
-                  {/* Question content */}
                   {question ? (
                     <Box sx={{ padding: "20px" }}>
                       <Typography fontSize="16px" fontWeight={700} gutterBottom>
@@ -1205,23 +958,23 @@ export default function BattleDetailPage() {
                         </Box>
                       )}
 
-                      {/* Answer options */}
-                      {/* <FormControl
-                        component="fieldset"
-                        sx={{ width: "100%", marginTop: 2 }}
-                      >
-                        <RadioGroup
-                          value={selectedAnswer ?? -1}
-                          onChange={handleRadioChange}
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 2,
-                          }}
+                      {question.type === "MULTIPLE_CHOICE" && (
+                        <FormControl
+                          component="fieldset"
+                          sx={{ width: "100%", marginTop: 2 }}
                         >
-                          {question.options &&
-                            question.options.map(
-                              (option: string, index: number) => (
+                          <RadioGroup
+                            value={selectedAnswer ?? -1}
+                            onChange={handleRadioChange}
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 2,
+                            }}
+                          >
+                            {question.options
+                              .filter((option: string) => option.trim() !== "")
+                              .map((option: string, index: number) => (
                                 <FormControlLabel
                                   key={index}
                                   value={index}
@@ -1244,56 +997,11 @@ export default function BattleDetailPage() {
                                     },
                                   }}
                                 />
-                              )
-                            )}
-                        </RadioGroup>
-                      </FormControl> */}
-                      {question.type === "MULTIPLE_CHOICE" && (
-                        <FormControl
-                          component="fieldset"
-                          sx={{ width: "100%", marginTop: 2 }}
-                        >
-                          <RadioGroup
-                            value={selectedAnswer ?? -1}
-                            onChange={handleRadioChange}
-                            sx={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 2,
-                            }}
-                          >
-                            {question.options &&
-                              question.options.map(
-                                (option: string, index: number) => (
-                                  <FormControlLabel
-                                    key={index}
-                                    value={index}
-                                    control={<Radio />}
-                                    label={option}
-                                    disabled={isAnswered || timer === 0}
-                                    sx={{
-                                      backgroundColor: "#F5F5F5",
-                                      borderRadius: "8px",
-                                      padding: "8px 16px",
-                                      margin: 0,
-                                      "& .MuiFormControlLabel-label": {
-                                        width: "100%",
-                                        fontSize: "16px",
-                                      },
-                                      "&:hover": {
-                                        backgroundColor: isAnswered
-                                          ? "#F5F5F5"
-                                          : "#E8F5E9",
-                                      },
-                                    }}
-                                  />
-                                )
-                              )}
+                              ))}
                           </RadioGroup>
                         </FormControl>
                       )}
 
-                      {/* Câu hỏi MULTI_SELECT */}
                       {question.type === "MULTI_SELECT" && (
                         <Box sx={{ width: "100%", marginTop: 2 }}>
                           <Typography
@@ -1306,43 +1014,40 @@ export default function BattleDetailPage() {
                             Vui lòng chọn các câu trả lời đúng:
                           </Typography>
 
-                          {question.options &&
-                            question.options.map(
-                              (option: string, index: number) => (
-                                <FormControlLabel
-                                  key={index}
-                                  control={
-                                    <Checkbox
-                                      checked={selectedAnswers.includes(index)}
-                                      onChange={(e) =>
-                                        handleCheckboxChange(e, index)
-                                      }
-                                      disabled={isAnswered || timer === 0}
-                                    />
-                                  }
-                                  label={option}
-                                  sx={{
-                                    display: "flex",
+                          {question.options
+                            .filter((option: string) => option.trim() !== "")
+                            .map((option: string, index: number) => (
+                              <FormControlLabel
+                                key={index}
+                                control={
+                                  <Checkbox
+                                    checked={selectedAnswers.includes(index)}
+                                    onChange={(e) =>
+                                      handleCheckboxChange(e, index)
+                                    }
+                                    disabled={isAnswered || timer === 0}
+                                  />
+                                }
+                                label={option}
+                                sx={{
+                                  display: "flex",
+                                  width: "100%",
+                                  backgroundColor: "#F5F5F5",
+                                  borderRadius: "8px",
+                                  padding: "8px 16px",
+                                  marginY: 1,
+                                  "& .MuiFormControlLabel-label": {
                                     width: "100%",
-                                    backgroundColor: "#F5F5F5",
-                                    borderRadius: "8px",
-                                    padding: "8px 16px",
-                                    marginY: 1,
-                                    "& .MuiFormControlLabel-label": {
-                                      width: "100%",
-                                      fontSize: "16px",
-                                    },
-                                    "&:hover": {
-                                      backgroundColor: isAnswered
-                                        ? "#F5F5F5"
-                                        : "#E8F5E9",
-                                    },
-                                  }}
-                                />
-                              )
-                            )}
-
-                          {/* Submit button đặc biệt cho Multi-select */}
+                                    fontSize: "16px",
+                                  },
+                                  "&:hover": {
+                                    backgroundColor: isAnswered
+                                      ? "#F5F5F5"
+                                      : "#E8F5E9",
+                                  },
+                                }}
+                              />
+                            ))}
                           <Box
                             sx={{
                               display: "flex",
@@ -1365,7 +1070,6 @@ export default function BattleDetailPage() {
                         </Box>
                       )}
 
-                      {/* Câu hỏi FILL_IN_THE_BLANK */}
                       {question.type === "FILL_IN_THE_BLANK" && (
                         <Box sx={{ width: "100%", marginTop: 2 }}>
                           <Typography
@@ -1375,7 +1079,7 @@ export default function BattleDetailPage() {
                               fontStyle: "italic",
                             }}
                           >
-                            Fill in your answer:
+                            Điền câu trả lời:
                           </Typography>
 
                           <TextField
@@ -1386,7 +1090,6 @@ export default function BattleDetailPage() {
                             placeholder="Type your answer here"
                           />
 
-                          {/* Submit button đặc biệt cho Fill-in-the-blank */}
                           <Box
                             sx={{
                               display: "flex",
@@ -1422,22 +1125,6 @@ export default function BattleDetailPage() {
                         </Typography>
                       )}
 
-                      {/* {isAnswered && (
-                        // <Box
-                        //   sx={{
-                        //     marginTop: 4,
-                        //     padding: 2,
-                        //     backgroundColor: "#E8F5E9",
-                        //     borderRadius: 2,
-                        //     textAlign: "center",
-                        //   }}
-                        // >
-                        //   <Typography>
-                        //     Waiting for opponent to answer...
-                        //   </Typography>
-                        // </Box>
-                        <></>
-                      )} */}
                       {isAnswered && (
                         <Box
                           sx={{
@@ -1453,21 +1140,6 @@ export default function BattleDetailPage() {
                           </Typography>
                         </Box>
                       )}
-                      {/* {isBothAnswered && (
-                        <Box
-                          sx={{
-                            marginTop: 4,
-                            padding: 2,
-                            backgroundColor: "#E8F5E9",
-                            borderRadius: 2,
-                            textAlign: "center",
-                          }}
-                        >
-                          <Typography>
-                            Both players answered! Loading next question...
-                          </Typography>
-                        </Box>
-                      )} */}
                     </Box>
                   ) : (
                     <Box
@@ -1480,7 +1152,7 @@ export default function BattleDetailPage() {
                       }}
                     >
                       <Typography sx={{ marginBottom: 3 }}>
-                        Loading next question...
+                        Đang tải câu hỏi...
                       </Typography>
                       <Box
                         sx={{
@@ -1503,104 +1175,10 @@ export default function BattleDetailPage() {
                     </Box>
                   )}
                 </Box>
-
-                {/* Right Section: Battle info */}
-                <Box
-                // sx={{
-                //   flex: 1,
-                //   display: "flex",
-                //   flexDirection: "column",
-                //   gap: 3,
-                // }}
-                >
-                  {/* Battle info */}
-                  {/* <Box
-                    sx={{
-                      padding: 2,
-                      border: "1px solid #ccc",
-                      borderRadius: 2,
-                      backgroundColor: "#F5F5F5",
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      fontWeight={700}
-                      sx={{
-                        textAlign: "center",
-                        padding: "8px",
-                        borderBottom: "1px dashed #ccc",
-                        marginBottom: 2,
-                      }}
-                    >
-                      Battle Status
-                    </Typography>
-
-                    <Box sx={{ marginBottom: 2 }}>
-                      <Typography fontWeight={600}>
-                        Current Question:
-                      </Typography>
-                      <Typography>
-                        {questionNumber} of {totalQuestions}
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ marginBottom: 2 }}>
-                      <Typography fontWeight={600}>Your Score:</Typography>
-                      <Typography>{playerScore} points</Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography fontWeight={600}>Opponent Score:</Typography>
-                      <Typography>{opponentScore} points</Typography>
-                    </Box>
-                  </Box> */}
-                  {/* {question && (
-                    <Box
-                      sx={{
-                        padding: 2,
-                        border: "1px solid #ccc",
-                        borderRadius: 2,
-                        backgroundColor: "#FFF8E1",
-                      }}
-                    >
-                      <Typography
-                        fontWeight={600}
-                        sx={{ textAlign: "center", marginBottom: 1 }}
-                      >
-                        Question Type
-                      </Typography>
-                      <Typography sx={{ textAlign: "center" }}>
-                        {question.type === "MULTIPLE_CHOICE" &&
-                          "Single Choice Question"}
-                        {question.type === "MULTI_SELECT" &&
-                          "Multiple Choice Question"}
-                        {question.type === "FILL_IN_THE_BLANK" &&
-                          "Fill in the Blank"}
-                      </Typography>
-                    </Box>
-                  )} */}
-
-                  {/* Current status */}
-                  {/* <Box
-                    sx={{
-                      padding: 2,
-                      border: "1px solid #ccc",
-                      borderRadius: 2,
-                      backgroundColor: isAnswered ? "#E8F5E9" : "#FFF8E1",
-                    }}
-                  >
-                    <Typography sx={{ fontWeight: 600, textAlign: "center" }}>
-                      {isAnswered
-                        ? "Waiting for opponent's answer..."
-                        : "Choose an answer before time runs out!"}
-                    </Typography>
-                  </Box> */}
-                </Box>
               </Box>
             </Box>
           )}
 
-          {/* Battle ended - basic finished message */}
           {finished && !showResultDialog && (
             <>
               <Box
@@ -1639,7 +1217,6 @@ export default function BattleDetailPage() {
         </Box>
       </Box>
 
-      {/* Results Dialog */}
       <Dialog
         open={showResultDialog}
         onClose={() => setShowResultDialog(false)}
@@ -1671,15 +1248,10 @@ export default function BattleDetailPage() {
             </Box>
             <Box
               sx={{
-                // display: "flex",
-                // justifyContent: "space-between",
                 alignItems: "center",
                 marginBottom: 2,
               }}
             >
-              {/* <Typography sx={{ textAlign: "center" }} variant="h6">
-                Điểm
-              </Typography> */}
               <Box
                 sx={{
                   display: "flex",
@@ -1698,10 +1270,15 @@ export default function BattleDetailPage() {
                   }}
                 >
                   <Avatar
-                    src={playerInfo?.avatar || ""}
-                    alt={playerInfo?.username || "You"}
-                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
-                  />
+                    sx={{
+                      border: "2px solid #BB9066",
+                      color: "#BB9066",
+                      bgcolor: "#FFFBF3",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {playerInfo?.username?.[0]?.toUpperCase() || "Y"}
+                  </Avatar>
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
                     <Typography fontWeight={600}>
                       {playerInfo?.username || "You"}
@@ -1716,8 +1293,8 @@ export default function BattleDetailPage() {
                     <Typography>Điểm: {playerScore}</Typography>
                   </Box>
                 </Box>
-                <Typography variant="h5" sx={{ alignSelf: "center" }}>
-                  vs
+                <Typography sx={{ alignSelf: "center", fontWeight: 600 }}>
+                  VS
                 </Typography>
                 <Box
                   sx={{
@@ -1729,10 +1306,15 @@ export default function BattleDetailPage() {
                   }}
                 >
                   <Avatar
-                    src={opponentInfo?.avatar || ""}
-                    alt={opponentInfo?.username || "Opponent"}
-                    sx={{ width: 40, height: 40, mx: "auto", mb: 1 }}
-                  />
+                    sx={{
+                      border: "2px solid #BB9066",
+                      color: "#BB9066",
+                      bgcolor: "#FFFBF3",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {opponentInfo?.username?.[0]?.toUpperCase() || "O"}
+                  </Avatar>
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
                     <Typography fontWeight={600}>
                       {opponentInfo?.username || "Opponent"}
@@ -1807,17 +1389,6 @@ export default function BattleDetailPage() {
           >
             Trở về
           </Button>
-          {/* <Button
-            onClick={() => router.push("/battle")}
-            sx={{
-              backgroundColor: "#99BC4D",
-              color: "white",
-              "&:hover": { backgroundColor: "#7A9F38" },
-              marginRight: 2,
-            }}
-          >
-            Trận đấu mới
-          </Button> */}
         </DialogActions>
       </Dialog>
     </Layout>

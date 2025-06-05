@@ -108,7 +108,8 @@ const SideNav: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const websocketRef = useRef<WebSocket | null>(null);
   const [websocketConnected, setWebsocketConnected] = useState<boolean>(false);
-
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
   const [dropdownEl, setDropdownEl] = useState<null | HTMLElement>(null);
   const [grades, setGrades] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -133,6 +134,145 @@ const SideNav: React.FC = () => {
   //     };
   //   }
   // }, [accessToken, userInfo]);
+
+  const cleanupWebSocket = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (websocketRef.current) {
+      websocketRef.current.close();
+      websocketRef.current = null;
+    }
+  };
+
+  const connectWebSocket = () => {
+    if (!accessToken) return;
+
+    // Dọn dẹp kết nối cũ và timeout trước khi tạo kết nối mới
+    cleanupWebSocket();
+
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications?noti-token=${accessToken}`;
+    console.log("Connecting to notification WebSocket:", wsUrl);
+
+    websocketRef.current = new WebSocket(wsUrl);
+    const maxAttempts = 3;
+
+    websocketRef.current.onopen = () => {
+      console.log("Notification WebSocket connection established");
+      reconnectAttemptsRef.current = 0; // Reset số lần thử
+      websocketRef.current?.send(JSON.stringify({ type: "GET_NOTIFICATIONS" }));
+      // Gọi fetchNotifications sau 3 giây nếu không nhận được thông báo
+      setTimeout(() => {
+        if (notifications.length === 0) {
+          console.log(
+            "WebSocket did not return notifications, falling back to HTTP"
+          );
+          fetchNotifications();
+        }
+      }, 3000);
+    };
+
+    websocketRef.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
+
+        if (data.type === "NEW_NOTIFICATION") {
+          const audio = new Audio("/notification-sound.mp3");
+          audio.play().catch((e) => console.log("Sound play error:", e));
+          setNotifications((prev) => [data.notification, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            new Notification(data.notification.title, {
+              body: data.notification.message,
+            });
+          }
+        } else if (data.type === "BATTLE_INVITATION_ACCEPTED") {
+          console.log(
+            "Battle invitation accepted, showing dialog and redirecting to battle:",
+            data.battleId
+          );
+          setBattleAcceptedDialog({ open: true, battleId: data.battleId });
+          setTimeout(() => {
+            setBattleAcceptedDialog({ open: false, battleId: null });
+            router.push(`/battle-detail/${data.battleId}`);
+          }, 2000);
+        } else if (data.type === "NOTIFICATION_READ") {
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.notificationId === data.notificationId
+                ? { ...notification, read: true }
+                : notification
+            )
+          );
+          setUnreadCount((prev) => {
+            const notification = notifications.find(
+              (n) => n.notificationId === data.notificationId
+            );
+            if (notification && !notification.read) {
+              return Math.max(0, prev - 1);
+            }
+            return prev;
+          });
+        } else if (data.type === "ALL_NOTIFICATIONS") {
+          setNotifications(data.notifications || []);
+          const unread = (data.notifications || []).filter(
+            (notification: Notification) => !notification.read
+          ).length;
+          setUnreadCount(unread);
+        } else if (data.type === "UNREAD_NOTIFICATIONS") {
+          setNotifications((prev) => {
+            const existingIds = new Set(prev.map((n) => n.notificationId));
+            const newNotifications = data.notifications.filter(
+              (n: Notification) => !existingIds.has(n.notificationId)
+            );
+            return [...newNotifications, ...prev];
+          });
+          setUnreadCount(data.notifications.length);
+        } else if (data.type === "ALL_NOTIFICATIONS_DELETED") {
+          setNotifications([]);
+          setUnreadCount(0);
+        } else if (data.type === "UNREAD_COUNT") {
+          setUnreadCount(data.data.count || 0);
+        } else if (data.type === "ERROR") {
+          console.error("WebSocket error message:", data.message);
+          fetchNotifications();
+        }
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+        fetchNotifications();
+      }
+    };
+
+    websocketRef.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      fetchNotifications();
+    };
+
+    websocketRef.current.onclose = (event) => {
+      console.log("WebSocket connection closed with code:", event.code);
+      if (event.code !== 1000 && reconnectAttemptsRef.current < maxAttempts) {
+        const delay = Math.pow(2, reconnectAttemptsRef.current) * 1000; // Exponential backoff: 1s, 2s, 4s
+        console.log(
+          `Attempting to reconnect in ${delay / 1000} seconds (${reconnectAttemptsRef.current + 1}/${maxAttempts})...`
+        );
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectAttemptsRef.current++;
+          connectWebSocket();
+        }, delay);
+      } else if (reconnectAttemptsRef.current >= maxAttempts) {
+        console.error("Max reconnect attempts reached. Please check server.");
+        setError("Không thể kết nối thông báo. Vui lòng thử lại sau.");
+      }
+      fetchNotifications();
+    };
+  };
   useEffect(() => {
     if (accessToken && userInfo) {
       connectWebSocket();
@@ -310,122 +450,122 @@ const SideNav: React.FC = () => {
   //     fetchNotifications();
   //   };
   // };
-  const connectWebSocket = () => {
-    if (!accessToken) return;
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications?noti-token=${accessToken}`;
-    console.log("Connecting to notification WebSocket:", wsUrl);
+  // const connectWebSocket = () => {
+  //   if (!accessToken) return;
+  //   const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  //   const wsUrl = `${wsProtocol}//${window.location.host}/ws/notifications?noti-token=${accessToken}`;
+  //   console.log("Connecting to notification WebSocket:", wsUrl);
 
-    if (
-      websocketRef.current &&
-      websocketRef.current.readyState !== WebSocket.CLOSED
-    ) {
-      websocketRef.current.close();
-    }
+  //   if (
+  //     websocketRef.current &&
+  //     websocketRef.current.readyState !== WebSocket.CLOSED
+  //   ) {
+  //     websocketRef.current.close();
+  //   }
 
-    websocketRef.current = new WebSocket(wsUrl);
-    let reconnectAttempts = 0;
-    const maxAttempts = 3;
+  //   websocketRef.current = new WebSocket(wsUrl);
+  //   let reconnectAttempts = 0;
+  //   const maxAttempts = 3;
 
-    websocketRef.current.onopen = () => {
-      console.log("Notification WebSocket connection established");
-      setWebsocketConnected(true);
-      websocketRef.current?.send(JSON.stringify({ type: "GET_NOTIFICATIONS" }));
-      reconnectAttempts = 0; // Reset attempts on success
-    };
+  //   websocketRef.current.onopen = () => {
+  //     console.log("Notification WebSocket connection established");
+  //     setWebsocketConnected(true);
+  //     websocketRef.current?.send(JSON.stringify({ type: "GET_NOTIFICATIONS" }));
+  //     reconnectAttempts = 0; // Reset attempts on success
+  //   };
 
-    websocketRef.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
+  //   websocketRef.current.onmessage = (event) => {
+  //     try {
+  //       const data = JSON.parse(event.data);
+  //       console.log("WebSocket message received:", data);
 
-        if (data.type === "NEW_NOTIFICATION") {
-          const audio = new Audio("/notification-sound.mp3");
-          audio.play().catch((e) => console.log("Sound play error:", e));
-          setNotifications((prev) => [data.notification, ...prev]);
-          setUnreadCount((prev) => prev + 1);
+  //       if (data.type === "NEW_NOTIFICATION") {
+  //         const audio = new Audio("/notification-sound.mp3");
+  //         audio.play().catch((e) => console.log("Sound play error:", e));
+  //         setNotifications((prev) => [data.notification, ...prev]);
+  //         setUnreadCount((prev) => prev + 1);
 
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification(data.notification.title, {
-              body: data.notification.message,
-            });
-          }
-        } else if (data.type === "BATTLE_INVITATION_ACCEPTED") {
-          console.log(
-            "Battle invitation accepted, showing dialog and redirecting to battle:",
-            data.battleId
-          );
-          setBattleAcceptedDialog({ open: true, battleId: data.battleId });
-          setTimeout(() => {
-            setBattleAcceptedDialog({ open: false, battleId: null });
-            router.push(`/battle-detail/${data.battleId}`);
-          }, 2000);
-        } else if (data.type === "NOTIFICATION_READ") {
-          setNotifications((prev) =>
-            prev.map((notification) =>
-              notification.notificationId === data.notificationId
-                ? { ...notification, read: true }
-                : notification
-            )
-          );
-          setUnreadCount((prev) => {
-            const notification = notifications.find(
-              (n) => n.notificationId === data.notificationId
-            );
-            if (notification && !notification.read) {
-              return Math.max(0, prev - 1);
-            }
-            return prev;
-          });
-        } else if (data.type === "ALL_NOTIFICATIONS") {
-          setNotifications(data.notifications || []);
-          const unread = (data.notifications || []).filter(
-            (notification: Notification) => !notification.read
-          ).length;
-          setUnreadCount(unread);
-        } else if (data.type === "UNREAD_NOTIFICATIONS") {
-          setNotifications((prev) => {
-            const existingIds = new Set(prev.map((n) => n.notificationId));
-            const newNotifications = data.notifications.filter(
-              (n: Notification) => !existingIds.has(n.notificationId)
-            );
-            return [...newNotifications, ...prev];
-          });
-          setUnreadCount(data.notifications.length);
-        } else if (data.type === "ALL_NOTIFICATIONS_DELETED") {
-          setNotifications([]);
-          setUnreadCount(0);
-        } else if (data.type === "UNREAD_COUNT") {
-          setUnreadCount(data.data.count || 0);
-        } else if (data.type === "ERROR") {
-          console.error("WebSocket error message:", data.message);
-          fetchNotifications();
-        }
-      } catch (error) {
-        console.error("Error processing WebSocket message:", error);
-        fetchNotifications();
-      }
-    };
+  //         if (
+  //           "Notification" in window &&
+  //           Notification.permission === "granted"
+  //         ) {
+  //           new Notification(data.notification.title, {
+  //             body: data.notification.message,
+  //           });
+  //         }
+  //       } else if (data.type === "BATTLE_INVITATION_ACCEPTED") {
+  //         console.log(
+  //           "Battle invitation accepted, showing dialog and redirecting to battle:",
+  //           data.battleId
+  //         );
+  //         setBattleAcceptedDialog({ open: true, battleId: data.battleId });
+  //         setTimeout(() => {
+  //           setBattleAcceptedDialog({ open: false, battleId: null });
+  //           router.push(`/battle-detail/${data.battleId}`);
+  //         }, 2000);
+  //       } else if (data.type === "NOTIFICATION_READ") {
+  //         setNotifications((prev) =>
+  //           prev.map((notification) =>
+  //             notification.notificationId === data.notificationId
+  //               ? { ...notification, read: true }
+  //               : notification
+  //           )
+  //         );
+  //         setUnreadCount((prev) => {
+  //           const notification = notifications.find(
+  //             (n) => n.notificationId === data.notificationId
+  //           );
+  //           if (notification && !notification.read) {
+  //             return Math.max(0, prev - 1);
+  //           }
+  //           return prev;
+  //         });
+  //       } else if (data.type === "ALL_NOTIFICATIONS") {
+  //         setNotifications(data.notifications || []);
+  //         const unread = (data.notifications || []).filter(
+  //           (notification: Notification) => !notification.read
+  //         ).length;
+  //         setUnreadCount(unread);
+  //       } else if (data.type === "UNREAD_NOTIFICATIONS") {
+  //         setNotifications((prev) => {
+  //           const existingIds = new Set(prev.map((n) => n.notificationId));
+  //           const newNotifications = data.notifications.filter(
+  //             (n: Notification) => !existingIds.has(n.notificationId)
+  //           );
+  //           return [...newNotifications, ...prev];
+  //         });
+  //         setUnreadCount(data.notifications.length);
+  //       } else if (data.type === "ALL_NOTIFICATIONS_DELETED") {
+  //         setNotifications([]);
+  //         setUnreadCount(0);
+  //       } else if (data.type === "UNREAD_COUNT") {
+  //         setUnreadCount(data.data.count || 0);
+  //       } else if (data.type === "ERROR") {
+  //         console.error("WebSocket error message:", data.message);
+  //         fetchNotifications();
+  //       }
+  //     } catch (error) {
+  //       console.error("Error processing WebSocket message:", error);
+  //       fetchNotifications();
+  //     }
+  //   };
 
-    websocketRef.current.onclose = (event) => {
-      console.log("WebSocket connection closed with code:", event.code);
-      setWebsocketConnected(false);
-      if (event.code !== 1000 && reconnectAttempts < maxAttempts) {
-        console.log(
-          `Attempting to reconnect in 5 seconds (${reconnectAttempts + 1}/${maxAttempts})...`
-        );
-        setTimeout(connectWebSocket, 5000);
-        reconnectAttempts++;
-      } else if (reconnectAttempts >= maxAttempts) {
-        console.error("Max reconnect attempts reached. Please check server.");
-        setError("Không thể kết nối thông báo. Vui lòng thử lại sau.");
-      }
-      fetchNotifications();
-    };
-  };
+  //   websocketRef.current.onclose = (event) => {
+  //     console.log("WebSocket connection closed with code:", event.code);
+  //     setWebsocketConnected(false);
+  //     if (event.code !== 1000 && reconnectAttempts < maxAttempts) {
+  //       console.log(
+  //         `Attempting to reconnect in 5 seconds (${reconnectAttempts + 1}/${maxAttempts})...`
+  //       );
+  //       setTimeout(connectWebSocket, 5000);
+  //       reconnectAttempts++;
+  //     } else if (reconnectAttempts >= maxAttempts) {
+  //       console.error("Max reconnect attempts reached. Please check server.");
+  //       setError("Không thể kết nối thông báo. Vui lòng thử lại sau.");
+  //     }
+  //     fetchNotifications();
+  //   };
+  // };
 
   const handleMarkAsRead = async (notificationId: string, link?: string) => {
     try {
@@ -1191,7 +1331,7 @@ const SideNav: React.FC = () => {
                                 <Divider />
                               </React.Fragment>
                             ))} */}
-                            {notifications.map((notification) => (
+                            {/* {notifications.map((notification) => (
                               <React.Fragment key={notification.notificationId}>
                                 <ListItem
                                   component="div"
@@ -1353,6 +1493,436 @@ const SideNav: React.FC = () => {
                                         Làm lại
                                       </Typography>
                                     ) : null}
+                                  </Box>
+                                  {notification.type !==
+                                    "BATTLE_INVITATION" && (
+                                    <Box
+                                      onClick={() =>
+                                        handleMarkAsRead(
+                                          notification.notificationId,
+                                          notification.link
+                                        )
+                                      }
+                                      sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  )}
+                                </ListItem>
+                                <Divider />
+                              </React.Fragment>
+                            ))} */}
+                            {/* {notifications.map((notification) => (
+                              <React.Fragment key={notification.notificationId}>
+                                <ListItem
+                                  component="div"
+                                  sx={{
+                                    bgcolor: notification.read
+                                      ? "white"
+                                      : "#f0f8ff",
+                                    "&:hover": { bgcolor: "#e8f4f8" },
+                                    cursor: "pointer",
+                                    display: "block",
+                                    padding: "8px 16px",
+                                  }}
+                                >
+                                  <ListItemText
+                                    primary={
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                        }}
+                                      >
+                                        {notification.type ===
+                                          "BATTLE_INVITATION" && (
+                                          <SportsIcon
+                                            sx={{
+                                              color: "#ff9800",
+                                              fontSize: 18,
+                                            }}
+                                          />
+                                        )}
+                                        {notification.type ===
+                                          "BATTLE_ACCEPTED" && (
+                                          <CheckCircleIcon
+                                            sx={{
+                                              color: "#4caf50",
+                                              fontSize: 18,
+                                            }}
+                                          />
+                                        )}
+                                        <Typography
+                                          variant="subtitle2"
+                                          sx={{
+                                            fontWeight: notification.read
+                                              ? "normal"
+                                              : "bold",
+                                          }}
+                                        >
+                                          {notification.title}
+                                        </Typography>
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        component="span"
+                                      >
+                                        {notification.message}
+                                      </Typography>
+                                    }
+                                  />
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      mt: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {notification.createdAt &&
+                                      new Date(
+                                        notification.createdAt
+                                      ).toString() !== "Invalid Date"
+                                        ? new Date(
+                                            notification.createdAt
+                                          ).toLocaleString("vi-VN", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit", // Thêm giây nếu muốn
+                                          })
+                                        : new Date().toLocaleString("vi-VN", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit", // Thêm giây nếu muốn
+                                          })}
+                                    </Typography>
+                                    {notification.type ===
+                                      "BATTLE_INVITATION" &&
+                                    !notification.read ? (
+                                      <Box sx={{ display: "flex", gap: 1 }}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const invitationId =
+                                              notification.link
+                                                .split("/")
+                                                .pop();
+                                            handleBattleInvitationAction(
+                                              notification.notificationId,
+                                              invitationId,
+                                              "accept"
+                                            );
+                                          }}
+                                          sx={{
+                                            color: "#4caf50",
+                                            "&:hover": {
+                                              bgcolor: "rgba(76, 175, 80, 0.1)",
+                                            },
+                                          }}
+                                        >
+                                          <CheckCircleIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const invitationId =
+                                              notification.link
+                                                .split("/")
+                                                .pop();
+                                            handleBattleInvitationAction(
+                                              notification.notificationId,
+                                              invitationId,
+                                              "decline"
+                                            );
+                                          }}
+                                          sx={{
+                                            color: "#f44336",
+                                            "&:hover": {
+                                              bgcolor: "rgba(244, 67, 54, 0.1)",
+                                            },
+                                          }}
+                                        >
+                                          <CancelIcon fontSize="small" />
+                                        </IconButton>
+                                      </Box>
+                                    ) : notification.type !==
+                                        "BATTLE_INVITATION" &&
+                                      (notification.type === "QUIZ_FAILED" ||
+                                        notification.type === "QUIZ_RETAKE") ? (
+                                      <Typography
+                                        variant="caption"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRetakeQuiz(
+                                            notification.notificationId,
+                                            notification.link
+                                          );
+                                        }}
+                                        sx={{
+                                          color: "#99BC4D",
+                                          cursor: "pointer",
+                                          "&:hover": {
+                                            textDecoration: "underline",
+                                          },
+                                        }}
+                                      >
+                                        Làm lại
+                                      </Typography>
+                                    ) : null}
+                                  </Box>
+                                  {notification.type !==
+                                    "BATTLE_INVITATION" && (
+                                    <Box
+                                      onClick={() =>
+                                        handleMarkAsRead(
+                                          notification.notificationId,
+                                          notification.link
+                                        )
+                                      }
+                                      sx={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0,
+                                        cursor: "pointer",
+                                      }}
+                                    />
+                                  )}
+                                </ListItem>
+                                <Divider />
+                              </React.Fragment>
+                            ))} */}
+                            {notifications.map((notification) => (
+                              <React.Fragment key={notification.notificationId}>
+                                <ListItem
+                                  component="div"
+                                  sx={{
+                                    bgcolor: "white", // Luôn là màu trắng cho cả đã đọc và chưa đọc
+                                    "&:hover": { bgcolor: "#e8f4f8" },
+                                    cursor: "pointer",
+                                    display: "block",
+                                    padding: "8px 16px",
+                                    position: "relative", // Để định vị chấm tròn
+                                  }}
+                                >
+                                  <ListItemText
+                                    primary={
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 1,
+                                          }}
+                                        >
+                                          {notification.type ===
+                                            "BATTLE_INVITATION" && (
+                                            <SportsIcon
+                                              sx={{
+                                                color: "#ff9800",
+                                                fontSize: 18,
+                                              }}
+                                            />
+                                          )}
+                                          {notification.type ===
+                                            "BATTLE_ACCEPTED" && (
+                                            <CheckCircleIcon
+                                              sx={{
+                                                color: "#4caf50",
+                                                fontSize: 18,
+                                              }}
+                                            />
+                                          )}
+                                          <Typography
+                                            variant="subtitle2"
+                                            sx={{
+                                              color: notification.read
+                                                ? "text.secondary"
+                                                : "#99BC4D",
+                                              fontWeight: "bold", // Tiêu đề luôn in đậm
+                                            }}
+                                          >
+                                            {notification.title}
+                                          </Typography>
+                                        </Box>
+                                        {!notification.read && (
+                                          <Box
+                                            sx={{
+                                              width: 10,
+                                              height: 10,
+                                              bgcolor: "#99BC4D",
+                                              borderRadius: "50%",
+                                              mr: 1,
+                                            }}
+                                          />
+                                        )}
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          color: notification.read
+                                            ? "text.secondary"
+                                            : "black",
+                                          fontWeight: "normal",
+                                        }}
+                                        component="span"
+                                      >
+                                        {notification.message}
+                                      </Typography>
+                                    }
+                                  />
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      mt: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {notification.createdAt &&
+                                      new Date(
+                                        notification.createdAt
+                                      ).toString() !== "Invalid Date"
+                                        ? new Date(
+                                            notification.createdAt
+                                          ).toLocaleString("vi-VN", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                          })
+                                        : new Date().toLocaleString("vi-VN", {
+                                            year: "numeric",
+                                            month: "2-digit",
+                                            day: "2-digit",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                          })}
+                                    </Typography>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                      }}
+                                    >
+                                      {notification.type ===
+                                        "BATTLE_INVITATION" &&
+                                      !notification.read ? (
+                                        <Box sx={{ display: "flex", gap: 1 }}>
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const invitationId =
+                                                notification.link
+                                                  .split("/")
+                                                  .pop();
+                                              handleBattleInvitationAction(
+                                                notification.notificationId,
+                                                invitationId,
+                                                "accept"
+                                              );
+                                            }}
+                                            sx={{
+                                              color: "#4caf50",
+                                              "&:hover": {
+                                                bgcolor:
+                                                  "rgba(76, 175, 80, 0.1)",
+                                              },
+                                            }}
+                                          >
+                                            <CheckCircleIcon fontSize="small" />
+                                          </IconButton>
+                                          <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const invitationId =
+                                                notification.link
+                                                  .split("/")
+                                                  .pop();
+                                              handleBattleInvitationAction(
+                                                notification.notificationId,
+                                                invitationId,
+                                                "decline"
+                                              );
+                                            }}
+                                            sx={{
+                                              color: "#f44336",
+                                              "&:hover": {
+                                                bgcolor:
+                                                  "rgba(244, 67, 54, 0.1)",
+                                              },
+                                            }}
+                                          >
+                                            <CancelIcon fontSize="small" />
+                                          </IconButton>
+                                        </Box>
+                                      ) : notification.type !==
+                                          "BATTLE_INVITATION" &&
+                                        (notification.type === "QUIZ_FAILED" ||
+                                          notification.type ===
+                                            "QUIZ_RETAKE") ? (
+                                        <Typography
+                                          variant="caption"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRetakeQuiz(
+                                              notification.notificationId,
+                                              notification.link
+                                            );
+                                          }}
+                                          sx={{
+                                            color: "#99BC4D",
+                                            cursor: "pointer",
+                                            "&:hover": {
+                                              textDecoration: "underline",
+                                            },
+                                          }}
+                                        >
+                                          Làm lại
+                                        </Typography>
+                                      ) : null}
+                                      {/* Chấm tròn biểu thị chưa đọc */}
+                                    </Box>
                                   </Box>
                                   {notification.type !==
                                     "BATTLE_INVITATION" && (
