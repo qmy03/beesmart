@@ -13,15 +13,19 @@ import {
   LinearProgress,
   MenuItem,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import Image from "next/image";
-
+import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import FlagIcon from "@mui/icons-material/Flag";
+import HistoryIcon from "@mui/icons-material/History";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 interface OnlineUser {
   userId: string;
   username: string;
-  wins?: number;
-  losses?: number;
+  totalBattleWon: number;
+  totalBattleLost: number;
   role?: string;
   grade?: string;
 }
@@ -51,12 +55,6 @@ interface ApiResponse<T = any> {
   message?: string;
 }
 
-interface OnlineUsersResponse {
-  data?: {
-    users: OnlineUser[];
-  };
-}
-
 interface SubjectsResponse {
   data?: {
     subjects: Subject[];
@@ -81,7 +79,42 @@ interface BattleInvitationRequest {
   subjectId: string;
   topic: string;
 }
+interface BattleHistory {
+  battleId: string;
+  opponentUsername: string;
+  gradeName: string;
+  subjectName: string;
+  topic: string;
+  won: boolean;
+  score: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  completedAt: string;
+}
 
+interface BattleUserDetail {
+  battleUserId: string;
+  userId: string;
+  username: string;
+  totalBattleWon: number;
+  totalBattleLost: number;
+  historyResponses: BattleHistory[];
+}
+
+interface BattleUserDetailResponse {
+  data?: BattleUserDetail;
+}
+interface BattleInvitationRequest {
+  inviteeId: string;
+  gradeId: string;
+  subjectId: string;
+  topic: string;
+}
+interface OnlineUsersResponse {
+  totalPages: number;
+  totalElements: number;
+  users: OnlineUser[];
+}
 export default function BattlePage() {
   const [usersOnline, setUsersOnline] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -100,38 +133,149 @@ export default function BattlePage() {
   const [error, setError] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [battleUserDetail, setBattleUserDetail] =
+    useState<BattleUserDetail | null>(null);
+  const [battleHistory, setBattleHistory] = useState<BattleHistory[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage1, setCurrentPage1] = useState(1);
 
-  useEffect(() => {
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const fetchOnlineUsers = async (page: number = 0, search: string = "") => {
     if (!accessToken) return;
+    try {
+      setLoadingUsers(true);
+      const response: ApiResponse<OnlineUsersResponse> = await apiService.get(
+        `/battles/get-online-list?page=${page}&size=10${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      console.log("Online Users Response:", response);
 
-    const fetchOnlineUsers = async () => {
-      try {
-        const response: ApiResponse<OnlineUsersResponse> = await apiService.get(
-          "/battles/get-online-list",
+      // FIX: Sửa cách truy cập dữ liệu để phù hợp với cấu trúc API response
+      const data = response.data?.data; // Thêm .data để truy cập đúng cấu trúc
+      if (data && Array.isArray(data.users)) {
+        const filteredUsers = data.users.filter(
+          (user) => user.userId !== userInfo?.userId
+        );
+        setUsersOnline(
+          (prev) => (page === 0 ? filteredUsers : [...prev, ...filteredUsers]) // Sửa page === 1 thành page === 0
+        );
+        setTotalPages(data.totalPages || 1);
+        setTotalElements(data.totalElements || 0);
+      } else {
+        console.warn("No users found in response:", data);
+        setUsersOnline([]);
+        setTotalPages(1);
+        setTotalElements(0);
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi lấy danh sách người dùng online:", error);
+      setError("Không thể tải danh sách người dùng online.");
+      setUsersOnline([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+  useEffect(() => {
+    fetchOnlineUsers(0, searchTerm);
+  }, [accessToken, userInfo?.userId, searchTerm]);
+
+  const loadMoreHistory = async () => {
+    if (!hasMoreHistory || loadingHistory) return;
+
+    const nextPage = currentPage1 + 1;
+    setCurrentPage1(nextPage);
+
+    try {
+      setLoadingHistory(true);
+      const response: ApiResponse<BattleUserDetailResponse> =
+        await apiService.get(
+          `/battles/user/battle-user-detail?page=${nextPage}&size=5`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           }
         );
-        console.log("Online Users Response:", response);
+      console.log("Battle User Detail Response:", response);
+      if (response.data?.data) {
+        const newHistory = response.data.data.historyResponses;
+        setBattleHistory((prev) => [...prev, ...newHistory]);
+        setHasMoreHistory(newHistory.length === 5);
+      }
+    } catch (error) {
+      console.error("❌ Lỗi khi load more history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
-        const users = response.data?.data?.users || [];
+  // useEffect(() => {
+  //   if (!accessToken) return;
 
-        // Filter out current user from the list
-        const filteredUsers = users.filter(
-          (user: any) => user.userId !== userInfo?.userId
+  //   const fetchOnlineUsers = async () => {
+  //     try {
+  //       const response: ApiResponse<OnlineUsersResponse> = await apiService.get(
+  //         "/battles/get-online-list",
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${accessToken}`,
+  //           },
+  //         }
+  //       );
+  //       console.log("Online Users Response:", response);
+
+  //       const users = response.data?.data?.users || [];
+
+  //       // Filter out current user from the list
+  //       const filteredUsers = users.filter(
+  //         (user: any) => user.userId !== userInfo?.userId
+  //       );
+
+  //       setUsersOnline(filteredUsers);
+  //     } catch (error) {
+  //       console.error("❌ Lỗi khi lấy danh sách người dùng online:", error);
+  //     }
+  //   };
+
+  //   fetchOnlineUsers();
+  // }, [accessToken, userInfo?.userId]);
+  useEffect(() => {
+    const fetchBattleUserDetail = async () => {
+      if (!accessToken) return;
+
+      try {
+        const response = await apiService.get(
+          `/battles/user/battle-user-detail?page=1&size=5`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
         );
 
-        setUsersOnline(filteredUsers);
+        console.log("Battle User Detail Response:", response);
+
+        if (response.data?.data) {
+          setBattleUserDetail(response.data.data);
+          setBattleHistory(response.data.data.historyResponses || []);
+          setHasMoreHistory(response.data.data.historyResponses?.length === 5);
+        }
       } catch (error) {
-        console.error("❌ Lỗi khi lấy danh sách người dùng online:", error);
+        console.error("❌ Lỗi khi lấy battle user detail:", error);
       }
     };
 
-    fetchOnlineUsers();
-  }, [accessToken, userInfo?.userId]);
-
+    fetchBattleUserDetail();
+  }, [accessToken]);
   useEffect(() => {
     if (!accessToken) return;
 
@@ -289,7 +433,27 @@ export default function BattlePage() {
   const filteredUsers = usersOnline.filter((user) =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 on search
+    fetchOnlineUsers(0, e.target.value); // Gọi ngay lập tức với search term mới
+  };
+  const loadMoreUsers = () => {
+    if (currentPage >= totalPages || loadingUsers) return;
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    fetchOnlineUsers(nextPage - 1, searchTerm); // Trừ 1 vì API dùng 0-based indexing
+  };
   return (
     <Layout>
       <Box
@@ -333,30 +497,237 @@ export default function BattlePage() {
             <Box
               sx={{
                 flex: 1,
-                backgroundColor: "#90DD81",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
                 borderRadius: 2,
-                p: 2,
                 textAlign: "center",
-                maxHeight: 200,
-                border: "1px solid #ccc",
+                // maxHeight: 200,
               }}
             >
-              <Avatar
+              <Box
                 sx={{
-                  width: 80,
-                  height: 80,
-                  margin: "auto",
-                  mb: 1,
-                  bgcolor: "#FFFBF3",
-                  color: "#BB9066",
-                  fontSize: 32,
-                  border: "2px solid #BB9066",
+                  backgroundColor: "#90DD81",
+                  borderRadius: 2,
+                  p: 2,
+                  textAlign: "center",
+                  // maxHeight: 200,
+                  border: "1px solid #ccc",
                 }}
               >
-                {userInfo?.username?.[0].toUpperCase()}
-              </Avatar>
-              <Box sx={{ fontSize: 18, fontWeight: "bold" }}>
-                {userInfo?.username || "Tên người dùng"}
+                <Avatar
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    margin: "auto",
+                    mb: 1,
+                    bgcolor: "#FFFBF3",
+                    color: "#BB9066",
+                    fontSize: 32,
+                    border: "2px solid #BB9066",
+                    fontWeight: 600,
+                  }}
+                >
+                  {userInfo?.username?.[0].toUpperCase()}
+                </Avatar>
+                <Box sx={{ fontSize: 18, fontWeight: "bold" }}>
+                  {userInfo?.username || "Tên người dùng"}
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mt: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      display: "flex",
+                      gap: 1,
+                      flexDirection: "column",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <EmojiEventsIcon sx={{ fontSize: 30, color: "yellow" }} />
+                      <Typography
+                        sx={{
+                          fontSize: 20,
+                          fontWeight: "bold",
+                          color: "yellow",
+                        }}
+                      >
+                        {battleUserDetail?.totalBattleWon || 0}
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      sx={{ fontSize: 14, fontWeight: "bold", color: "#FFF" }}
+                    >
+                      Trận thắng
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      display: "flex",
+                      gap: 1,
+                      flexDirection: "column",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      {" "}
+                      <FlagIcon sx={{ fontSize: 30, color: "#FFF" }} />
+                      <Typography
+                        sx={{
+                          fontSize: 20,
+                          fontWeight: "bold",
+                          color: "yellow",
+                        }}
+                      >
+                        {battleUserDetail?.totalBattleLost || 0}
+                      </Typography>
+                    </Box>
+
+                    <Typography
+                      sx={{ fontSize: 14, fontWeight: "bold", color: "#FFF" }}
+                    >
+                      Trận thua
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              <Divider />
+              <Box
+                sx={{
+                  backgroundColor: "#FFFFFF",
+                  // border: "1px solid #ccc",
+                  borderRadius: 2,
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: "600",
+                    textAlign: "center",
+                    paddingY: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 1,
+                    fontSize: "20px",
+                    color: "#90DD81",
+                    borderBottom: "1px dashed #ccc",
+                  }}
+                >
+                  TRẬN ĐẤU GẦN ĐÂY
+                </Typography>
+                <Box sx={{ flex: 1, overflow: "auto", maxHeight: 400 }}>
+                  {battleHistory && battleHistory.length > 0 ? (
+                    <>
+                      {battleHistory.map((battle, index) => (
+                        <Box
+                          key={battle.battleId}
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 2,
+                          }}
+                        >
+                          <Box >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                mt: 1,
+                              }}
+                            >
+                              <HistoryIcon sx={{ fontSize: 16 }} />
+                              <Typography
+                                sx={{ fontWeight: "bold", fontSize: 12 }}
+                              >
+                                Trận đấu - {formatDate(battle.completedAt)}
+                              </Typography>
+                            </Box>
+
+                            {/* Hover tooltip component */}
+                            <Tooltip
+                              title={
+                                <Box>
+                                  <Typography sx={{ fontSize: 12, mb: 0.5 }}>
+                                    Đối thủ: {battle.opponentUsername}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: 12, mb: 0.5 }}>
+                                    Môn: {battle.subjectName} -{" "}
+                                    {battle.gradeName}
+                                  </Typography>
+                                  <Typography sx={{ fontSize: 12 }}>
+                                    Điểm: {battle.score} | Đúng:{" "}
+                                    {battle.correctAnswers} | Sai:{" "}
+                                    {battle.incorrectAnswers}
+                                  </Typography>
+                                </Box>
+                              }
+                              arrow
+                              placement="top"
+                            >
+                              <Typography
+                                sx={{
+                                  fontSize: 12,
+                                  color: "#999",
+                                  fontStyle: "italic",
+                                  cursor: "pointer",
+                                  textDecoration: "underline",
+                                  "&:hover": {
+                                    color: "#666",
+                                  },
+                                  
+                                }}
+                              >
+                                Trận đấu đã kết thúc
+                              </Typography>
+                            </Tooltip>
+                          </Box>
+                          {index < battleHistory.length - 1 && (
+                            <Divider sx={{ borderStyle: "dashed" }} />
+                          )}
+                        </Box>
+                      ))}
+
+                      {/* Load More Button */}
+                      {hasMoreHistory && (
+                        <Box sx={{ textAlign: "center", p: 2 }}>
+                          <Button
+                            variant="outlined"
+                            onClick={loadMoreHistory}
+                            disabled={loadingHistory}
+                            sx={{
+                              borderColor: "#90DD81",
+                              color: "#90DD81",
+                              "&:hover": {
+                                backgroundColor: "#90DD81",
+                                color: "white",
+                              },
+                            }}
+                          >
+                            {loadingHistory ? "Đang tải..." : "Xem thêm"}
+                          </Button>
+                        </Box>
+                      )}
+                    </>
+                  ) : (
+                    <Box sx={{ p: 2, textAlign: "center", color: "#666" }}>
+                      <Typography>Chưa có trận đấu nào</Typography>
+                    </Box>
+                  )}
+                </Box>
               </Box>
             </Box>
 
@@ -366,7 +737,7 @@ export default function BattlePage() {
                 flex: 2,
                 borderRadius: 2,
                 textAlign: "center",
-                gap: 2,
+                gap: 3,
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -395,8 +766,9 @@ export default function BattlePage() {
                           height: 50,
                           bgcolor: "#FFFBF3",
                           color: "#BB9066",
-                          fontSize: 32,
+                          fontSize: 24,
                           border: "2px solid #BB9066",
+                          fontWeight: 600,
                         }}
                       >
                         {selectedOpponent.username[0].toUpperCase()}
@@ -411,9 +783,35 @@ export default function BattlePage() {
                         alignItems: "flex-start",
                       }}
                     >
-                      <Typography fontSize={20} fontWeight={600}>
+                      <Typography fontSize={24} fontWeight={600}>
                         {selectedOpponent.username}
                       </Typography>
+                      <Box
+                        sx={{ display: "flex", gap: 3, alignItems: "center" }}
+                      >
+                        <Box
+                          sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                        >
+                          <EmojiEventsIcon sx={{ fontSize: 24 }} />
+                          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
+                            {selectedOpponent.totalBattleWon}
+                          </Typography>
+                          <Typography sx={{ fontSize: 14 }}>
+                            Trận thắng
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                        >
+                          <FlagIcon sx={{ fontSize: 24 }} />
+                          <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>
+                            {selectedOpponent.totalBattleLost}
+                          </Typography>
+                          <Typography sx={{ fontSize: 14 }}>
+                            Trận thua
+                          </Typography>
+                        </Box>
+                      </Box>
                       <Divider sx={{ width: "100%" }} />
                       <Button
                         onClick={() =>
@@ -560,6 +958,46 @@ export default function BattlePage() {
                   </Typography>
                 </Box>
               </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: 1,
+                }}
+              >
+                <Typography sx={{ fontSize: "20px", fontWeight: 600 }}>
+                  THÁCH ĐẤU NGẪU NHIÊN
+                </Typography>
+                <Typography
+                  sx={{ fontSize: "14px", color: "#555", fontStyle: "italic" }}
+                >
+                  Bạn có thể bấm chọn nút thách đấu bên dưới để thách đấu ngẫu
+                  nhiên
+                </Typography>
+                {!matching ? (
+                  <Box>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={startMatching}
+                    >
+                      Thách đấu
+                    </Button>
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ width: "300px", textAlign: "center" }}>
+                      <LinearProgress color="secondary" />
+                    </Box>
+
+                    <Button onClick={cancelMatching} variant="outlined">
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </Box>
             </Box>
             <Box
               sx={{
@@ -569,6 +1007,7 @@ export default function BattlePage() {
                 border: "1px solid #ccc",
                 borderRadius: 4,
                 flex: 1,
+                maxHeight: 300,
               }}
             >
               <Typography
@@ -583,7 +1022,15 @@ export default function BattlePage() {
               >
                 Danh sách học sinh
               </Typography>
-              {filteredUsers.map((user, index) => (
+              <TextField
+                label="Tìm học sinh..."
+                size="small"
+                variant="outlined"
+                value={searchTerm}
+                onChange={handleSearch}
+                sx={{ backgroundColor: "white", margin: 1 }}
+              />
+              {usersOnline.slice(0, 10).map((user, index) => (
                 <Box
                   key={user.userId}
                   sx={{
@@ -593,7 +1040,7 @@ export default function BattlePage() {
                     cursor: "pointer",
                     p: 1.5,
                     borderBottom:
-                      index !== filteredUsers.length - 1
+                      index !== usersOnline.slice(0, 10).length - 1
                         ? "1px dashed #ccc"
                         : "none",
                     position: "relative",
@@ -606,12 +1053,11 @@ export default function BattlePage() {
                       sx={{
                         bgcolor: "#73BAFB",
                         color: "#FFFFFF",
-                        fontWeight: 600
+                        fontWeight: 600,
                       }}
                     >
                       {user.username[0].toUpperCase()}
                     </Avatar>
-                    {/* Online dot */}
                     <Box
                       sx={{
                         position: "absolute",
@@ -625,9 +1071,28 @@ export default function BattlePage() {
                       }}
                     />
                   </Box>
-                  <Typography fontWeight={600} >{user.username}</Typography>
+                  <Typography fontWeight={600}>{user.username}</Typography>
                 </Box>
               ))}
+              {totalElements > 10 && currentPage < totalPages && (
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={loadMoreUsers}
+                    disabled={loadingUsers}
+                    sx={{
+                      borderColor: "#90DD81",
+                      color: "#90DD81",
+                      "&:hover": {
+                        backgroundColor: "#90DD81",
+                        color: "white",
+                      },
+                    }}
+                  >
+                    {loadingUsers ? "Đang tải..." : "Xem thêm"}
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Box>
         </Box>
