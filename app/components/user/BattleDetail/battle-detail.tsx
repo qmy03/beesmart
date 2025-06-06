@@ -1830,7 +1830,7 @@ export default function BattleDetailPage() {
           setError("Failed to load new question. Retrying...");
           fetchFirstQuestion();
         }
-      }, 5000);
+      }, 2000);
     } catch (error) {
       console.error("Error fetching next question:", error);
       setError("Failed to load the next question");
