@@ -23,6 +23,8 @@ import {
 } from "@mui/material";
 import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
 import TextField from "../../textfield";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
 interface PlayerScore {
   userId: string;
   score: number;
@@ -66,7 +68,7 @@ export default function BattleDetailPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [textAnswer, setTextAnswer] = useState("");
   const [battleResults, setBattleResults] = useState<any>(null);
-  const [showResultDialog, setShowResultDialog] = useState(false);
+  // const [showResultDialog, setShowResultDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [playerInfo, setPlayerInfo] = useState<PlayerInfo | null>(null);
@@ -431,14 +433,24 @@ export default function BattleDetailPage() {
     }
   };
 
+  // const handleBattleEnd = (msg: any) => {
+  //   setWinner(msg.winner);
+  //   setFinished(true);
+  //   setBattleResults(msg.results || null);
+  //   if (timerRef.current) clearInterval(timerRef.current);
+
+  //   setTimeout(() => {
+  //     setShowResultDialog(true);
+  //   }, 1000);
+  // };
   const handleBattleEnd = (msg: any) => {
     setWinner(msg.winner);
     setFinished(true);
     setBattleResults(msg.results || null);
     if (timerRef.current) clearInterval(timerRef.current);
-
+    // Chuyển hướng đến trang kết quả
     setTimeout(() => {
-      setShowResultDialog(true);
+      router.push(`/battle-result/${battleId}`);
     }, 1000);
   };
 
@@ -455,7 +467,7 @@ export default function BattleDetailPage() {
       setBattleResults(battleResponse.results || null);
       setFinished(true);
       if (timerRef.current) clearInterval(timerRef.current);
-      setShowResultDialog(true);
+      // setShowResultDialog(true);
     }
   };
 
@@ -617,7 +629,7 @@ export default function BattleDetailPage() {
             overflow: "hidden",
           }}
         >
-          <Box sx={{ bgcolor: "#E8F5E9" }}>
+          <Box sx={{ bgcolor: "#90DD81" }}>
             <Typography
               sx={{
                 fontSize: "24px",
@@ -645,7 +657,7 @@ export default function BattleDetailPage() {
                     display: "flex",
                     alignItems: "center",
                     backgroundColor: "#E8F5E9",
-                    padding: 2,
+                    padding: "4px",
                     borderRadius: 4,
                     width: "35%",
                     gap: 2,
@@ -657,28 +669,83 @@ export default function BattleDetailPage() {
                       color: "#BB9066",
                       bgcolor: "#FFFBF3",
                       fontWeight: 600,
+                      height: 100,
+                      width: 100,
+                      fontSize: 32,
                     }}
                   >
                     {playerInfo?.username?.[0]?.toUpperCase() || "Y"}
                   </Avatar>
 
-                  <Box>
-                    <Typography fontWeight={700}>
-                      You ({playerInfo?.username || "Player"})
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Typography
+                      fontWeight={700}
+                      sx={{
+                        padding: "2px 4px",
+                        borderRadius: 4,
+                        bgcolor: "#ccc",
+                        fontSize: 20,
+                        textAlign: "center",
+                      }}
+                    >
+                      {playerInfo?.username || "Player"}
                     </Typography>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Đúng: </Typography>
-                      <Typography>{playerInfo?.correctAnswers || 0}</Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <CheckCircleIcon
+                            sx={{
+                              color: "#4caf50",
+                              fontSize: 24,
+                            }}
+                          />
+                          <Typography fontSize={18} fontWeight={600}>
+                            {playerInfo?.correctAnswers || 0}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={600}>Câu đúng </Typography>
+                      </Box>
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <CancelIcon
+                            sx={{
+                              color: "#f44336",
+                              fontSize: 24,
+                            }}
+                          />
+                          <Typography fontSize={18} fontWeight={600}>
+                            {playerInfo?.incorrectAnswers || 0}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={600}>Câu sai </Typography>
+                      </Box>
                     </Box>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Sai: </Typography>
-                      <Typography>
-                        {playerInfo?.incorrectAnswers || 0}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Điểm: </Typography>
-                      <Typography>{playerScore}</Typography>
+
+                    <Box
+                      sx={{ display: "flex", gap: "2px", alignItems: "center" }}
+                    >
+                      <Typography fontWeight={600}>Điểm số: </Typography>
+                      <Typography fontWeight={600}>{playerScore}</Typography>
                     </Box>
                   </Box>
                 </Box>
@@ -722,7 +789,7 @@ export default function BattleDetailPage() {
                     display: "flex",
                     alignItems: "center",
                     backgroundColor: "#E8F5E9",
-                    padding: 2,
+                    padding: "4px",
                     borderRadius: 4,
                     width: "35%",
                     gap: 2,
@@ -734,29 +801,81 @@ export default function BattleDetailPage() {
                       color: "#BB9066",
                       bgcolor: "#FFFBF3",
                       fontWeight: 600,
+                      height: 100,
+                      width: 100,
+                      fontSize: 32,
                     }}
                   >
                     {opponentInfo?.username?.[0]?.toUpperCase() || "O"}
                   </Avatar>
-                  <Box>
-                    <Typography fontWeight={700}>
-                      Opponent ({opponentInfo?.username || "Opponent"})
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    <Typography
+                      fontWeight={700}
+                      sx={{
+                        padding: "2px 4px",
+                        borderRadius: 4,
+                        bgcolor: "#ccc",
+                        fontSize: 20,
+                        textAlign: "center",
+                      }}
+                    >
+                      {opponentInfo?.username || "Opponent"}
                     </Typography>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Đúng: </Typography>
-                      <Typography>
-                        {opponentInfo?.correctAnswers || 0}
-                      </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <CheckCircleIcon
+                            sx={{
+                              color: "#4caf50",
+                              fontSize: 24,
+                            }}
+                          />
+                          <Typography fontSize={18} fontWeight={600}>
+                            {opponentInfo?.correctAnswers || 0}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={600}>Câu đúng </Typography>
+                      </Box>
+                      <Box>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            gap: "4px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <CancelIcon
+                            sx={{
+                              color: "#f44336",
+                              fontSize: 24,
+                            }}
+                          />
+                          <Typography fontSize={18} fontWeight={600}>
+                            {opponentInfo?.incorrectAnswers || 0}
+                          </Typography>
+                        </Box>
+                        <Typography fontWeight={600}>Câu sai </Typography>
+                      </Box>
                     </Box>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Sai: </Typography>
-                      <Typography>
-                        {opponentInfo?.incorrectAnswers || 0}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", gap: "2px" }}>
-                      <Typography fontWeight={600}>Điểm:</Typography>
-                      <Typography>{opponentScore} </Typography>
+                    <Box
+                      sx={{ display: "flex", gap: "2px", alignItems: "center" }}
+                    >
+                      <Typography fontWeight={600}>Điểm số:</Typography>
+                      <Typography fontWeight={600}>{opponentScore}</Typography>
                     </Box>
                   </Box>
                 </Box>
@@ -1125,7 +1244,7 @@ export default function BattleDetailPage() {
                         </Typography>
                       )}
 
-                      {isAnswered && (
+                      {/* {isAnswered && (
                         <Box
                           sx={{
                             marginTop: 4,
@@ -1139,7 +1258,7 @@ export default function BattleDetailPage() {
                             Waiting for opponent to answer...
                           </Typography>
                         </Box>
-                      )}
+                      )} */}
                     </Box>
                   ) : (
                     <Box
@@ -1179,7 +1298,7 @@ export default function BattleDetailPage() {
             </Box>
           )}
 
-          {finished && !showResultDialog && (
+          {/* {finished && !showResultDialog && (
             <>
               <Box
                 sx={{
@@ -1213,11 +1332,53 @@ export default function BattleDetailPage() {
                 </Button>
               </Box>
             </>
+          )} */}
+          {finished && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 8,
+                flex: 1,
+                gap: 2,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "24px",
+                  fontWeight: "bold",
+                  textAlign: "center",
+                }}
+              >
+                {winner === userInfo?.userId
+                  ? "🏆 CHIẾN THẮNG! 🏆"
+                  : "🎮 Thua rồi! Hãy thử lại lần sau! 🎮"}
+              </Typography>
+              <Typography sx={{ fontSize: "16px", color: "#666" }}>
+                Đang chuyển đến trang kết quả...
+              </Typography>
+              <Box
+                sx={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  border: "4px solid #f3f3f3",
+                  borderTop: "4px solid #99BC4D",
+                  animation: "spin 1s linear infinite",
+                  "@keyframes spin": {
+                    "0%": { transform: "rotate(0deg)" },
+                    "100%": { transform: "rotate(360deg)" },
+                  },
+                }}
+              />
+            </Box>
           )}
         </Box>
       </Box>
 
-      <Dialog
+      {/* <Dialog
         open={showResultDialog}
         onClose={() => setShowResultDialog(false)}
         fullWidth
@@ -1390,7 +1551,7 @@ export default function BattleDetailPage() {
             Trở về
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </Layout>
   );
 }

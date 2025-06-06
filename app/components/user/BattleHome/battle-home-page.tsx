@@ -725,7 +725,7 @@ export default function BattlePage() {
                       fontWeight: "bold",
                       fontSize: 18,
                       border: "3px solid #A7A5A5",
-                      p: 4,
+                      padding: "16px",
                       borderRadius: 4,
                       display: "flex",
                       gap: 2,
@@ -733,9 +733,10 @@ export default function BattlePage() {
                       justifyContent: "center",
                       bgcolor: "#EAE8E8",
                       flex: 1,
+                      maxHeight: "200px",
                     }}
                   >
-                    <Box sx={{ flex: 1, display: "flex" }}>
+                    <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
                       <Avatar
                         sx={{
                           width: 50,
@@ -805,12 +806,16 @@ export default function BattlePage() {
                 <>
                   <Box
                     sx={{
+                      display:"flex",
+                      alignItems: "center",
                       fontWeight: "bold",
                       fontSize: 18,
                       border: "3px solid #A7A5A5",
-                      p: 4,
+                      padding: "16px",
                       borderRadius: 4,
                       bgcolor: "#EAE8E8",
+                      height: "200px",
+                      justifyContent: "center",
                     }}
                   >
                     Bạn hãy chọn người đang tham dự đấu trường để thách đấu nhé
