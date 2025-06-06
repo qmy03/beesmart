@@ -87,9 +87,9 @@ export default function BattleDetailPage() {
     if (isCorrect === null) {
       return "Hãy trả lời câu hỏi bên dưới!";
     }
-    return isCorrect
-      ? "Tuyệt vời! Tiếp tục phát huy nhé!"
-      : "Đừng nản lòng! Cố gắng lên nào!";
+    // return isCorrect
+    //   ? "Tuyệt vời! Tiếp tục phát huy nhé!"
+    //   : "Đừng nản lòng! Cố gắng lên nào!";
   };
 
   useEffect(() => {
@@ -241,11 +241,11 @@ export default function BattleDetailPage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [accessToken, battleId, userInfo?.userId]);
-  const handleAnswerResult = (msg: any) => {
-    if (msg.userId === userInfo?.userId) {
-      setPlayerLastAnswerCorrect(msg.isCorrect);
-    }
-  };
+  // const handleAnswerResult = (msg: any) => {
+  //   if (msg.userId === userInfo?.userId) {
+  //     setPlayerLastAnswerCorrect(msg.isCorrect);
+  //   }
+  // };
 
   const handleBothAnswered = async () => {
     if (!battleId || !accessToken) return;
@@ -374,11 +374,11 @@ export default function BattleDetailPage() {
         }
       );
       console.log("Time-expired answer submitted successfully:", res);
-      if (res.data && res.data.isCorrect !== undefined) {
-        setPlayerLastAnswerCorrect(res.data.isCorrect);
-      } else {
-        setPlayerLastAnswerCorrect(false);
-      }
+      // if (res.data && res.data.isCorrect !== undefined) {
+      //   setPlayerLastAnswerCorrect(res.data.isCorrect);
+      // } else {
+      //   setPlayerLastAnswerCorrect(false);
+      // }
     } catch (error) {
       console.error("Error submitting time-expired answer:", error);
       setError("Failed to submit answer");
@@ -519,9 +519,9 @@ export default function BattleDetailPage() {
         }
       );
 
-      if (response.data && response.data.isCorrect !== undefined) {
-        setPlayerLastAnswerCorrect(response.data.isCorrect);
-      }
+      // if (response.data && response.data.isCorrect !== undefined) {
+      //   setPlayerLastAnswerCorrect(response.data.isCorrect);
+      // }
     } catch (error) {
       console.error("Error submitting answer:", error);
       setError("Failed to submit answer");
@@ -593,7 +593,7 @@ export default function BattleDetailPage() {
     if (!isAnswered) return "/bee-2.png";
 
     if (isCorrect === null) return "/bee-2.png";
-    return isCorrect ? "/bee-1.png" : "/bee-3.png";
+    // return isCorrect ? "/bee-1.png" : "/bee-3.png";
   };
   return (
     <Layout>

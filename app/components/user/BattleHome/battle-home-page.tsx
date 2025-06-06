@@ -119,6 +119,7 @@ export default function BattlePage() {
   const [usersOnline, setUsersOnline] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOpponent, setSelectedOpponent] = useState<any | null>(null);
+  const [sendingInvitation, setSendingInvitation] = useState(false);
   const accessToken = localStorage.getItem("accessToken");
   const { userInfo } = useAuth();
   console.log("User Info:", userInfo);
@@ -218,43 +219,13 @@ export default function BattlePage() {
     }
   };
 
-  // useEffect(() => {
-  //   if (!accessToken) return;
-
-  //   const fetchOnlineUsers = async () => {
-  //     try {
-  //       const response: ApiResponse<OnlineUsersResponse> = await apiService.get(
-  //         "/battles/get-online-list",
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${accessToken}`,
-  //           },
-  //         }
-  //       );
-  //       console.log("Online Users Response:", response);
-
-  //       const users = response.data?.data?.users || [];
-
-  //       // Filter out current user from the list
-  //       const filteredUsers = users.filter(
-  //         (user: any) => user.userId !== userInfo?.userId
-  //       );
-
-  //       setUsersOnline(filteredUsers);
-  //     } catch (error) {
-  //       console.error("❌ Lỗi khi lấy danh sách người dùng online:", error);
-  //     }
-  //   };
-
-  //   fetchOnlineUsers();
-  // }, [accessToken, userInfo?.userId]);
   useEffect(() => {
     const fetchBattleUserDetail = async () => {
       if (!accessToken) return;
 
       try {
         const response = await apiService.get(
-          `/battles/user/battle-user-detail?page=1&size=5`,
+          `/battles/user/battle-user-detail?page=0&size=5`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -399,6 +370,8 @@ export default function BattlePage() {
     }
 
     try {
+      setSendingInvitation(true);
+
       const invitationRequest = {
         inviteeId: opponentId,
         gradeId: selectedGrade,
@@ -419,13 +392,15 @@ export default function BattlePage() {
       if (response.data?.status === 200) {
         alert("Lời mời thách đấu đã được gửi thành công!");
         // Optionally reset selected opponent
-        setSelectedOpponent(null);
+        // setSelectedOpponent(null);
       }
     } catch (error: any) {
       console.error("❌ Error sending battle invitation:", error);
       const errorMessage =
         error.response?.data?.message || "Không thể gửi lời mời thách đấu";
       setError(errorMessage);
+    } finally {
+      setSendingInvitation(false);
     }
   };
 
@@ -441,6 +416,8 @@ export default function BattlePage() {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
+      timeZone: "UTC",
     });
   };
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -640,7 +617,7 @@ export default function BattlePage() {
                             gap: 2,
                           }}
                         >
-                          <Box >
+                          <Box>
                             <Box
                               sx={{
                                 display: "flex",
@@ -688,7 +665,6 @@ export default function BattlePage() {
                                   "&:hover": {
                                     color: "#666",
                                   },
-                                  
                                 }}
                               >
                                 Trận đấu đã kết thúc
@@ -818,8 +794,9 @@ export default function BattlePage() {
                           sendBattleInvitation(selectedOpponent.userId)
                         }
                         sx={{ maxWidth: 100 }}
+                        disabled={sendingInvitation}
                       >
-                        Thách đấu
+                        {sendingInvitation ? "Đang mời..." : "Thách đấu"}
                       </Button>
                     </Box>
                   </Box>
