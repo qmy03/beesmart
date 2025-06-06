@@ -5,15 +5,10 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import { Button } from "../../button";
 import apiService from "@/app/untils/api";
 import Layout from "@/app/components/user/Home/layout";
-import {
-  Box,
-  Typography,
-  Avatar,
-  Divider,
-} from "@mui/material";
+import { Box, Typography, Avatar, Divider } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-
+import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 interface PlayerInfo {
   userId: string;
   username: string;
@@ -42,50 +37,61 @@ export default function BattleResultPage() {
   useEffect(() => {
     const fetchBattleResult = async () => {
       if (!battleId || !userInfo?.userId) {
-        console.log("Missing battleId or userInfo:", { battleId, userId: userInfo?.userId });
+        console.log("Missing battleId or userInfo:", {
+          battleId,
+          userId: userInfo?.userId,
+        });
         return;
       }
 
       try {
         // Đảm bảo chỉ truy cập localStorage khi đã mount
-        const accessToken = typeof window !== 'undefined' ? localStorage.getItem("accessToken") : null;
-        
+        const accessToken =
+          typeof window !== "undefined"
+            ? localStorage.getItem("accessToken")
+            : null;
+
         if (!accessToken) {
           setError("Không tìm thấy token xác thực");
           setLoading(false);
           return;
         }
 
-        console.log("Calling API with:", { battleId, accessToken: !!accessToken });
-        
-        const response = await apiService.get(
-          `/battles/${battleId}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+        console.log("Calling API with:", {
+          battleId,
+          accessToken: !!accessToken,
+        });
+
+        const response = await apiService.get(`/battles/${battleId}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
         console.log("API Response:", response);
         const data = response.data.data;
         console.log("Battle Result Data:", data);
         console.log("Player Scores:", data.playerScores);
         setBattleResult(data);
-        
+
         // Lưu vào localStorage sau khi gọi API thành công
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`battle_result_${battleId}`, JSON.stringify(data));
+        if (typeof window !== "undefined") {
+          localStorage.setItem(
+            `battle_result_${battleId}`,
+            JSON.stringify(data)
+          );
         }
       } catch (error: any) {
         console.error("Error fetching battle result:", error);
         console.error("Error details:", error.response?.data);
-        setError(`Failed to load battle result: ${error.response?.data?.message || error.message}`);
+        setError(
+          `Failed to load battle result: ${error.response?.data?.message || error.message}`
+        );
       } finally {
         setLoading(false);
       }
     };
 
     // Kiểm tra localStorage trước (chỉ khi đã mount)
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const storedResult = localStorage.getItem(`battle_result_${battleId}`);
       if (storedResult) {
         try {
@@ -115,7 +121,7 @@ export default function BattleResultPage() {
       const opponentInfo = battleResult.playerScores?.find(
         (player) => player.userId !== userInfo?.userId
       );
-      
+
       console.log("Current User ID:", userInfo.userId);
       console.log("Player Info:", playerInfo);
       console.log("Opponent Info:", opponentInfo);
@@ -124,13 +130,24 @@ export default function BattleResultPage() {
 
   // Debug: Log state changes
   useEffect(() => {
-    console.log("State update:", { loading, error, battleResult: !!battleResult });
+    console.log("State update:", {
+      loading,
+      error,
+      battleResult: !!battleResult,
+    });
   }, [loading, error, battleResult]);
 
   if (loading) {
     return (
       <Layout>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "50vh",
+          }}
+        >
           <Typography>Đang tải kết quả...</Typography>
         </Box>
       </Layout>
@@ -140,16 +157,26 @@ export default function BattleResultPage() {
   if (error || !battleResult) {
     return (
       <Layout>
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '50vh', justifyContent: 'center' }}>
-          <Typography color="error">{error || "Không thể tải kết quả"}</Typography>
-          <Button 
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            minHeight: "50vh",
+            justifyContent: "center",
+          }}
+        >
+          <Typography color="error">
+            {error || "Không thể tải kết quả"}
+          </Typography>
+          <Button
             onClick={() => {
               // Clear localStorage và retry
-              if (typeof window !== 'undefined') {
+              if (typeof window !== "undefined") {
                 localStorage.removeItem(`battle_result_${battleId}`);
               }
               window.location.reload();
-            }} 
+            }}
             sx={{ mt: 2, mr: 2 }}
           >
             Thử lại
@@ -163,13 +190,15 @@ export default function BattleResultPage() {
   }
 
   // Tìm thông tin player và opponent từ playerScores array
-  const playerInfo = battleResult.playerScores?.find(
-    (player) => player.userId === userInfo?.userId
-  ) || null;
-  
-  const opponentInfo = battleResult.playerScores?.find(
-    (player) => player.userId !== userInfo?.userId
-  ) || null;
+  const playerInfo =
+    battleResult.playerScores?.find(
+      (player) => player.userId === userInfo?.userId
+    ) || null;
+
+  const opponentInfo =
+    battleResult.playerScores?.find(
+      (player) => player.userId !== userInfo?.userId
+    ) || null;
 
   const { winner, questions } = battleResult;
 
@@ -231,9 +260,9 @@ export default function BattleResultPage() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                //   backgroundColor: "rgba(0, 0, 0, 0.3)",
+                  //   backgroundColor: "rgba(0, 0, 0, 0.3)",
                   borderRadius: 2,
-                }
+                },
               }}
             >
               <Box
@@ -272,7 +301,8 @@ export default function BattleResultPage() {
                   borderRadius: 2,
                   padding: 3,
                   flex: 1,
-                  backgroundColor: winner === userInfo?.userId ? "#E8F5E9" : "#FFFFFF",
+                  backgroundColor:
+                    winner === userInfo?.userId ? "#E8F5E9" : "#FFFFFF",
                 }}
               >
                 <Avatar
@@ -281,36 +311,36 @@ export default function BattleResultPage() {
                     color: "#BB9066",
                     bgcolor: "#FFFBF3",
                     fontWeight: 600,
-                    width: 80,
-                    height: 80,
+                    width: 50,
+                    height: 50,
                     fontSize: 24,
                   }}
                 >
                   {playerInfo?.username?.[0]?.toUpperCase() || "P"}
                 </Avatar>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Typography variant="h6" fontWeight={600}>
+                  <Typography fontSize={24} fontWeight={600}>
                     {playerInfo?.username || "Player"}
                   </Typography>
-                  
-                  <Box sx={{ display: "flex", gap: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <CheckCircleIcon sx={{ color: "#4caf50", fontSize: 20 }} />
-                      <Typography fontWeight={600}>
-                        {playerInfo?.correctAnswers || 0} đúng
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <CancelIcon sx={{ color: "#f44336", fontSize: 20 }} />
-                      <Typography fontWeight={600}>
-                        {playerInfo?.incorrectAnswers || 0} sai
-                      </Typography>
-                    </Box>
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <CheckCircleIcon sx={{ color: "#4caf50", fontSize: 20 }} />
+                    <Typography fontWeight={600}>
+                      Số câu trả lời đúng: {playerInfo?.correctAnswers || 0}
+                    </Typography>
                   </Box>
-                  
-                  <Typography variant="h6" fontWeight={600} color="primary">
-                    Điểm: {playerInfo?.score || 0}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <CancelIcon sx={{ color: "#f44336", fontSize: 20 }} />
+                    <Typography fontWeight={600}>
+                      Số câu trả lời sai: {playerInfo?.incorrectAnswers || 0}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <WorkspacePremiumIcon sx={{ fontSize: 20 }} />
+                    <Typography fontWeight={600}>
+                      Điểm: {playerInfo?.score || 0}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
 
@@ -328,8 +358,8 @@ export default function BattleResultPage() {
                   borderRadius: 2,
                   padding: 3,
                   flex: 1,
-                  backgroundColor: winner !== userInfo?.userId ? "#E8F5E9" : "#FFFFFF",
-                  
+                  backgroundColor:
+                    winner !== userInfo?.userId ? "#E8F5E9" : "#FFFFFF",
                 }}
               >
                 <Avatar
@@ -338,36 +368,36 @@ export default function BattleResultPage() {
                     color: "#BB9066",
                     bgcolor: "#FFFBF3",
                     fontWeight: 600,
-                    width: 80,
-                    height: 80,
+                    width: 50,
+                    height: 50,
                     fontSize: 24,
                   }}
                 >
                   {opponentInfo?.username?.[0]?.toUpperCase() || "O"}
                 </Avatar>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Typography variant="h6" fontWeight={600}>
+                  <Typography fontSize={24} fontWeight={600}>
                     {opponentInfo?.username || "Opponent"}
                   </Typography>
-                  
-                  <Box sx={{ display: "flex", gap: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <CheckCircleIcon sx={{ color: "#4caf50", fontSize: 20 }} />
-                      <Typography fontWeight={600}>
-                        {opponentInfo?.correctAnswers || 0} đúng
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                      <CancelIcon sx={{ color: "#f44336", fontSize: 20 }} />
-                      <Typography fontWeight={600}>
-                        {opponentInfo?.incorrectAnswers || 0} sai
-                      </Typography>
-                    </Box>
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <CheckCircleIcon sx={{ color: "#4caf50", fontSize: 20 }} />
+                    <Typography fontWeight={600}>
+                      Số câu trả lời đúng: {opponentInfo?.correctAnswers || 0}
+                    </Typography>
                   </Box>
-                  
-                  <Typography variant="h6" fontWeight={600} color="primary">
-                    Điểm: {opponentInfo?.score || 0}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <CancelIcon sx={{ color: "#f44336", fontSize: 20 }} />
+                    <Typography fontWeight={600}>
+                      Số câu trả lời sai: {opponentInfo?.incorrectAnswers || 0}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <WorkspacePremiumIcon sx={{ fontSize: 20 }} />{" "}
+                    <Typography fontWeight={600}>
+                      Điểm: {opponentInfo?.score || 0}
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Box>
@@ -375,7 +405,10 @@ export default function BattleResultPage() {
             {/* Question Summary */}
             {questions && questions.length > 0 && (
               <Box>
-                <Typography variant="h5" sx={{ marginBottom: 3, fontWeight: 600 }}>
+                <Typography
+                  variant="h5"
+                  sx={{ marginBottom: 3, fontWeight: 600 }}
+                >
                   Chi tiết từng câu hỏi
                 </Typography>
                 <Divider sx={{ marginBottom: 3 }} />
@@ -391,36 +424,54 @@ export default function BattleResultPage() {
                       border: "1px solid #ddd",
                     }}
                   >
-                    <Typography variant="h6" fontWeight={600} sx={{ marginBottom: 2 }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={600}
+                      sx={{ marginBottom: 2 }}
+                    >
                       Câu {index + 1}: {question.content}
                     </Typography>
-                    
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+
+                    <Box
+                      sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                    >
                       <Typography>
                         <strong>Câu trả lời của bạn:</strong>{" "}
-                        <span style={{ 
-                          color: question.correct ? "#4caf50" : "#f44336",
-                          fontWeight: 600 
-                        }}>
+                        <span
+                          style={{
+                            color: question.correct ? "#4caf50" : "#f44336",
+                            fontWeight: 600,
+                          }}
+                        >
                           {question.userAnswer || "Không trả lời"}
                         </span>
                       </Typography>
-                      
+
                       <Typography>
                         <strong>Đáp án đúng:</strong>{" "}
                         <span style={{ color: "#4caf50", fontWeight: 600 }}>
                           {question.correctAnswer}
                         </span>
                       </Typography>
-                      
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
-                        <Typography variant="h6" sx={{ 
-                          color: question.correct ? "#4caf50" : "#f44336",
-                          fontWeight: 600 
-                        }}>
+
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mt: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            color: question.correct ? "#4caf50" : "#f44336",
+                            fontWeight: 600,
+                          }}
+                        >
                           {question.correct ? "✓ Đúng" : "✗ Sai"}
                         </Typography>
-                        
+
                         {question.timeTaken && (
                           <Typography variant="body2" color="text.secondary">
                             Thời gian: {question.timeTaken}s
@@ -434,7 +485,14 @@ export default function BattleResultPage() {
             )}
 
             {/* Action Buttons */}
-            <Box sx={{ display: "flex", gap: 2, justifyContent: "center", marginTop: 4 }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                justifyContent: "center",
+                marginTop: 4,
+              }}
+            >
               <Button
                 onClick={() => router.push("/battle-home")}
                 sx={{
