@@ -1,5 +1,13 @@
 import TextField from "@/app/components/textfield";
-import { Box, Card, CardContent, MenuItem, Typography } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  MenuItem,
+  Skeleton,
+  Typography,
+} from "@mui/material";
+import React from "react";
 import {
   CartesianGrid,
   Legend,
@@ -11,10 +19,19 @@ import {
 } from "recharts";
 
 const transformData = (rawData: any, type: "quiz" | "arena") => {
-  return rawData.map((item: any) => ({
+  // Thêm kiểm tra dữ liệu đầu vào
+  if (!rawData || !Array.isArray(rawData) || rawData.length === 0) {
+    console.log(`[transformData] No data available for ${type}:`, rawData);
+    return [];
+  }
+
+  const transformed = rawData.map((item: any) => ({
     date: item.date,
     ...item.averages,
   }));
+
+  console.log(`[transformData] Transformed ${type} data:`, transformed);
+  return transformed;
 };
 
 const QuizAverageBarChart = ({
@@ -42,20 +59,30 @@ const QuizAverageBarChart = ({
     type === "quiz"
       ? `Điểm trung bình quiz trong tháng ${month}/${year}`
       : `Điểm trung bình đấu trường trong tháng ${month}/${year}`;
-  const chartData =
-    data && Array.isArray(data) ? transformData(data, type) : [];
 
-  console.log(chartData);
+  // Cải thiện logic xử lý dữ liệu
+  const chartData = React.useMemo(() => {
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      console.log(`[${type}] No chart data available:`, data);
+      return [];
+    }
+
+    const transformed = Array.isArray(data) ? transformData(data, type) : [];
+    console.log(`[${type}] Final chart data:`, transformed);
+    return transformed;
+  }, [data, type]);
+
   const calculateChartWidth = (dataLength: number) => {
-    const minWidth = 450; // Độ rộng tối thiểu
+    const minWidth = 950; // Độ rộng tối thiểu
     const maxWidth = 1400; // Độ rộng tối đa
     const widthPerDay = 45; // Độ rộng cho mỗi ngày
-    
+
     const calculatedWidth = Math.max(minWidth, dataLength * widthPerDay);
     return Math.min(calculatedWidth, maxWidth);
   };
 
   const chartWidth = calculateChartWidth(chartData?.length || 0);
+
   const CustomTick = ({ x, y, payload }: any) => (
     <text
       x={x}
@@ -69,8 +96,29 @@ const QuizAverageBarChart = ({
       {payload.value}
     </text>
   );
+  const LoadingSkeleton = () => (
+    <Box sx={{ minWidth: chartWidth }}>
+      <Skeleton
+        variant="rectangular"
+        width="100%"
+        height={400}
+        animation="wave"
+      />
+    </Box>
+  );
+
+  // Thêm log để debug
+  React.useEffect(() => {
+    console.log(`[${type}] Component props:`, {
+      dataLength: data?.length || 0,
+      selectedSubject,
+      loading,
+      chartDataLength: chartData.length,
+    });
+  }, [data, selectedSubject, loading, chartData, type]);
+
   return (
-    <Box sx={{ width: "100%" }}>
+    <Card variant="outlined" sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
         <Box
           sx={{
@@ -134,20 +182,9 @@ const QuizAverageBarChart = ({
           }}
         >
           {loading ? (
-            <Box
-              sx={{
-                height: 400,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography color="text.secondary">
-                Đang tải dữ liệu...
-              </Typography>
-            </Box>
+            <LoadingSkeleton />
           ) : chartData && chartData.length > 0 ? (
-            <Box sx={{ minWidth: chartWidth }}>
+            <Box sx={{ minWidth: chartWidth, display: "flex", justifyContent: "center" }}>
               <LineChart
                 width={chartWidth}
                 height={400}
@@ -180,18 +217,7 @@ const QuizAverageBarChart = ({
               </LineChart>
             </Box>
           ) : (
-            <Box
-              sx={{
-                height: 400,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Typography color="text.secondary">
-                Đang tải dữ liệu...
-              </Typography>
-            </Box>
+            <LoadingSkeleton />
           )}
         </Box>
 
@@ -243,7 +269,7 @@ const QuizAverageBarChart = ({
           ))}
         </Box>
       </CardContent>
-    </Box>
+    </Card>
   );
 };
 

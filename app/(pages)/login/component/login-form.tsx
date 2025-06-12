@@ -50,7 +50,7 @@ const LoginForm = () => {
     }
 
     if (!isValid) {
-      return; 
+      return;
     }
 
     try {
@@ -126,9 +126,7 @@ const LoginForm = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   error={passwordError}
-                  helperText={
-                    passwordError ? "Vui lòng nhập mật khẩu" : ""
-                  }
+                  helperText={passwordError ? "Vui lòng nhập mật khẩu" : ""}
                   FormHelperTextProps={{
                     sx: {
                       paddingY: "2px",
@@ -158,7 +156,7 @@ const LoginForm = () => {
                   }}
                 />
               </FormControl>
-              <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center justify-between mt-2 mb-2">
                 <FormControlLabel
                   control={<Checkbox sx={{ color: "#99BC4D" }} />}
                   label="Nhớ đăng nhập"
@@ -181,13 +179,14 @@ const LoginForm = () => {
               {errorMessage && (
                 <Typography color="error">{errorMessage}</Typography>
               )}
-              <Button variant="contained" type="submit" className="mt-4 w-full">
+              <Button variant="contained" type="submit" sx={{ marginTop: 4 }}>
                 Đăng nhập
               </Button>
               <Typography
                 variant="body2"
                 align="center"
-                className="mt-3 text-sm text-gray-500"
+                sx={{ marginTop: 2, color: "#6b7280 " }}
+                // className="mt-5 text-sm text-gray-500"
               >
                 Bạn chưa có tài khoản?{" "}
                 <Link
@@ -206,14 +205,10 @@ const LoginForm = () => {
             onClose={() => setErrorMessage(null)}
           />
         </form>
-        <ForgotPassword
-          open={openForgotPassword}
-          onClose={handleCloseDialog} 
-        />
+        <ForgotPassword open={openForgotPassword} onClose={handleCloseDialog} />
       </Box>
     </Layout>
   );
 };
 
 export default LoginForm;
-

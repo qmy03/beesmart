@@ -374,7 +374,7 @@ const StatisticLessonsPage = () => {
           display: "flex",
           flexDirection: "column",
           padding: "0 10px",
-          gap: 2,
+          gap: 1,
         }}
       >
         <Box
@@ -419,13 +419,12 @@ const StatisticLessonsPage = () => {
               helperText={error}
             />
           </Box>
-          <Card
+          <Box
             sx={{
               width: "100%",
               flexGrow: 1,
               borderRadius: 2,
-              boxShadow: 3,
-              border: "none",
+              // border: "none",
             }}
           >
             <LessonViewsBarChart
@@ -437,7 +436,7 @@ const StatisticLessonsPage = () => {
               subjects={subjects}
               loading={loading}
             />
-          </Card>
+          </Box>
         </Box>
       </Box>
     </Layout>

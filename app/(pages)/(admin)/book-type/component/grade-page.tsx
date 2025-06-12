@@ -292,9 +292,9 @@ const GradePage = () => {
             minHeight: 0,
           }}
         >
-          {isLoading ? (
+          {/* {isLoading ? (
             <Typography>Đang tải...</Typography>
-          ) : (
+          ) : ( */}
             <Box
               sx={{
                 boxShadow: 4,
@@ -445,7 +445,7 @@ const GradePage = () => {
                 onRowsPerPageChange={handleChangeRowsPerPage}
               />
             </Box>
-          )}
+          {/* )} */}
         </Box>
 
         <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>

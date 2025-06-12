@@ -17,11 +17,24 @@ import {
   Alert,
   TablePagination,
   Checkbox,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
 } from "@mui/material";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import apiService from "@/app/untils/api";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+
+// Helper function to format date to dd/mm/yyyy
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 interface User {
   userId: string;
@@ -45,6 +58,14 @@ const UserPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDelete, setOpenDelete] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+
+  // Search states
+  const [searchUsername, setSearchUsername] = useState("");
+  const [searchEmail, setSearchEmail] = useState("");
+  const [searchRole, setSearchRole] = useState("");
+  const [searchStatus, setSearchStatus] = useState("All");
+  const [searchDate, setSearchDate] = useState("");
+
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -68,7 +89,7 @@ const UserPage = () => {
 
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = users.map((user) => user.userId);
+      const newSelected = filteredUsers.map((user) => user.userId);
       setSelected(newSelected);
       setOpenDelete(true);
     } else {
@@ -107,10 +128,50 @@ const UserPage = () => {
     setPage(0);
   };
 
-  const paginatedUsers = users.slice(
+  // Filter users based on search criteria
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchUsername = user.username
+        .toLowerCase()
+        .includes(searchUsername.toLowerCase());
+      const matchEmail = user.email
+        .toLowerCase()
+        .includes(searchEmail.toLowerCase());
+      const matchRole = user.role
+        .toLowerCase()
+        .includes(searchRole.toLowerCase());
+
+      let matchStatus = true;
+      if (searchStatus === "On") {
+        matchStatus = user.active === true;
+      } else if (searchStatus === "Off") {
+        matchStatus = user.active === false;
+      }
+
+      let matchDate = true;
+      if (searchDate) {
+        const userFormattedDate = formatDate(user.createdAt);
+        matchDate = userFormattedDate.includes(searchDate);
+      }
+
+      return (
+        matchUsername && matchEmail && matchRole && matchStatus && matchDate
+      );
+    });
+  }, [
+    users,
+    searchUsername,
+    searchEmail,
+    searchRole,
+    searchStatus,
+    searchDate,
+  ]);
+
+  const paginatedUsers = filteredUsers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -119,6 +180,7 @@ const UserPage = () => {
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
+
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
@@ -195,129 +257,217 @@ const UserPage = () => {
         </Box>
 
         <Box sx={{ marginY: 2, maxHeight: "50vh" }}>
-          {loading ? (
-            <Typography>Đang tải...</Typography>
-          ) : (
-            <>
-              <Box sx={{ boxShadow: 4, borderRadius: 2, overflow: "auto" }}>
-                <TableContainer
-                  sx={{
-                    borderRadius: 2,
-                    flex: 1,
-                    height: "80vh",
-                    overflow: "auto",
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                      <TableRow>
-                        <TableCell>
-                          <Checkbox
-                            indeterminate={
-                              selected.length > 0 &&
-                              users.length > 0 &&
-                              selected.length < users.length
-                            }
+          <>
+            <Box sx={{ boxShadow: 4, borderRadius: 2, overflow: "auto" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  flex: 1,
+                  height: "80vh",
+                  overflow: "auto",
+                }}
+              >
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell sx={{ border: "none" }}>
+                        <Checkbox
+                          indeterminate={
+                            selected.length > 0 &&
+                            filteredUsers.length > 0 &&
+                            selected.length < filteredUsers.length
+                          }
+                          sx={{
+                            color: "#637381",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                            "&.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                          }}
+                          checked={
+                            filteredUsers.length > 0 &&
+                            selected.length === filteredUsers.length
+                          }
+                          onChange={handleSelectAllClick}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ border: "none" }}>
+                        Tên người dùng
+                      </TableCell>
+                      <TableCell sx={{ border: "none" }}>Email</TableCell>
+                      <TableCell sx={{ border: "none" }}>Vai trò</TableCell>
+                      <TableCell sx={{ border: "none" }}>Trạng thái</TableCell>
+                      <TableCell sx={{ border: "none" }}>Ngày tạo</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ paddingTop: 0 }}></TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchUsername}
+                          onChange={(e) => setSearchUsername(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchEmail}
+                          onChange={(e) => setSearchEmail(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchRole}
+                          onChange={(e) => setSearchRole(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <FormControl size="small" sx={{ minWidth: 80 }}>
+                          <Select
+                            value={searchStatus}
+                            onChange={(e) => setSearchStatus(e.target.value)}
                             sx={{
-                              color: "#637381",
-                              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D",
-                              },
-                              "&.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D",
-                              },
+                              bgcolor: "#FFF",
+                              borderRadius: "4px",
                             }}
-                            checked={
-                              users.length > 0 &&
-                              selected.length === users.length
-                            }
-                            onChange={handleSelectAllClick}
-                          />
+                          >
+                            <MenuItem value="All">Tất cả</MenuItem>
+                            <MenuItem value="On">Hoạt động</MenuItem>
+                            <MenuItem value="Off">Không hoạt động</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder="dd/mm/yyyy"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          align="center"
+                          sx={{ paddingY: "16px" }}
+                        >
+                          Đang tải dữ liệu...
                         </TableCell>
-                        <TableCell>Tên người dùng</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Vai trò</TableCell>
-                        <TableCell>Trạng thái</TableCell>
-                        <TableCell>Ngày tạo</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {users
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((user) => {
-                          const isItemSelected =
-                            selected.indexOf(user.userId) !== -1;
-                          return (
-                            <TableRow
-                              key={user.userId}
-                              hover
-                              role="checkbox"
-                              aria-checked={isItemSelected}
-                              selected={isItemSelected}
-                            >
-                              <TableCell>
-                                <Checkbox
-                                  sx={{
-                                    color: "#637381",
-                                    "&.Mui-checked": {
-                                      color: "#99BC4D",
-                                    },
-                                  }}
-                                  checked={isItemSelected}
-                                  onChange={(event) =>
-                                    handleSelectRowClick(event, user.userId)
-                                  }
-                                  inputProps={{
-                                    "aria-labelledby": user.userId,
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell>{user.username}</TableCell>
-                              <TableCell>{user.email}</TableCell>
-                              <TableCell>{user.role}</TableCell>
-                              <TableCell>
-                                <Switch
-                                  size="small"
-                                  sx={{ fontSize: "small" }}
-                                  checked={user.active}
-                                  onChange={() =>
-                                    handleStatusChange(user.userId, user.active)
-                                  }
-                                  name="active"
-                                  color="primary"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {new Date(user.createdAt).toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <div>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="flex-end"
-                  >
-                    <TablePagination
-                      component="div"
-                      count={users.length}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      rowsPerPage={rowsPerPage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
-                  </Box>
-                </div>
-              </Box>
-            </>
-          )}
+                    ) : paginatedUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          Không có dữ liệu
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedUsers.map((user) => {
+                        const isItemSelected =
+                          selected.indexOf(user.userId) !== -1;
+                        return (
+                          <TableRow
+                            key={user.userId}
+                            hover
+                            role="checkbox"
+                            aria-checked={isItemSelected}
+                            selected={isItemSelected}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                sx={{
+                                  color: "#637381",
+                                  "&.Mui-checked": {
+                                    color: "#99BC4D",
+                                  },
+                                }}
+                                checked={isItemSelected}
+                                onChange={(event) =>
+                                  handleSelectRowClick(event, user.userId)
+                                }
+                                inputProps={{
+                                  "aria-labelledby": user.userId,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>{user.username}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.role}</TableCell>
+                            <TableCell>
+                              <Switch
+                                size="small"
+                                sx={{ fontSize: "small" }}
+                                checked={user.active}
+                                onChange={() =>
+                                  handleStatusChange(user.userId, user.active)
+                                }
+                                name="active"
+                                color="primary"
+                              />
+                            </TableCell>
+                            <TableCell>{formatDate(user.createdAt)}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <div>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="flex-end"
+                >
+                  <TablePagination
+                    component="div"
+                    count={filteredUsers.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </Box>
+              </div>
+            </Box>
+          </>
         </Box>
       </Box>
 

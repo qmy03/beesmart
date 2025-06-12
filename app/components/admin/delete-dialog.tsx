@@ -39,7 +39,7 @@ const DeleteDialog: React.FC<DialogComponentProps> = ({
         }}
         disableEnforceFocus
         hideBackdrop
-        style={{ position: "initial" }}
+        style={{ position: "fixed", zIndex: 1300, pointerEvents: "none" }}
         slotProps={{
           backdrop: {
             sx: {

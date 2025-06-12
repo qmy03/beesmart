@@ -446,7 +446,7 @@ const SignUpForm: React.FC = () => {
                     Đăng nhập ngay
                   </Link>
                 </Typography>
-                <div className="mt-3 flex flex-col items-center justify-center gap-1">
+                <div className="mt-2 flex flex-col items-center justify-center gap-1">
                   {resendCooldown > 0 ? (
                     <Typography>
                       Bạn có thể gửi lại email sau{" "}

@@ -97,7 +97,8 @@ const QuizPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [severity, setSeverity] = useState<"success" | "error">("success");
-  const { accessToken, isLoading, setIsLoading } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const { isLoading, setIsLoading } = useAuth();
 
   console.log(accessToken);
   const [grades, setGrades] = useState<any[]>([]);
@@ -239,72 +240,54 @@ const QuizPage = () => {
   useEffect(() => {
     if (accessToken) {
       setIsLoading(true);
-      apiService
-        .get<GradesResponse>("/grades")
-        .then((response) => {
-          const fetchedGrades = response.data.data.grades;
+
+      Promise.all([
+        apiService.get<GradesResponse>("/grades", {}),
+        apiService.get<BooksResponse>("/book-types", {}),
+        apiService.get<SubjectsResponse>("/subjects", {}),
+      ])
+        .then(([gradesRes, booksRes, subjectsRes]) => {
+          const fetchedGrades = gradesRes.data.data.grades;
+          const fetchedBooks = booksRes.data.data.bookTypes;
+          const fetchedSubjects = subjectsRes.data.data.subjects;
+
           setGrades(fetchedGrades);
-          if (fetchedGrades.length > 0) {
-            const firstGrade = fetchedGrades[0];
-            setSelectedGradeId(firstGrade.gradeId);
-            setSelectedGradeName(firstGrade.gradeName);
-          }
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setIsLoading(false);
-        });
-    }
-  }, [accessToken]);
-  useEffect(() => {
-    if (accessToken) {
-      setIsLoading(true);
-      apiService
-        .get<BooksResponse>("/book-types", {})
-        .then((response) => {
-          const fetchedBooks = response.data.data.bookTypes;
           setBooks(fetchedBooks);
-          if (fetchedBooks.length > 0) {
-            const firstBook = fetchedBooks[0];
-            setSelectedBookId(firstBook.bookId);
-            setSelectedBookName(firstBook.bookName);
-          }
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setIsLoading(false);
-        });
-    }
-  }, [accessToken]);
-  useEffect(() => {
-    if (accessToken) {
-      setIsLoading(true);
-      apiService
-        .get<SubjectsResponse>("/subjects", {})
-        .then((response) => {
-          const fetchedSubjects = response.data.data.subjects;
           setSubjects(fetchedSubjects);
-          if (fetchedSubjects.length > 0) {
-            const firstSubject = fetchedSubjects[0];
-            setSelectedSubjectId(firstSubject.subjectId);
-            setSelectedSubjectName(firstSubject.subjectName);
+
+          // Set default values sau khi tất cả API đã hoàn thành
+          if (fetchedGrades.length > 0) {
+            setSelectedGradeId(fetchedGrades[0].gradeId);
+            setSelectedGradeName(fetchedGrades[0].gradeName);
           }
+          if (fetchedBooks.length > 0) {
+            setSelectedBookId(fetchedBooks[0].bookId);
+            setSelectedBookName(fetchedBooks[0].bookName);
+          }
+          if (fetchedSubjects.length > 0) {
+            setSelectedSubjectId(fetchedSubjects[0].subjectId);
+            setSelectedSubjectName(fetchedSubjects[0].subjectName);
+          }
+
           setIsLoading(false);
         })
         .catch((error) => {
-          console.error("Error fetching grades:", error);
+          console.error("Error fetching data:", error);
           setIsLoading(false);
         });
     }
   }, [accessToken]);
   useEffect(() => {
+    setTopics([]);
+    setLessons([]);
+    setSelectedTopicId(null);
+    setSelectedLessonId(null);
+    setQuizzes([]);
     if (
       selectedGradeName &&
-      selectedSemester &&
+      selectedSubjectName &&
       selectedBookName &&
-      selectedSubjectName
+      selectedSemester
     ) {
       setIsLoading(true);
       apiService
@@ -316,11 +299,23 @@ const QuizPage = () => {
           setTopics(fetchedTopics);
           if (fetchedTopics.length > 0) {
             setSelectedTopicId(fetchedTopics[0].topicId);
+            // Also set lessons for the first topic
+            if (
+              fetchedTopics[0].lessons &&
+              fetchedTopics[0].lessons.length > 0
+            ) {
+              setLessons(fetchedTopics[0].lessons);
+            }
           }
           setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching topics:", error);
+          setIsLoading(false);
+          setTopics([]);
+          setLessons([]);
+          setSelectedTopicId(null);
+          setSelectedLessonId(null);
           setIsLoading(false);
         });
     }
@@ -332,16 +327,31 @@ const QuizPage = () => {
   ]);
 
   useEffect(() => {
-    if (selectedTopicId) {
+    setLessons([]);
+    setSelectedLessonId(null);
+    setQuizzes([]);
+    // if (selectedTopicId) {
+    //   const selectedTopic = topics.find(
+    //     (topic) => topic.topicId === selectedTopicId
+    //   );
+    //   if (selectedTopic) {
+    //     setLessons(selectedTopic.lessons);
+    //     setSelectedLessonId(null);
+    //   }
+    // }
+    // console.log("selectedTopic", selectedTopicId);
+    if (selectedTopicId && topics.length > 0) {
       const selectedTopic = topics.find(
         (topic) => topic.topicId === selectedTopicId
       );
-      if (selectedTopic) {
+
+      if (selectedTopic && selectedTopic.lessons) {
         setLessons(selectedTopic.lessons);
-        setSelectedLessonId(null);
+        // if (selectedTopic.lessons.length > 0) {
+        //   setSelectedLessonId(selectedTopic.lessons[0].lessonId);
+        // }
       }
     }
-    console.log("selectedTopic", selectedTopicId);
   }, [selectedTopicId, topics]);
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -352,6 +362,11 @@ const QuizPage = () => {
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
+      setTopics([]);
+      setLessons([]);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      setQuizzes([]);
     }
   };
   const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -362,6 +377,11 @@ const QuizPage = () => {
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
       setSelectedBookName(selectedBookItem.bookName);
+      setTopics([]);
+      setLessons([]);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      setQuizzes([]);
     }
   };
   const handleSubjectChange = (
@@ -374,6 +394,11 @@ const QuizPage = () => {
     if (selectedSubjectItem) {
       setSelectedSubjectId(selectedSubjectItem.subjectId);
       setSelectedSubjectName(selectedSubjectItem.subjectName);
+      setTopics([]);
+      setLessons([]);
+      setSelectedTopicId(null);
+      setSelectedLessonId(null);
+      setQuizzes([]);
     }
   };
 
@@ -381,6 +406,11 @@ const QuizPage = () => {
     event: React.ChangeEvent<{ value: unknown }>
   ) => {
     setSelectedSemester(event.target.value as string);
+    setTopics([]);
+    setLessons([]);
+    setSelectedTopicId(null);
+    setSelectedLessonId(null);
+    setQuizzes([]);
   };
 
   const handleTopicChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -592,7 +622,10 @@ const QuizPage = () => {
     return questions.map((question, index) => {
       const correctAnswer = question.correctAnswer;
       const questionNumber = currentPage * 10 + index + 1;
-
+      const validOptions =
+        question.options?.filter(
+          (option: string) => option && option.trim() !== ""
+        ) || [];
       switch (question.questionType) {
         case "MULTI_SELECT":
           return (
@@ -630,25 +663,26 @@ const QuizPage = () => {
                   style={{ maxWidth: "50%", height: "auto" }}
                 />
               )}
-              {question.options.map((option: string, idx: number) => (
-                <Box
-                  key={idx}
-                  sx={{ display: "flex", gap: 2, marginX: "32px" }}
-                >
-                  <input
-                    type="checkbox"
-                    value={option}
-                    onChange={(e) => {
-                      const newAnswer = [
-                        ...(userAnswers[question.questionId] || []),
-                        e.target.value,
-                      ];
-                      handleInputChange(question.questionId, newAnswer);
-                    }}
-                  />
-                  <label>{option}</label>
-                </Box>
-              ))}
+              {validOptions.length > 0 &&
+                validOptions.map((option: string, idx: number) => (
+                  <Box
+                    key={idx}
+                    sx={{ display: "flex", gap: 2, marginX: "32px" }}
+                  >
+                    <input
+                      type="checkbox"
+                      value={option}
+                      onChange={(e) => {
+                        const newAnswer = [
+                          ...(userAnswers[question.questionId] || []),
+                          e.target.value,
+                        ];
+                        handleInputChange(question.questionId, newAnswer);
+                      }}
+                    />
+                    <label>{option}</label>
+                  </Box>
+                ))}
               <Button
                 onClick={() =>
                   handleAnswerSubmit(
@@ -699,21 +733,22 @@ const QuizPage = () => {
                   style={{ maxWidth: "50%", height: "auto" }}
                 />
               )}
-              {question.options.map((option: string, idx: number) => (
-                <div key={idx}>
-                  <Box sx={{ display: "flex", gap: 1, marginX: "32px" }}>
-                    <input
-                      type="radio"
-                      name={question.questionId}
-                      value={option}
-                      onChange={(e) =>
-                        handleInputChange(question.questionId, e.target.value)
-                      }
-                    />
-                    <label>{option}</label>
-                  </Box>
-                </div>
-              ))}
+              {validOptions.length > 0 &&
+                validOptions.map((option: string, idx: number) => (
+                  <div key={idx}>
+                    <Box sx={{ display: "flex", gap: 1, marginX: "32px" }}>
+                      <input
+                        type="radio"
+                        name={question.questionId}
+                        value={option}
+                        onChange={(e) =>
+                          handleInputChange(question.questionId, e.target.value)
+                        }
+                      />
+                      <label>{option}</label>
+                    </Box>
+                  </div>
+                ))}
               <Button
                 onClick={() =>
                   handleAnswerSubmit(
@@ -1058,7 +1093,7 @@ const QuizPage = () => {
             </TextField>
           </FormControl>
 
-          <FormControl fullWidth size="small">
+          {/* <FormControl fullWidth size="small">
             <TextField
               select
               value={selectedTopicId ?? ""}
@@ -1084,6 +1119,40 @@ const QuizPage = () => {
                   {topic.topicName}
                 </MenuItem>
               ))}
+            </TextField>
+          </FormControl> */}
+          <FormControl fullWidth size="small">
+            <TextField
+              select
+              value={selectedTopicId ?? ""}
+              onChange={handleTopicChange}
+              label="Chọn chủ đề"
+              fullWidth
+              InputLabelProps={{
+                shrink: selectedTopicId ? true : false,
+              }}
+            >
+              {topics.length === 0 ? (
+                <MenuItem disabled value="">
+                  Không có chủ đề
+                </MenuItem>
+              ) : (
+                topics.map((topic) => (
+                  <MenuItem
+                    key={topic.topicId}
+                    value={topic.topicId}
+                    sx={{
+                      "&.Mui-selected": {
+                        backgroundColor: "#BCD181 !important",
+                        color: "white",
+                      },
+                      "&:hover": { backgroundColor: "#BCD181" },
+                    }}
+                  >
+                    {topic.topicName}
+                  </MenuItem>
+                ))
+              )}
             </TextField>
           </FormControl>
 

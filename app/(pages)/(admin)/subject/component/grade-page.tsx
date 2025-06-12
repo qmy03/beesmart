@@ -276,6 +276,11 @@ const SubjectPage = () => {
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
   };
+  const handleCloseDeleteDialog = () => {
+    setOpenDelete(false);
+    setSelected([]); // Reset checkbox con
+  };
+
   return (
     <Layout>
       <Box
@@ -511,7 +516,7 @@ const SubjectPage = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-      <ProgressOverlay isLoading={isLoading}/>
+      <ProgressOverlay isLoading={isLoading} />
     </Layout>
   );
 };

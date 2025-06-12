@@ -75,11 +75,20 @@ const SkillPracticePage = () => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const { accessToken } = useAuth();
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [quizDuration, setQuizDuration] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [recordId, setRecordId] = useState<string | null>(null);
 
+  const handleOpenConfirm = () => {
+    setConfirmDialogOpen(true);
+  };
+
+  const handleCloseConfirm = () => {
+    setConfirmDialogOpen(false);
+  };
   const handleNext = () => {
     if (currentPage < questions.length - 1) {
       setCurrentPage(currentPage + 1);
@@ -200,8 +209,11 @@ const SkillPracticePage = () => {
       .then((response) => {
         console.log("Quiz submitted successfully", response.data);
         setQuizResult(response.data.data);
+        setRecordId(response.data.data.recordId);
         setDialogOpen(true);
         setIsSubmitted(true);
+        handleCloseConfirm();
+        router.push(`/skill/${response.data.data.recordId}`);
       })
       .catch((error) => {
         console.error(
@@ -329,19 +341,30 @@ const SkillPracticePage = () => {
                     <Typography fontSize="16px" fontWeight={700}>
                       {question.content}
                     </Typography>
-
-                    {/* Render the different question types (radio, checkbox, text input) */}
                     <FormControl
                       component="fieldset"
-                      // sx={{ alignItems: "center" }}
+                      sx={{ alignItems: "center" }}
                     >
                       {question.image && (
                         <img
                           src={question.image}
                           alt="Question"
-                          style={{ maxWidth: "50%" }}
+                          style={{ maxWidth: "300px" }}
                         />
                       )}
+                    </FormControl>
+                    {/* Render the different question types (radio, checkbox, text input) */}
+                    <FormControl
+                      component="fieldset"
+                      // sx={{ alignItems: "center" }}
+                    >
+                      {/* {question.image && (
+                        <img
+                          src={question.image}
+                          alt="Question"
+                          style={{ maxWidth: "300px" }}
+                        />
+                      )} */}
                       {question.questionType === "FILL_IN_THE_BLANK" && (
                         <TextField
                           value={answers[currentPage]?.inputAnswer || ""}
@@ -568,7 +591,7 @@ const SkillPracticePage = () => {
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={handleSubmit}
+                  onClick={handleConfirm}
                   disabled={timeLeft === 0}
                   sx={{
                     textTransform: "none",
@@ -583,8 +606,41 @@ const SkillPracticePage = () => {
           </Box>
         </Box>
       </Box>
-
       <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCloseConfirm}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Typography fontSize="18px" fontWeight={600} textAlign="center">
+            Xác nhận nộp bài
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography textAlign="center">
+            Bạn có chắc chắn muốn nộp bài không?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={handleCloseConfirm}
+            sx={{ textTransform: "none", mr: 2 }}
+          >
+            Không
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSubmit}
+            sx={{ textTransform: "none", backgroundColor: "#99BC4D" }}
+          >
+            Có
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* <Dialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         fullWidth
@@ -816,7 +872,7 @@ const SkillPracticePage = () => {
             </DialogActions>
           </Box>
         )}
-      </Dialog>
+      </Dialog> */}
     </Layout>
   );
 };

@@ -85,7 +85,8 @@ type ApiResponse = {
 };
 
 const LessonPage = () => {
-  const { accessToken, isLoading, setIsLoading } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  const { isLoading, setIsLoading } = useAuth();
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedGradeName, setSelectedGradeName] = useState<string>("");
@@ -215,63 +216,39 @@ const LessonPage = () => {
   useEffect(() => {
     if (accessToken) {
       setIsLoading(true);
-      apiService
-        .get<GradesResponse>("/grades")
-        .then((response) => {
-          const fetchedGrades = response.data.data.grades;
+
+      Promise.all([
+        apiService.get<GradesResponse>("/grades", {}),
+        apiService.get<BookTypesResponse>("/book-types", {}),
+        apiService.get<SubjectsResponse>("/subjects", {}),
+      ])
+        .then(([gradesRes, booksRes, subjectsRes]) => {
+          const fetchedGrades = gradesRes.data.data.grades;
+          const fetchedBooks = booksRes.data.data.bookTypes;
+          const fetchedSubjects = subjectsRes.data.data.subjects;
+
           setGrades(fetchedGrades);
-          if (fetchedGrades.length > 0) {
-            const firstGrade = fetchedGrades[0];
-            setSelectedGradeId(firstGrade.gradeId);
-            setSelectedGradeName(firstGrade.gradeName);
-          }
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setIsLoading(false);
-        });
-    }
-  }, [accessToken]);
-  useEffect(() => {
-    if (accessToken) {
-      setIsLoading(true);
-      apiService
-        .get<BookTypesResponse>("/book-types", {})
-        .then((response) => {
-          const fetchedBooks = response.data.data.bookTypes;
           setBooks(fetchedBooks);
-          if (fetchedBooks.length > 0) {
-            const firstBook = fetchedBooks[0];
-            setSelectedBookId(firstBook.bookId);
-            setSelectedBookName(firstBook.bookName);
-          }
-          setIsLoading(false);
-        })
-        .catch((error) => {
-          console.error("Error fetching grades:", error);
-          setIsLoading(false);
-        });
-    }
-  }, [accessToken]);
-  useEffect(() => {
-    if (accessToken) {
-      setIsLoading(true);
-      apiService
-        .get<SubjectsResponse>("/subjects", {})
-        .then((response) => {
-          const fetchedSubjects = response.data.data.subjects;
-          console.log("Fetched subjects:", fetchedSubjects);
           setSubjects(fetchedSubjects);
-          if (fetchedSubjects.length > 0) {
-            const firstSubject = fetchedSubjects[0];
-            setSelectedSubjectId(firstSubject.subjectId);
-            setSelectedSubjectName(firstSubject.subjectName);
+
+          // Set default values sau khi tất cả API đã hoàn thành
+          if (fetchedGrades.length > 0) {
+            setSelectedGradeId(fetchedGrades[0].gradeId);
+            setSelectedGradeName(fetchedGrades[0].gradeName);
           }
+          if (fetchedBooks.length > 0) {
+            setSelectedBookId(fetchedBooks[0].bookId);
+            setSelectedBookName(fetchedBooks[0].bookName);
+          }
+          if (fetchedSubjects.length > 0) {
+            setSelectedSubjectId(fetchedSubjects[0].subjectId);
+            setSelectedSubjectName(fetchedSubjects[0].subjectName);
+          }
+
           setIsLoading(false);
         })
         .catch((error) => {
-          console.error("Error fetching grades:", error);
+          console.error("Error fetching data:", error);
           setIsLoading(false);
         });
     }
@@ -717,8 +694,8 @@ const LessonPage = () => {
                   <TableCell sx={{ width: "30%", paddingY: "12px" }}>
                     Tên chủ điểm
                   </TableCell>
-                  <TableCell sx={{ width: "30%" }}>Tên bài học</TableCell>
-                  <TableCell sx={{ width: "30%" }}>Mô tả</TableCell>
+                  <TableCell sx={{ width: "40%" }}>Tên bài học</TableCell>
+                  <TableCell sx={{ width: "20%" }}>Mô tả</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

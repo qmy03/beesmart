@@ -4,7 +4,7 @@ import apiService from "@/app/untils/api";
 import { useAuth } from "@/app/hooks/AuthContext";
 import TextField from "@/app/components/textfield";
 import { Button } from "@/app/components/button";
-
+import CloseIcon from "@mui/icons-material/Close";
 interface QuizData {
   quizId: string;
   title: string;
@@ -115,7 +115,7 @@ const DialogPopup = ({
   return (
     <>
       <Dialog open={open} onClose={onClose}>
-        <DialogTitle>{dialogType === "add" ? "Thêm mới Quiz" : "Chỉnh sửa Quiz"}</DialogTitle>
+        <DialogTitle sx={{display: "flex", justifyContent: "space-between"}}>{dialogType === "add" ? "Thêm mới Quiz" : "Chỉnh sửa Quiz"}<CloseIcon onClick={onClose}/></DialogTitle>
         <DialogContent>
           <TextField
             label="Tiêu đề"
@@ -141,7 +141,6 @@ const DialogPopup = ({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Hủy</Button>
           <Button onClick={handleSave} disabled={loading}>
             {loading ? <CircularProgress size={24} /> : "Lưu"}
           </Button>

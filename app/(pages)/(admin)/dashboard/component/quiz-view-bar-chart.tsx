@@ -1,5 +1,5 @@
 import TextField from "@/app/components/textfield";
-import { Box, Card, CardContent, MenuItem, Typography } from "@mui/material";
+import { Box, Card, CardContent, MenuItem, Skeleton, Typography } from "@mui/material";
 import {
   LineChart,
   Line,
@@ -17,6 +17,8 @@ const QuizViewsBarChart = ({
   selectedSubject,
   setSelectedSubject,
   subjects,
+  loading,
+  hasData = false,
 }: {
   data: any[];
   month: number;
@@ -24,9 +26,21 @@ const QuizViewsBarChart = ({
   selectedSubject: string;
   setSelectedSubject: React.Dispatch<React.SetStateAction<string>>;
   subjects: { subjectId: string; subjectName: string }[];
+  loading?: boolean;
+  hasData?: boolean;
 }) => {
   const classes = ["Lớp 1", "Lớp 2", "Lớp 3", "Lớp 4", "Lớp 5"];
   const colors = ["#1877F2", "#8E33FF", "#00B8D9", "#FF5630", "#22C55E"];
+  const calculateChartWidth = (dataLength: number) => {
+    const minWidth = 950;
+    const maxWidth = 1400;
+    const widthPerDay = 45;
+
+    const calculatedWidth = Math.max(minWidth, dataLength * widthPerDay);
+    return Math.min(calculatedWidth, maxWidth);
+  };
+
+  const chartWidth = calculateChartWidth(data?.length || 0);
   const CustomTick = ({ x, y, payload }: any) => (
     <text
       x={x}
@@ -39,6 +53,37 @@ const QuizViewsBarChart = ({
     >
       {payload.value}
     </text>
+  );
+  const LoadingSkeleton = () => (
+    <Box sx={{ minWidth: chartWidth }}>
+      <Skeleton
+        variant="rectangular"
+        width="100%"
+        height={400}
+        animation="wave"
+      />
+    </Box>
+  );
+
+  // Empty state component
+  const EmptyState = () => (
+    <Box
+      sx={{
+        height: 400,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "text.secondary",
+      }}
+    >
+      {/* <Typography variant="h6" gutterBottom>
+          Không có dữ liệu
+        </Typography>
+        <Typography variant="body2">
+          Chưa có dữ liệu cho {selectedSubject} trong tháng {month}/{year}
+        </Typography> */}
+    </Box>
   );
   return (
     <Card variant="outlined" sx={{ width: "100%" }}>
@@ -98,38 +143,44 @@ const QuizViewsBarChart = ({
             },
           }}
         >
-          <Box sx={{ width: 1400 }}>
-            <LineChart
-              width={1400}
-              height={400}
-              data={data}
-              margin={{ top: 10, right: 30, left: -15 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                interval={0}
-                tick={<CustomTick />}
-                height={60}
-              />
-              <YAxis />
-              <Tooltip
-                formatter={(value, name) => [`${value} lượt`, name]}
-                labelFormatter={(label) => `Ngày ${label}`}
-                cursor={data && data.length > 0 ? undefined : false}
-              />
-              {classes.map((cls, index) => (
-                <Line
-                  key={cls}
-                  type="monotone"
-                  dataKey={cls}
-                  stroke={colors[index]}
-                  strokeWidth={2}
-                  activeDot={{ r: 8 }}
+          {loading ? (
+            <LoadingSkeleton />
+          ) : data && data.length > 0 && subjects.length > 0 ? (
+            <Box sx={{ minWidth: chartWidth, display: "flex", justifyContent: "center" }}>
+              <LineChart
+                width={chartWidth}
+                height={400}
+                data={data}
+                margin={{ top: 10, right: 30 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  interval={0}
+                  tick={<CustomTick />}
+                  height={60}
                 />
-              ))}
-            </LineChart>
-          </Box>
+                <YAxis />
+                <Tooltip
+                  formatter={(value, name) => [`${value} lượt`, name]}
+                  labelFormatter={(label) => `Ngày ${label}`}
+                />
+                {/* <Legend /> */}
+                {classes.map((cls, index) => (
+                  <Line
+                    key={cls}
+                    type="monotone"
+                    dataKey={cls}
+                    stroke={colors[index]}
+                    strokeWidth={2}
+                    activeDot={{ r: 6 }}
+                  />
+                ))}
+              </LineChart>
+            </Box>
+          ) : (
+            <LoadingSkeleton />
+          )}
         </Box>
         <Box
           sx={{
