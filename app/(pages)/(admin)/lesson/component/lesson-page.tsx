@@ -23,7 +23,7 @@ import {
   TablePagination,
   InputAdornment,
 } from "@mui/material";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import apiService from "@/app/untils/api";
 import theme from "@/app/components/theme";
 import TextField from "@/app/components/textfield";
@@ -54,6 +54,10 @@ interface Subject {
 interface Lesson {
   lessonId: number;
   lessonName: string;
+  lessonNumber: number;
+  description: string;
+  content: string;
+  viewCount: number;
 }
 
 interface Topic {
@@ -78,6 +82,8 @@ interface TopicsResponse {
   data: {
     topics: Topic[];
     totalItems: number;
+    totalPages: number;
+    currentPage: number;
   };
 }
 type ApiResponse = {
@@ -87,6 +93,8 @@ type ApiResponse = {
 const LessonPage = () => {
   const accessToken = localStorage.getItem("accessToken");
   const { isLoading, setIsLoading } = useAuth();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedGradeName, setSelectedGradeName] = useState<string>("");
@@ -113,37 +121,98 @@ const LessonPage = () => {
   );
   const [openDelete, setOpenDelete] = useState(false);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [editMode, setEditMode] = useState<"add" | "edit">("add");
+  const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchKeyword);
     }, 300);
     return () => clearTimeout(handler);
   }, [searchKeyword]);
-  const getTotalLessonsCount = () => {
-    let totalLessons = 0;
 
-    topics.forEach((topic) => {
-      if (isTopicExpanded(topic.topicId)) {
-        totalLessons += topic.lessons.length + 1;
-      } else {
-        totalLessons += 1;
+  // Filter topics and lessons based on search
+  const filteredTopicsAndLessons = useMemo(() => {
+    if (!debouncedSearch.trim()) {
+      return topics;
+    }
+
+    const searchLower = debouncedSearch.toLowerCase();
+    return topics.filter((topic) => {
+      // Check if topic name matches
+      const topicMatches = topic.topicName.toLowerCase().includes(searchLower);
+
+      // Check if any lesson in this topic matches
+      const lessonMatches = topic.lessons.some(
+        (lesson: Lesson) =>
+          lesson.lessonName.toLowerCase().includes(searchLower) ||
+          lesson.description.toLowerCase().includes(searchLower)
+      );
+
+      // If search matches lessons, auto-expand the topic
+      if (lessonMatches && !topicMatches) {
+        setExpandedRows((prev) => new Set(prev).add(topic.topicId));
+      }
+
+      return topicMatches || lessonMatches;
+    });
+  }, [topics, debouncedSearch]);
+
+  // Calculate total items for pagination (topics + expanded lessons)
+  const getTotalItemsCount = () => {
+    let totalCount = filteredTopicsAndLessons.length;
+
+    filteredTopicsAndLessons.forEach((topic) => {
+      if (expandedRows.has(topic.topicId)) {
+        totalCount += topic.lessons.length;
       }
     });
 
-    return totalLessons;
+    return totalCount;
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    console.log("Changing to page:", newPage);
+  // Get paginated data
+  const getPaginatedData = () => {
+    const startIndex = page * rowsPerPage;
+    let currentIndex = 0;
+    const result: Array<{
+      type: "topic" | "lesson";
+      data: any;
+      topicId?: number;
+    }> = [];
 
-    const totalPages = Math.ceil(topics.length / rowsPerPage);
-    if (newPage < totalPages) {
-      setPage(newPage);
-    } else {
-      setPage(totalPages - 1);
+    for (const topic of filteredTopicsAndLessons) {
+      // Add topic row
+      if (currentIndex >= startIndex && result.length < rowsPerPage) {
+        result.push({ type: "topic", data: topic });
+      }
+      currentIndex++;
+
+      // Add lesson rows if topic is expanded
+      if (expandedRows.has(topic.topicId)) {
+        for (const lesson of topic.lessons) {
+          if (currentIndex >= startIndex && result.length < rowsPerPage) {
+            result.push({
+              type: "lesson",
+              data: lesson,
+              topicId: topic.topicId,
+            });
+          }
+          currentIndex++;
+        }
+      }
+
+      if (result.length >= rowsPerPage) break;
     }
+
+    return result;
+  };
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
   };
 
   const handleChangeRowsPerPage = (
@@ -152,11 +221,43 @@ const LessonPage = () => {
     const newRowsPerPage = parseInt(event.target.value, 10);
     setRowsPerPage(newRowsPerPage);
     setPage(0);
-
-    if (newRowsPerPage === 10 && topics.length > 10) {
-      setPage(1);
-    }
   };
+  // const getTotalLessonsCount = () => {
+  //   let totalLessons = 0;
+
+  //   topics.forEach((topic) => {
+  //     if (isTopicExpanded(topic.topicId)) {
+  //       totalLessons += topic.lessons.length + 1;
+  //     } else {
+  //       totalLessons += 1;
+  //     }
+  //   });
+
+  //   return totalLessons;
+  // };
+
+  // const handleChangePage = (event: unknown, newPage: number) => {
+  //   console.log("Changing to page:", newPage);
+
+  //   const totalPages = Math.ceil(topics.length / rowsPerPage);
+  //   if (newPage < totalPages) {
+  //     setPage(newPage);
+  //   } else {
+  //     setPage(totalPages - 1);
+  //   }
+  // };
+
+  // const handleChangeRowsPerPage = (
+  //   event: React.ChangeEvent<HTMLInputElement>
+  // ) => {
+  //   const newRowsPerPage = parseInt(event.target.value, 10);
+  //   setRowsPerPage(newRowsPerPage);
+  //   setPage(0);
+
+  //   if (newRowsPerPage === 10 && topics.length > 10) {
+  //     setPage(1);
+  //   }
+  // };
 
   const paginatedTopics = topics.slice(
     page * rowsPerPage,
@@ -165,9 +266,7 @@ const LessonPage = () => {
   const isSelected = (topicId: number): boolean => {
     return selected.includes(topicId);
   };
-  const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedTopic, setSelectedTopic] = useState<any | null>(null);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
   const handleSnackbarOpen = (
     message: string,
     severity: "success" | "error"
@@ -216,7 +315,8 @@ const LessonPage = () => {
   useEffect(() => {
     if (accessToken) {
       setIsLoading(true);
-
+      setIsInitialLoad(true);
+      setIsInitialDataLoaded(false);
       Promise.all([
         apiService.get<GradesResponse>("/grades", {}),
         apiService.get<BookTypesResponse>("/book-types", {}),
@@ -231,7 +331,6 @@ const LessonPage = () => {
           setBooks(fetchedBooks);
           setSubjects(fetchedSubjects);
 
-          // Set default values sau khi tất cả API đã hoàn thành
           if (fetchedGrades.length > 0) {
             setSelectedGradeId(fetchedGrades[0].gradeId);
             setSelectedGradeName(fetchedGrades[0].gradeName);
@@ -244,12 +343,14 @@ const LessonPage = () => {
             setSelectedSubjectId(fetchedSubjects[0].subjectId);
             setSelectedSubjectName(fetchedSubjects[0].subjectName);
           }
-
+          setIsInitialDataLoaded(true);
           setIsLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
           setIsLoading(false);
+          setIsInitialLoad(false);
+          setIsInitialDataLoaded(true);
         });
     }
   }, [accessToken]);
@@ -273,22 +374,40 @@ const LessonPage = () => {
   ]);
 
   const fetchTopics = async () => {
+    if (
+      !selectedGradeName ||
+      !selectedSemester ||
+      !selectedBookName ||
+      !selectedSubjectName
+    ) {
+      setIsLoading(false);
+      setIsInitialLoad(false);
+      return;
+    }
     try {
       setIsLoading(true);
+      // const response = await apiService.get<TopicsResponse>(
+      //   `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
+      // );
       const response = await apiService.get<TopicsResponse>(
-        `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&search=${debouncedSearch}&page=${page}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
+        `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
       );
       setTopics(response.data.data.topics);
+      setTotalItems(response.data.data.totalItems);
+      setTotalPages(response.data.data.totalPages);
+      setCurrentPage(response.data.data.currentPage);
     } catch (error) {
       console.error("Error fetching topics:", error);
     } finally {
       setIsLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
     setSearchKeyword("");
+    setPage(0);
     const selectedGradeItem = grades.find(
       (grade) => grade.gradeName === selectedGrade
     );
@@ -301,6 +420,7 @@ const LessonPage = () => {
   const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedBook = event.target.value as string;
     setSearchKeyword("");
+    setPage(0);
     const selectedBookItem = books.find(
       (book) => book.bookName === selectedBook
     );
@@ -314,6 +434,7 @@ const LessonPage = () => {
   ) => {
     const selectedSubject = event.target.value as string;
     setSearchKeyword("");
+    setPage(0);
     const selectedSubjectItem = subjects.find(
       (subject) => subject.subjectName === selectedSubject
     );
@@ -328,6 +449,7 @@ const LessonPage = () => {
   ) => {
     setSelectedSemester(event.target.value as string);
     setSearchKeyword("");
+    setPage(0);
   };
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -482,7 +604,125 @@ const LessonPage = () => {
       handleExpandClick(topicId);
     }
   };
+  const renderTableBody = () => {
+    if (isLoading || isInitialLoad || !isInitialDataLoaded) {
+      return (
+        <TableRow>
+          <TableCell colSpan={5} sx={{ textAlign: "center", paddingY: "12px" }}>
+            Đang tải dữ liệu...
+          </TableCell>
+        </TableRow>
+      );
+    }
 
+    if (filteredTopicsAndLessons.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={5} sx={{ textAlign: "center", paddingY: "12px" }}>
+            {debouncedSearch
+              ? "Không tìm thấy kết quả phù hợp"
+              : "Không có dữ liệu"}
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    const paginatedData = getPaginatedData();
+
+    return paginatedData.map((item, index) => {
+      if (item.type === "topic") {
+        const topic = item.data;
+        return (
+          <TableRow key={`topic-${topic.topicId}`}>
+            <TableCell>
+              <Checkbox
+                sx={{
+                  color: "#637381",
+                  "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                    color: "#99BC4D",
+                  },
+                  p: 0,
+                }}
+                size="small"
+                checked={
+                  checkedState[topic.topicId]?.size ===
+                  (topic.lessons?.length || 0)
+                }
+                indeterminate={
+                  checkedState[topic.topicId]?.size > 0 &&
+                  checkedState[topic.topicId]?.size <
+                    (topic.lessons?.length || 0)
+                }
+                onChange={(event) =>
+                  handleTopicCheckboxChange(topic.topicId, event.target.checked)
+                }
+              />
+            </TableCell>
+            <TableCell>
+              <IconButton onClick={() => handleExpandClick(topic.topicId)}>
+                {expandedRows.has(topic.topicId) ? (
+                  <ExpandLess fontSize="small" />
+                ) : (
+                  <ExpandMore fontSize="small" />
+                )}
+              </IconButton>
+            </TableCell>
+            <TableCell sx={{ fontWeight: 500 }}>
+              {topic.topicNumber}. {topic.topicName}
+            </TableCell>
+            <TableCell></TableCell>
+            <TableCell></TableCell>
+          </TableRow>
+        );
+      } else {
+        const lesson = item.data;
+        const topic = topics.find((t) => t.topicId === item.topicId);
+        return (
+          <TableRow key={`lesson-${lesson.lessonId}`}>
+            <TableCell>
+              <Checkbox
+                sx={{
+                  color: "#637381",
+                  "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                    color: "#99BC4D",
+                  },
+                  p: 0,
+                }}
+                size="small"
+                checked={
+                  checkedState[item.topicId!]?.has(lesson.lessonId) || false
+                }
+                onChange={(event) =>
+                  handleLessonCheckboxChange(
+                    item.topicId!,
+                    lesson.lessonId,
+                    event.target.checked
+                  )
+                }
+                onClick={() => setOpenDelete(true)}
+              />
+            </TableCell>
+            <TableCell>
+              <IconButton
+                onClick={() =>
+                  handleEditLesson(lesson.lessonId, item.topicId!.toString())
+                }
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </TableCell>
+            <TableCell sx={{ paddingLeft: 5 }}>
+              <Typography variant="body2" color="textSecondary">
+                Bài học số {lesson.lessonNumber}
+              </Typography>
+            </TableCell>
+            <TableCell>{lesson.lessonName}</TableCell>
+            <TableCell>{lesson.description}</TableCell>
+          </TableRow>
+        );
+      }
+    });
+  };
   return (
     <Layout>
       <Box
@@ -698,7 +938,7 @@ const LessonPage = () => {
                   <TableCell sx={{ width: "20%" }}>Mô tả</TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>
+              {/* <TableBody>
                 {isLoading ? (
                   <TableRow></TableRow>
                 ) : (
@@ -799,16 +1039,31 @@ const LessonPage = () => {
                     </>
                   ))
                 )}
-              </TableBody>
+              </TableBody> */}
+              <TableBody>{renderTableBody()}</TableBody>
             </Table>
           </TableContainer>
-          <TablePagination
+          {/* <TablePagination
             component="div"
             count={getTotalLessonsCount()}
             page={page}
             onPageChange={handleChangePage}
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{ flexShrink: 0 }}
+          />
+           */}
+          <TablePagination
+            component="div"
+            count={getTotalItemsCount()}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            labelRowsPerPage="Số dòng mỗi trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}–${to} của ${count !== -1 ? count : `hơn ${to}`}`
+            }
             sx={{ flexShrink: 0 }}
           />
         </Box>

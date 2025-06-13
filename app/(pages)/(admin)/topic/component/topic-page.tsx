@@ -484,7 +484,7 @@ const TopicPage = () => {
                     </TableRow>
                   ) : topics.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} align="center">
+                      <TableCell colSpan={4} align="center" sx={{paddingY: "12px"}}>
                        Không có dữ liệu
                       </TableCell>
                     </TableRow>
