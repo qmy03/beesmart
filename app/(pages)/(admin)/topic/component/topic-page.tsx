@@ -95,7 +95,9 @@ const TopicPage = () => {
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">("success");
+  const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
+    "success"
+  );
   const [openDelete, setOpenDelete] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
@@ -160,7 +162,12 @@ const TopicPage = () => {
 
   // Fetch topics with separate loading state
   useEffect(() => {
-    if (selectedGradeName && selectedSubjectName && selectedBookName && selectedSemester) {
+    if (
+      selectedGradeName &&
+      selectedSubjectName &&
+      selectedBookName &&
+      selectedSemester
+    ) {
       setTopicsLoading(true); // Use separate loading state
       apiService
         .get<TopicsResponse>(
@@ -191,7 +198,9 @@ const TopicPage = () => {
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
-    const selectedGradeItem = grades.find((grade) => grade.gradeName === selectedGrade);
+    const selectedGradeItem = grades.find(
+      (grade) => grade.gradeName === selectedGrade
+    );
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
@@ -201,7 +210,9 @@ const TopicPage = () => {
 
   const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedBook = event.target.value as string;
-    const selectedBookItem = books.find((book) => book.bookName === selectedBook);
+    const selectedBookItem = books.find(
+      (book) => book.bookName === selectedBook
+    );
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
       setSelectedBookName(selectedBookItem.bookName);
@@ -209,7 +220,9 @@ const TopicPage = () => {
     }
   };
 
-  const handleSubjectChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleSubjectChange = (
+    event: React.ChangeEvent<{ value: unknown }>
+  ) => {
     const selectedSubject = event.target.value as string;
     const selectedSubjectItem = subjects.find(
       (subject) => subject.subjectName === selectedSubject
@@ -221,7 +234,9 @@ const TopicPage = () => {
     }
   };
 
-  const handleSemesterChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleSemesterChange = (
+    event: React.ChangeEvent<{ value: unknown }>
+  ) => {
     setSelectedSemester(event.target.value as string);
     setPage(0); // Reset page when changing semester
   };
@@ -237,7 +252,12 @@ const TopicPage = () => {
   };
 
   const handleTopicAdded = () => {
-    if (selectedGradeName && selectedSubjectName && selectedBookName && selectedSemester) {
+    if (
+      selectedGradeName &&
+      selectedSubjectName &&
+      selectedBookName &&
+      selectedSemester
+    ) {
       setTopicsLoading(true); // Use separate loading state
       setPage(0); // Reset to first page to show latest topics
       apiService
@@ -291,7 +311,10 @@ const TopicPage = () => {
     }
   };
 
-  const handleCheckboxClick = (event: React.ChangeEvent<HTMLInputElement>, topicId: number) => {
+  const handleCheckboxClick = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    topicId: number
+  ) => {
     const updatedSelected = event.target.checked
       ? [...selected, topicId]
       : selected.filter((id) => id !== topicId);
@@ -303,7 +326,9 @@ const TopicPage = () => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -314,7 +339,10 @@ const TopicPage = () => {
     setOpenDialog(true);
   };
 
-  const handleSnackbarOpen = (message: string, severity: "success" | "error") => {
+  const handleSnackbarOpen = (
+    message: string,
+    severity: "success" | "error"
+  ) => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
@@ -326,9 +354,27 @@ const TopicPage = () => {
 
   return (
     <Layout>
-      <Box sx={{ display: "flex", flexDirection: "column", padding: "0 10px", gap: 1, height: "100%" }}>
-        <Box sx={{ display: "flex", padding: "4px 8px", alignItems: "center", boxShadow: 4, borderRadius: "8px" }}>
-          <Typography fontWeight={700} flexGrow={1}>Quản lý Chủ điểm</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          padding: "0 10px",
+          gap: 1,
+          height: "100%",
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            padding: "4px 8px",
+            alignItems: "center",
+            boxShadow: 4,
+            borderRadius: "8px",
+          }}
+        >
+          <Typography fontWeight={700} flexGrow={1}>
+            Quản lý Chủ điểm
+          </Typography>
           <Button onClick={handleOpenDialog}>Thêm mới</Button>
         </Box>
 
@@ -346,7 +392,11 @@ const TopicPage = () => {
                   key={grade.gradeId}
                   value={grade.gradeName}
                   sx={{
-                    "&.Mui-selected": { backgroundColor: "#BCD181 !important", color: "white", opacity: 1 },
+                    "&.Mui-selected": {
+                      backgroundColor: "#BCD181 !important",
+                      color: "white",
+                      opacity: 1,
+                    },
                     "&:hover": { backgroundColor: "#BCD181" },
                   }}
                 >
@@ -369,7 +419,11 @@ const TopicPage = () => {
                   key={subject.subjectId}
                   value={subject.subjectName}
                   sx={{
-                    "&.Mui-selected": { backgroundColor: "#BCD181 !important", color: "white", opacity: 1 },
+                    "&.Mui-selected": {
+                      backgroundColor: "#BCD181 !important",
+                      color: "white",
+                      opacity: 1,
+                    },
                     "&:hover": { backgroundColor: "#BCD181" },
                   }}
                 >
@@ -392,7 +446,11 @@ const TopicPage = () => {
                   key={book.bookId}
                   value={book.bookName}
                   sx={{
-                    "&.Mui-selected": { backgroundColor: "#BCD181 !important", color: "white", opacity: 1 },
+                    "&.Mui-selected": {
+                      backgroundColor: "#BCD181 !important",
+                      color: "white",
+                      opacity: 1,
+                    },
                     "&:hover": { backgroundColor: "#BCD181" },
                   }}
                 >
@@ -413,7 +471,10 @@ const TopicPage = () => {
               <MenuItem
                 value="Học kì 1"
                 sx={{
-                  "&.Mui-selected": { backgroundColor: "#99BC4D !important", color: "white" },
+                  "&.Mui-selected": {
+                    backgroundColor: "#99BC4D !important",
+                    color: "white",
+                  },
                   "&:hover": { backgroundColor: "#99BC4D 70%" },
                 }}
               >
@@ -422,7 +483,10 @@ const TopicPage = () => {
               <MenuItem
                 value="Học kì 2"
                 sx={{
-                  "&.Mui-selected": { backgroundColor: "#99BC4D !important", color: "white" },
+                  "&.Mui-selected": {
+                    backgroundColor: "#99BC4D !important",
+                    color: "white",
+                  },
                   "&:hover": { backgroundColor: "#99BC4D 70%" },
                 }}
               >
@@ -432,111 +496,150 @@ const TopicPage = () => {
           </FormControl>
         </Box>
 
-        <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 }}>
-          <Box sx={{ boxShadow: 4, borderRadius: 2, display: "flex", flexDirection: "column", height: "100%", mb: 1 }}>
-            <TableContainer sx={{ borderRadius: "8px 8px 0 0", flexGrow: 1, overflow: "auto" }}>
-              <Table size="small">
-                <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+        <Box
+          sx={{
+            boxShadow: 4,
+            borderRadius: 2,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+            flexGrow: 1,
+            minHeight: 0,
+            mb: 1,
+            overflow: "hidden",
+          }}
+        >
+          <TableContainer
+            sx={{ borderRadius: "8px 8px 0 0", flexGrow: 1, overflow: "auto", maxHeight: "calc(100% - 52px)", }}
+          >
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                <TableRow>
+                  <TableCell sx={{ width: "5%", border: "none" }}></TableCell>
+                  <TableCell sx={{ width: "10%", border: "none" }}></TableCell>
+                  <TableCell sx={{ width: "15%", border: "none" }}>
+                    Thứ tự
+                  </TableCell>
+                  <TableCell sx={{ width: "70%", border: "none", paddingY: "12px" }}>
+                    Tên chủ điểm
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ width: "5%" }}>
+                    <Checkbox
+                      indeterminate={
+                        selected.length > 0 &&
+                        topics.length > 0 &&
+                        selected.length < topics.length
+                      }
+                      sx={{
+                        color: "#637381",
+                        "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                          color: "#99BC4D",
+                        },
+                        p: 0,
+                        ml: 1.5,
+                      }}
+                      checked={
+                        topics.length > 0 && selected.length === topics.length
+                      }
+                      onChange={handleSelectAllClick}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell sx={{ width: "10%" }}></TableCell>
+                  <TableCell sx={{ width: "15%" }}>
+                    <TextField
+                      sx={{
+                        p: 0,
+                        m: 0,
+                        bgcolor: "#EAEDF0",
+                        borderRadius: "4px",
+                      }}
+                      disabled
+                    ></TextField>
+                  </TableCell>
+                  <TableCell sx={{ width: "70%" }}>
+                    <TextField
+                      sx={{ p: 0, m: 0, bgcolor: "#FFF", borderRadius: "4px" }}
+                      placeholder="Tìm kiếm..."
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                    ></TextField>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {topicsLoading ? ( // Use separate loading state instead of isLoading
                   <TableRow>
-                    <TableCell sx={{ width: "5%", border: "none" }}></TableCell>
-                    <TableCell sx={{ width: "10%", border: "none" }}></TableCell>
-                    <TableCell sx={{ width: "15%", border: "none" }}>Thứ tự</TableCell>
-                    <TableCell sx={{ width: "70%", border: "none" }}>Tên chủ điểm</TableCell>
+                    <TableCell
+                      colSpan={4}
+                      align="center"
+                      sx={{ paddingY: "12px" }}
+                    >
+                      Đang tải dữ liệu...
+                    </TableCell>
                   </TableRow>
+                ) : topics.length === 0 ? (
                   <TableRow>
-                    <TableCell sx={{ width: "5%" }}>
-                      <Checkbox
-                        indeterminate={selected.length > 0 && topics.length > 0 && selected.length < topics.length}
-                        sx={{
-                          color: "#637381",
-                          "&.Mui-checked, &.MuiCheckbox-indeterminate": { color: "#99BC4D" },
-                          p: 0,
-                          ml: 1.5,
-                        }}
-                        checked={topics.length > 0 && selected.length === topics.length}
-                        onChange={handleSelectAllClick}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell sx={{ width: "10%" }}></TableCell>
-                    <TableCell sx={{ width: "15%" }}>
-                      <TextField
-                        sx={{ p: 0, m: 0, bgcolor: "#EAEDF0", borderRadius: "4px" }}
-                        disabled
-                      ></TextField>
-                    </TableCell>
-                    <TableCell sx={{ width: "70%" }}>
-                      <TextField
-                        sx={{ p: 0, m: 0, bgcolor: "#FFF", borderRadius: "4px" }}
-                        placeholder="Tìm kiếm..."
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                      ></TextField>
+                    <TableCell
+                      colSpan={4}
+                      align="center"
+                      sx={{ paddingY: "12px" }}
+                    >
+                      Không có dữ liệu
                     </TableCell>
                   </TableRow>
-                </TableHead>
-                <TableBody>
-                  {topicsLoading ? ( // Use separate loading state instead of isLoading
-                    <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{paddingY: "12px"}}>
-                        Đang tải dữ liệu...
-                      </TableCell>
-                    </TableRow>
-                  ) : topics.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} align="center" sx={{paddingY: "12px"}}>
-                       Không có dữ liệu
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    topics.map((topic, index) => {
-                      const isItemSelected = isSelected(topic.topicId);
-                      return (
-                        <TableRow key={topic.topicId}>
-                          <TableCell>
-                            <Checkbox
-                              size="small"
-                              checked={isItemSelected}
-                              sx={{
-                                color: "#637381",
-                                "&.Mui-checked": { color: "#99BC4D" },
-                                p: 0,
-                                ml: 1.5,
+                ) : (
+                  topics.map((topic, index) => {
+                    const isItemSelected = isSelected(topic.topicId);
+                    return (
+                      <TableRow key={topic.topicId}>
+                        <TableCell>
+                          <Checkbox
+                            size="small"
+                            checked={isItemSelected}
+                            sx={{
+                              color: "#637381",
+                              "&.Mui-checked": { color: "#99BC4D" },
+                              p: 0,
+                              ml: 1.5,
+                            }}
+                            onChange={(event) =>
+                              handleCheckboxClick(event, topic.topicId)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <IconButton>
+                            <EditIcon
+                              fontSize="small"
+                              sx={{ color: "#637381", cursor: "pointer" }}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenEdit(topic);
                               }}
-                              onChange={(event) => handleCheckboxClick(event, topic.topicId)}
                             />
-                          </TableCell>
-                          <TableCell>
-                            <IconButton>
-                              <EditIcon
-                                fontSize="small"
-                                sx={{ color: "#637381", cursor: "pointer" }}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleOpenEdit(topic);
-                                }}
-                              />
-                            </IconButton>
-                          </TableCell>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{topic.topicName}</TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              component="div"
-              count={totalItems}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[10, 25, 50]}
-            />
-          </Box>
+                          </IconButton>
+                        </TableCell>
+                        <TableCell>{topic.topicNumber}</TableCell>
+                        <TableCell>{topic.topicName}</TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={totalItems}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[10, 25, 50]}
+          />
         </Box>
 
         <DialogPopup
@@ -567,7 +670,11 @@ const TopicPage = () => {
           onClose={handleSnackbarClose}
           anchorOrigin={{ vertical: "top", horizontal: "right" }}
         >
-          <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: "100%" }}>
+          <Alert
+            onClose={handleSnackbarClose}
+            severity={snackbarSeverity}
+            sx={{ width: "100%" }}
+          >
             {snackbarMessage}
           </Alert>
         </Snackbar>
