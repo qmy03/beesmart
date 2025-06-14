@@ -13,14 +13,31 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Pagination,
 } from "@mui/material";
 import { Button } from "../../button";
 import SearchIcon from "@mui/icons-material/Search";
 import TextField from "../../textfield";
-import { useAuth } from "@/app/hooks/AuthContext";
 import apiService from "@/app/untils/api";
 import VideoThumbnail from "../../capture-frame";
 import Image from "next/image";
+
+// Custom debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 interface Grade {
   gradeId: string;
@@ -76,6 +93,9 @@ interface SubjectsResponse {
 
 interface TopicsResponse {
   topics: Topic[];
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
 }
 
 interface QuizzesResponse {
@@ -83,10 +103,8 @@ interface QuizzesResponse {
 }
 
 const SkillListPage: React.FC = () => {
-  // const { userInfo } = useAuth();
   const userInfo = localStorage.getItem("userInfo");
   const userInfoParsed = userInfo ? JSON.parse(userInfo) : null;
-  const accessToken = localStorage.getItem("accessToken");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isTopicsLoading, setIsTopicsLoading] = useState(false);
@@ -99,71 +117,58 @@ const SkillListPage: React.FC = () => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [searchText, setSearchText] = useState<string>("");
+  const debouncedSearchText = useDebounce(searchText, 500);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedSubjectName, setSelectedSubjectName] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedTerm, setSelectedTerm] = useState<string>("Học kì 1");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   const termMapping: { [key: string]: string } = {
     "Học kì 1": "term1",
     "Học kì 2": "term2",
   };
 
-  // Hàm xử lý thay đổi học kỳ
+  // Handle term change
   const handleTermChange = (termDisplay: string) => {
     setSelectedTerm(termDisplay);
     setSelectedTopic(null);
     setTopics([]);
+    setCurrentPage(1);
+    setSearchText("");
   };
 
-  // Lấy subjectId và gradeName từ query params
-  useEffect(() => {
-    const subjectIdFromQuery = searchParams.get("subjectId");
-    const gradeNameFromQuery = searchParams.get("gradeName");
-
-    if (subjectIdFromQuery && gradeNameFromQuery && subjects.length > 0 && grades.length > 0) {
-      const subject = subjects.find((s) => s.subjectId === subjectIdFromQuery);
-      const grade = grades.find((g) => g.gradeName === gradeNameFromQuery);
-
-      if (subject) {
-        setSelectedSubjectId(subject.subjectId);
-        setSelectedSubjectName(subject.subjectName);
-      }
-      if (grade) {
-        setSelectedGradeId(grade.gradeId);
-        setSelectedGradeName(grade.gradeName);
-      }
-    }
-  }, [searchParams, subjects, grades]);
-
-  // Tải dữ liệu ban đầu (grades, subjects, bookTypes)
+  // Fetch initial data (grades, subjects, bookTypes)
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        // Tải danh sách lớp
-        const gradesResponse = await apiService.get<ApiResponse<GradesResponse>>("/grades");
+        const gradesResponse =
+          await apiService.get<ApiResponse<GradesResponse>>("/grades");
         const gradesData = gradesResponse.data.data.grades;
         setGrades(gradesData);
 
-        // Tải danh sách môn học
-        const subjectsResponse = await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
+        const subjectsResponse =
+          await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
         const subjectsData = subjectsResponse.data.data.subjects;
         setSubjects(subjectsData);
 
-        // Tải danh sách loại sách
-        const bookTypesResponse = await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
+        const bookTypesResponse =
+          await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
         const bookTypesData = bookTypesResponse.data.data.bookTypes;
         setBookTypes(bookTypesData);
 
-        // Thiết lập giá trị mặc định nếu không có query params
         if (!searchParams.get("subjectId") && subjectsData.length > 0) {
           setSelectedSubjectId(subjectsData[0].subjectId);
           setSelectedSubjectName(subjectsData[0].subjectName);
         }
         if (!searchParams.get("gradeName") && gradesData.length > 0) {
-          const userGrade = gradesData.find((grade) => grade.gradeName === userInfoParsed?.grade);
+          const userGrade = gradesData.find(
+            (grade) => grade.gradeName === userInfoParsed?.grade
+          );
           if (userGrade) {
             setSelectedGradeId(userGrade.gradeId);
             setSelectedGradeName(userGrade.gradeName);
@@ -184,50 +189,86 @@ const SkillListPage: React.FC = () => {
     fetchInitialData();
   }, [userInfo, searchParams]);
 
-  // Hàm lấy danh sách chủ điểm
-  const fetchTopics = useCallback(async () => {
-    if (!selectedGradeName || !selectedTerm || !selectedBookTypeName || !selectedSubjectName) {
-      return;
-    }
-
-    setIsTopicsLoading(true);
-    try {
-      const response = await apiService.get<ApiResponse<TopicsResponse>>(
-        `/topics?grade=${selectedGradeName}&semester=${selectedTerm}&bookType=${selectedBookTypeName}&subject=${selectedSubjectName}`
-      );
-      const topicsData = response.data.data.topics || [];
-      setTopics(topicsData);
-      setSelectedTopic(topicsData[0] || null);
-    } catch (error) {
-      console.error("Error fetching topics:", error);
-      setTopics([]);
-      setSelectedTopic(null);
-    } finally {
-      setIsTopicsLoading(false);
-    }
-  }, [selectedGradeName, selectedTerm, selectedBookTypeName, selectedSubjectName]);
-
-  useEffect(() => {
-    fetchTopics();
-  }, [fetchTopics]);
-
-  // Xử lý notification topic selection
-  useEffect(() => {
-    const topicId = sessionStorage.getItem("notificationTopicId");
-    if (topicId && topics.length > 0) {
-      const matchedTopic = topics.find((t) => t.topicId === topicId);
-      if (matchedTopic) {
-        setSelectedTopic(matchedTopic);
-        sessionStorage.removeItem("notificationTopicId");
+  // Fetch topics with pagination and search
+  const fetchTopics = useCallback(
+    async (page: number, search: string) => {
+      if (
+        !selectedGradeName ||
+        !selectedTerm ||
+        !selectedBookTypeName ||
+        !selectedSubjectName
+      ) {
+        return;
       }
-    }
-  }, [topics]);
 
+      setIsTopicsLoading(true);
+      try {
+        const queryParams = new URLSearchParams({
+          grade: selectedGradeName,
+          semester: selectedTerm,
+          bookType: selectedBookTypeName,
+          subject: selectedSubjectName,
+          page: (page - 1).toString(),
+        });
+
+        if (search.trim()) {
+          queryParams.append("search", search.trim());
+        }
+
+        console.log(
+          `Fetching topics: /topics/topic-lesson?${queryParams.toString()}`
+        );
+
+        const response = await apiService.get<ApiResponse<TopicsResponse>>(
+          `/topics/topic-lesson?${queryParams.toString()}`
+        );
+
+        const data = response.data.data;
+        setTopics(data.topics || []);
+        setTotalPages(data.totalPages || 0);
+        setTotalItems(data.totalItems || 0);
+
+        if (data.topics.length > 0 && !selectedTopic) {
+          setSelectedTopic(data.topics[0]);
+        } else if (data.topics.length === 0) {
+          setSelectedTopic(null);
+        }
+      } catch (error) {
+        console.error("Error fetching topics:", error);
+        setTopics([]);
+        setSelectedTopic(null);
+        setTotalPages(0);
+        setTotalItems(0);
+      } finally {
+        setIsTopicsLoading(false);
+      }
+    },
+    [selectedGradeName, selectedTerm, selectedBookTypeName, selectedSubjectName]
+  );
+
+  // Trigger fetchTopics when filters or debounced search change
+  useEffect(() => {
+    fetchTopics(currentPage, debouncedSearchText);
+  }, [fetchTopics, currentPage, debouncedSearchText]);
+
+  // Handle pagination change
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    value: number
+  ) => {
+    console.log(`Page changed to: ${value}`);
+    setCurrentPage(value);
+    setSelectedTopic(null);
+  };
+
+  // Handle subject selection
   const handleSubjectClick = (subject: Subject) => {
     setSelectedSubjectId(subject.subjectId);
     setSelectedSubjectName(subject.subjectName);
     setSelectedTopic(null);
     setTopics([]);
+    setCurrentPage(1);
+    setSearchText("");
   };
 
   const getSubjectImage = (subjectName: string) => {
@@ -245,28 +286,34 @@ const SkillListPage: React.FC = () => {
 
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
-    const selectedGradeItem = grades.find((grade) => grade.gradeName === selectedGrade);
+    const selectedGradeItem = grades.find(
+      (grade) => grade.gradeName === selectedGrade
+    );
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
       setSelectedTopic(null);
+      setCurrentPage(1);
+      setSearchText(""); // Reset search text when changing grade
     }
   };
 
-  const handleBookTypeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  const handleBookTypeChange = (
+    event: React.ChangeEvent<{ value: unknown }>
+  ) => {
     const selectedBookType = event.target.value as string;
-    const selectedBookTypeItem = bookTypes.find((bookType) => bookType.bookName === selectedBookType);
+    const selectedBookTypeItem = bookTypes.find(
+      (bookType) => bookType.bookName === selectedBookType
+    );
     if (selectedBookTypeItem) {
       setSelectedBookTypeId(selectedBookTypeItem.bookId);
       setSelectedBookTypeName(selectedBookTypeItem.bookName);
       setSelectedTopic(null);
       setTopics([]);
+      setCurrentPage(1);
+      setSearchText(""); // Reset search text when changing book type
     }
   };
-
-  const filteredTopics = topics.filter((topic) =>
-    topic.topicName.toLowerCase().includes(searchText.toLowerCase())
-  );
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -290,8 +337,10 @@ const SkillListPage: React.FC = () => {
     router.push(`/skill-detail/${lessonId}?grade=${selectedGradeName}`);
   };
 
-  const hasLessons = selectedTopic && selectedTopic.lessons && selectedTopic.lessons.length > 0;
-  const hasQuizzes = selectedTopic && selectedTopic.quizzes && selectedTopic.quizzes.length > 0;
+  const hasLessons =
+    selectedTopic && selectedTopic.lessons && selectedTopic.lessons.length > 0;
+  const hasQuizzes =
+    selectedTopic && selectedTopic.quizzes && selectedTopic.quizzes.length > 0;
 
   return (
     <Layout>
@@ -321,7 +370,8 @@ const SkillListPage: React.FC = () => {
                 padding: "10px",
                 borderRadius: "8px",
                 border: "1px solid #ccc",
-                backgroundColor: selectedSubjectId === subject.subjectId ? "#FFFFFF" : "none",
+                backgroundColor:
+                  selectedSubjectId === subject.subjectId ? "#FFFFFF" : "none",
                 cursor: "pointer",
                 width: "15%",
                 transition: "all 0.2s ease",
@@ -330,8 +380,17 @@ const SkillListPage: React.FC = () => {
                 },
               }}
             >
-              <img src={getSubjectImage(subject.subjectName)} alt={subject.subjectName} width={60} height={60} />
-              <Typography fontSize="14px" fontWeight={600} sx={{ marginTop: "5px", textAlign: "center" }}>
+              <img
+                src={getSubjectImage(subject.subjectName)}
+                alt={subject.subjectName}
+                width={60}
+                height={60}
+              />
+              <Typography
+                fontSize="14px"
+                fontWeight={600}
+                sx={{ marginTop: "5px", textAlign: "center" }}
+              >
                 {subject.subjectName}
               </Typography>
             </Box>
@@ -339,7 +398,14 @@ const SkillListPage: React.FC = () => {
         </Box>
 
         {/* Header */}
-        <Box sx={{ display: "flex", gap: "20px", alignItems: "center", justifyContent: "space-between" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: "20px",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Typography fontSize="26px" color="#000000" fontWeight={700}>
             Danh sách chủ điểm
           </Typography>
@@ -357,7 +423,10 @@ const SkillListPage: React.FC = () => {
                     key={grade.gradeId}
                     value={grade.gradeName}
                     sx={{
-                      "&.Mui-selected": { backgroundColor: "#BCD181 !important", color: "white" },
+                      "&.Mui-selected": {
+                        backgroundColor: "#BCD181 !important",
+                        color: "white",
+                      },
                       "&:hover": { backgroundColor: "#BCD181" },
                     }}
                   >
@@ -379,7 +448,10 @@ const SkillListPage: React.FC = () => {
                     key={bookType.bookId}
                     value={bookType.bookName}
                     sx={{
-                      "&.Mui-selected": { backgroundColor: "#BCD181 !important", color: "white" },
+                      "&.Mui-selected": {
+                        backgroundColor: "#BCD181 !important",
+                        color: "white",
+                      },
                       "&:hover": { backgroundColor: "#BCD181" },
                     }}
                   >
@@ -394,8 +466,24 @@ const SkillListPage: React.FC = () => {
         {/* Body */}
         <Box sx={{ display: "flex", gap: "20px", flex: 1 }}>
           {/* Sidebar */}
-          <Box sx={{ flex: 3, backgroundColor: "white", borderRadius: "8px", height: "600px", display: "flex", flexDirection: "column" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "16px" }}>
+          <Box
+            sx={{
+              flex: 3,
+              backgroundColor: "white",
+              borderRadius: "8px",
+              height: "600px",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                fontSize: "16px",
+              }}
+            >
               {["Học kì 1", "Học kì 2"].map((termDisplay) => (
                 <Box
                   key={termDisplay}
@@ -406,7 +494,8 @@ const SkillListPage: React.FC = () => {
                     borderTopRightRadius: "8px",
                     borderTopLeftRadius: "8px",
                     cursor: "pointer",
-                    backgroundColor: selectedTerm === termDisplay ? "#99BC4D" : "#FFFFFF",
+                    backgroundColor:
+                      selectedTerm === termDisplay ? "#99BC4D" : "#FFFFFF",
                     color: selectedTerm === termDisplay ? "white" : "#A8A8A8",
                     fontWeight: 600,
                   }}
@@ -416,49 +505,122 @@ const SkillListPage: React.FC = () => {
                 </Box>
               ))}
             </Box>
-            <Box sx={{ padding: "8px", flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+            <Box
+              sx={{
+                padding: "8px",
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                overflowY: "auto",
+              }}
+            >
+              <TextField
+                variant="outlined"
+                placeholder="Tìm kiếm chủ điểm hoặc bài học..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <SearchIcon fontSize="small" sx={{ fill: "#99BC4D" }} />
+                  ),
+                }}
+                sx={{ flexShrink: 0, marginBottom: 2 }}
+              />
               {isTopicsLoading ? (
-                <Box sx={{ display: "flex", justifyContent: "center", flex: 1 }}>
+                <Box
+                  sx={{ display: "flex", justifyContent: "center", flex: 1 }}
+                >
                   <CircularProgress size="30px" />
                 </Box>
               ) : (
                 <>
-                  <TextField
-                    variant="outlined"
-                    placeholder="Tìm kiếm..."
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ fill: "#99BC4D" }} /> }}
-                    sx={{ flexShrink: 0 }}
-                  />
-                  <Box sx={{ marginTop: "8px", flex: 1 }}>
-                    {filteredTopics.map((topic) => (
+                  <Box sx={{ flex: 1, overflowY: "auto" }}>
+                    {topics.length > 0 ? (
+                      topics.map((topic) => (
+                        <Box
+                          key={topic.topicId}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "10px",
+                            borderRadius: "5px",
+                            marginBottom: "10px",
+                            cursor: "pointer",
+                            backgroundColor:
+                              selectedTopic?.topicId === topic.topicId
+                                ? "#C1E9F9"
+                                : "transparent",
+                            borderBottom: "1px solid #E0E0E0",
+                          }}
+                          onClick={() => setSelectedTopic(topic)}
+                        >
+                          <Box
+                            component="img"
+                            src="/icon-topic.png"
+                            alt="icon topic"
+                            sx={{
+                              width: "24px",
+                              height: "24px",
+                              marginRight: "10px",
+                            }}
+                          />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography fontSize="16px" fontWeight={600}>
+                              {topic.topicName}
+                            </Typography>
+                            <Typography variant="body2" color="#A8A8A8">
+                              Bài học: {topic.lessons.length} | Bài kiểm tra:{" "}
+                              {topic.quizzes.length}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))
+                    ) : (
                       <Box
-                        key={topic.topicId}
                         sx={{
                           display: "flex",
+                          justifyContent: "center",
                           alignItems: "center",
-                          padding: "10px",
-                          borderRadius: "5px",
-                          marginBottom: "10px",
-                          cursor: "pointer",
-                          backgroundColor: selectedTopic?.topicId === topic.topicId ? "#C1E9F9" : "transparent",
-                          borderBottom: "1px solid #E0E0E0",
+                          height: "100%",
                         }}
-                        onClick={() => setSelectedTopic(topic)}
                       >
-                        <Box component="img" src="/icon-topic.png" alt="icon topic" sx={{ width: "24px", height: "24px", marginRight: "10px" }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography fontSize="16px" fontWeight={600}>
-                            {topic.topicName}
-                          </Typography>
-                          <Typography variant="body2" color="#A8A8A8">
-                            Bài học: {topic.lessons.length} | Bài kiểm tra: {topic.quizzes.length}
-                          </Typography>
-                        </Box>
+                        <Typography color="#A8A8A8">
+                          {searchText
+                            ? "Không tìm thấy chủ điểm hoặc bài học nào"
+                            : "Không có chủ điểm nào"}
+                        </Typography>
                       </Box>
-                    ))}
+                    )}
                   </Box>
+                  {totalPages > 1 && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        padding: "16px 0",
+                        borderTop: "1px solid #E0E0E0",
+                      }}
+                    >
+                      <Pagination
+                        count={totalPages}
+                        page={currentPage}
+                        onChange={handlePageChange}
+                        color="primary"
+                        size="small"
+                        sx={{
+                          "& .MuiPaginationItem-root": {
+                            "&.Mui-selected": {
+                              backgroundColor: "#99BC4D",
+                              color: "white",
+                              "&:hover": {
+                                backgroundColor: "#8DAB42",
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                  )}
                 </>
               )}
             </Box>
@@ -468,7 +630,16 @@ const SkillListPage: React.FC = () => {
           <Box sx={{ flex: 7 }}>
             {selectedTopic ? (
               <Box sx={{ gap: 4 }}>
-                <Box sx={{ backgroundColor: "white", alignItems: "center", gap: 2, padding: "24px", borderRadius: "16px", border: "1px solid #A8A8A8" }}>
+                <Box
+                  sx={{
+                    backgroundColor: "white",
+                    alignItems: "center",
+                    gap: 2,
+                    padding: "24px",
+                    borderRadius: "16px",
+                    border: "1px solid #A8A8A8",
+                  }}
+                >
                   <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
                     <img src="/math.png" width={40} height={40} />
                     <Typography fontSize={20} fontWeight={700}>
@@ -477,37 +648,152 @@ const SkillListPage: React.FC = () => {
                   </Box>
                   <Divider />
                   <Box sx={{ display: "flex", gap: 4 }}>
-                    <Typography fontSize={16} fontStyle="italic" color="#A8A8A8" sx={{ display: "flex", gap: 2, alignItems: "center", paddingTop: "16px" }}>
+                    <Typography
+                      fontSize={16}
+                      fontStyle="italic"
+                      color="#A8A8A8"
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        alignItems: "center",
+                        paddingTop: "16px",
+                      }}
+                    >
                       Bài học: {selectedTopic.lessons.length}
                     </Typography>
-                    <Typography fontSize={16} fontStyle="italic" color="#A8A8A8" sx={{ display: "flex", gap: 2, alignItems: "center", paddingTop: "16px" }}>
+                    <Typography
+                      fontSize={16}
+                      fontStyle="italic"
+                      color="#A8A8A8"
+                      sx={{
+                        display: "flex",
+                        gap: 2,
+                        alignItems: "center",
+                        paddingTop: "16px",
+                      }}
+                    >
                       Bài kiểm tra: {selectedTopic.quizzes.length}
                     </Typography>
                   </Box>
                 </Box>
                 {hasLessons && (
-                  <Box sx={{ backgroundColor: "white", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginTop: "16px", padding: "24px", borderRadius: "16px", border: "1px solid #A8A8A8" }}>
+                  <Box
+                    sx={{
+                      backgroundColor: "white",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "16px",
+                      marginTop: "16px",
+                      padding: "24px",
+                      borderRadius: "16px",
+                      border: "1px solid #A8A8A8",
+                    }}
+                  >
                     {selectedTopic.lessons.map((lesson: Lesson) => (
-                      <Box key={lesson.lessonId} sx={{ border: "0.5px solid #A8A8A8", borderRadius: "8px", backgroundColor: "#f9f9f9", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                      <Box
+                        key={lesson.lessonId}
+                        sx={{
+                          border: "0.5px solid #A8A8A8",
+                          borderRadius: "8px",
+                          backgroundColor: "#f9f9f9",
+                          overflow: "hidden",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
                         {lesson.content && lesson.content.includes(".mp4") && (
-                          <Box sx={{ width: "100%", cursor: "pointer" }} onClick={() => handleLessonClick(lesson.lessonId)}>
-                            <VideoThumbnail videoUrl={lesson.content} thumbnailUrls={lesson.thumbnailUrls} captureTime={60} width={300} height={200} />
+                          <Box
+                            sx={{ width: "100%", cursor: "pointer" }}
+                            onClick={() => handleLessonClick(lesson.lessonId)}
+                          >
+                            <VideoThumbnail
+                              videoUrl={lesson.content}
+                              thumbnailUrls={lesson.thumbnailUrls}
+                              captureTime={60}
+                              width={300}
+                              height={200}
+                            />
                           </Box>
                         )}
-                        <Box sx={{ display: "flex", flexDirection: "column", flex: 1, padding: "16px", backgroundColor: "white", borderBottomLeftRadius: "8px", borderBottomRightRadius: "8px", width: "100%" }}>
-                          <Typography fontSize="20px" fontWeight={600} color="#99BC4D" sx={{ flex: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            flex: 1,
+                            padding: "16px",
+                            backgroundColor: "white",
+                            borderBottomLeftRadius: "8px",
+                            borderBottomRightRadius: "8px",
+                            width: "100%",
+                          }}
+                        >
+                          <Typography
+                            fontSize="20px"
+                            fontWeight={600}
+                            color="#99BC4D"
+                            sx={{
+                              flex: 2,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
                             {lesson.lessonName}
                           </Typography>
-                          <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 2 }}>
-                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }} onClick={() => handleLessonClick(lesson.lessonId)}>
-                              <Image src="/icon-video.png" width={24} height={24} alt="" />
-                              <Typography fontSize="16px" color="#469ADF" fontWeight={600}>
+                          <Box
+                            sx={{
+                              flex: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 4,
+                              marginTop: 2,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                cursor: "pointer",
+                              }}
+                              onClick={() => handleLessonClick(lesson.lessonId)}
+                            >
+                              <Image
+                                src="/icon-video.png"
+                                width={24}
+                                height={24}
+                                alt=""
+                              />
+                              <Typography
+                                fontSize="16px"
+                                color="#469ADF"
+                                fontWeight={600}
+                              >
                                 Video bài giảng
                               </Typography>
                             </Box>
-                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }} onClick={() => handlePracticeClick(lesson.lessonId)}>
-                              <Image src="/icon-quiz.png" width={24} height={24} alt="" />
-                              <Typography fontSize="16px" color="#469ADF" fontWeight={600}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                handlePracticeClick(lesson.lessonId)
+                              }
+                            >
+                              <Image
+                                src="/icon-quiz.png"
+                                width={24}
+                                height={24}
+                                alt=""
+                              />
+                              <Typography
+                                fontSize="16px"
+                                color="#469ADF"
+                                fontWeight={600}
+                              >
                                 Thực hành
                               </Typography>
                             </Box>
@@ -518,19 +804,57 @@ const SkillListPage: React.FC = () => {
                   </Box>
                 )}
                 {hasQuizzes && (
-                  <Box sx={{ backgroundColor: "white", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px", marginTop: "16px", padding: "24px", borderRadius: "16px", border: "1px solid #A8A8A8" }}>
+                  <Box
+                    sx={{
+                      backgroundColor: "white",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "16px",
+                      marginTop: "16px",
+                      padding: "24px",
+                      borderRadius: "16px",
+                      border: "1px solid #A8A8A8",
+                    }}
+                  >
                     {selectedTopic.quizzes.map((quiz: Quiz) => (
-                      <Box key={quiz.quizId} sx={{ border: "0.5px solid #A8A8A8", borderRadius: "16px", backgroundColor: "#f9f9f9" }}>
+                      <Box
+                        key={quiz.quizId}
+                        sx={{
+                          border: "0.5px solid #A8A8A8",
+                          borderRadius: "16px",
+                          backgroundColor: "#f9f9f9",
+                        }}
+                      >
                         <img src="/quiz.png" />
-                        <Box sx={{ padding: 2, backgroundColor: "white", borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px" }}>
-                          <Typography fontSize="20px" fontWeight={600} color="#99BC4D">
+                        <Box
+                          sx={{
+                            padding: 2,
+                            backgroundColor: "white",
+                            borderBottomLeftRadius: "16px",
+                            borderBottomRightRadius: "16px",
+                          }}
+                        >
+                          <Typography
+                            fontSize="20px"
+                            fontWeight={600}
+                            color="#99BC4D"
+                          >
                             {quiz.title}
                           </Typography>
-                          <Typography fontSize="16px" fontWeight={600} color="#555">
+                          <Typography
+                            fontSize="16px"
+                            fontWeight={600}
+                            color="#555"
+                          >
                             Thời gian làm bài
                           </Typography>
-                          <Typography sx={{ pb: 1 }}>{quiz.quizDuration} phút</Typography>
-                          <Button fullWidth onClick={() => handleQuizClick(quiz.quizId)}>
+                          <Typography sx={{ pb: 1 }}>
+                            {quiz.quizDuration} phút
+                          </Typography>
+                          <Button
+                            fullWidth
+                            onClick={() => handleQuizClick(quiz.quizId)}
+                          >
                             Làm bài kiểm tra
                           </Button>
                         </Box>
@@ -540,7 +864,20 @@ const SkillListPage: React.FC = () => {
                 )}
               </Box>
             ) : (
-              <Typography>Chọn một chủ điểm để xem chi tiết</Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                  backgroundColor: "white",
+                  borderRadius: "16px",
+                }}
+              >
+                {/* <Typography color="#A8A8A8" fontSize="18px">
+                  Chọn một chủ điểm để xem chi tiết
+                </Typography> */}
+              </Box>
             )}
           </Box>
         </Box>
@@ -557,8 +894,17 @@ const SkillListPage: React.FC = () => {
               Vui lòng chọn quiz bên dưới để luyện tập
             </Typography>
             {quizzes.map((quiz: Quiz) => (
-              <Box key={quiz.quizId} sx={{ marginBottom: "10px", display: "flex", flexDirection: "column" }}>
-                <Button onClick={() => handleQuizClick(quiz.quizId)}>{quiz.title}</Button>
+              <Box
+                key={quiz.quizId}
+                sx={{
+                  marginBottom: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Button onClick={() => handleQuizClick(quiz.quizId)}>
+                  {quiz.title}
+                </Button>
               </Box>
             ))}
           </DialogContent>
