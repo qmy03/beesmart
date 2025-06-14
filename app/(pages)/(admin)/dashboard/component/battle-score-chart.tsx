@@ -97,7 +97,7 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
     <Card sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
         <Typography fontWeight={600} fontSize={20} sx={{ mb: 2 }}>
-          Thống kê số thí sinh theo môn học và phân bố điểm Battle
+          Thống kê số thí sinh theo môn học và phân bố điểm Đấu trường
         </Typography>
 
         <Box height={400}>
@@ -146,25 +146,25 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
                   dataKey="0-50"
                   fill="#ef4444"
                   name="0-50"
-                  radius={[2, 2, 0, 0]}
+                  radius={[12, 12, 4, 4]}
                 />
                 <Bar
                   dataKey="51-70"
                   fill="#f97316"
                   name="51-70"
-                  radius={[2, 2, 0, 0]}
+                  radius={[12, 12, 4, 4]}
                 />
                 <Bar
                   dataKey="71-90"
                   fill="#eab308"
                   name="71-90"
-                  radius={[2, 2, 0, 0]}
+                  radius={[12, 12, 4, 4]}
                 />
                 <Bar
                   dataKey="91-100"
                   fill="#22c55e"
                   name="91-100"
-                  radius={[2, 2, 0, 0]}
+                  radius={[12, 12, 4, 4]}
                 />
               </BarChart>
             ) : (
@@ -184,7 +184,7 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
           </ResponsiveContainer>
         </Box>
 
-        <Box sx={{ mt: 1}}>
+        <Box sx={{}}>
           <Box
             sx={{
               display: "flex",
@@ -208,7 +208,7 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
                   }}
                 />
                 <Typography variant="body2" color="text.secondary">
-                  {range} điểm
+                  {range}
                 </Typography>
               </Box>
             ))}

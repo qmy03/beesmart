@@ -131,8 +131,13 @@ const Sidebar: React.FC = () => {
           icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
         },
         {
-          name: "Thống kê Quiz",
+          name: "Thống kê Bài kiểm tra",
           path: "/statistic-quizzes",
+          icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
+        },
+        {
+          name: "Thống kê Đấu trường",
+          path: "/statistic-battles",
           icon: <FiberManualRecordIcon sx={{ fontSize: "8px" }} />,
         },
       ],

@@ -164,14 +164,14 @@ const SideNav: React.FC = () => {
       reconnectAttemptsRef.current = 0; // Reset số lần thử
       websocketRef.current?.send(JSON.stringify({ type: "GET_NOTIFICATIONS" }));
       // Gọi fetchNotifications sau 3 giây nếu không nhận được thông báo
-      // setTimeout(() => {
-      //   if (notifications.length === 0) {
-      //     console.log(
-      //       "WebSocket did not return notifications, falling back to HTTP"
-      //     );
-      //     fetchNotifications();
-      //   }
-      // }, 3000);
+      setTimeout(() => {
+        if (notifications.length === 0) {
+          console.log(
+            "WebSocket did not return notifications, falling back to HTTP"
+          );
+          fetchNotifications();
+        }
+      }, 3000);
     };
 
     websocketRef.current.onmessage = (event) => {

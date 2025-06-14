@@ -213,7 +213,7 @@ const SkillPracticePage = () => {
         setDialogOpen(true);
         setIsSubmitted(true);
         handleCloseConfirm();
-        router.push(`/skill/${response.data.data.recordId}`);
+        router.push(`/skill-list/${response.data.data.recordId}`);
       })
       .catch((error) => {
         console.error(
@@ -591,7 +591,7 @@ const SkillPracticePage = () => {
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={handleConfirm}
+                  onClick={handleOpenConfirm}
                   disabled={timeLeft === 0}
                   sx={{
                     textTransform: "none",

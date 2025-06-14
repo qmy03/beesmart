@@ -292,7 +292,7 @@ const QuizPage = () => {
       setIsLoading(true);
       apiService
         .get<TopicsResponse>(
-          `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
+          `/topics/topic-lesson?grade=${selectedGradeName}&semester=${selectedSemester}&subject=${selectedSubjectName}&bookType=${selectedBookName}`
         )
         .then((response) => {
           const fetchedTopics = response.data.data.topics;

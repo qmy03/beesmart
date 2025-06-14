@@ -138,7 +138,7 @@ const QuizStatisticsChart: React.FC<QuizStatisticsChartProps> = ({
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: 0.5 
+              gap: 1, 
             }}
           >
             <Box
@@ -166,10 +166,10 @@ const QuizStatisticsChart: React.FC<QuizStatisticsChartProps> = ({
   };
 
   return (
-    <Card sx={{ width: "100%", height: "fit-content" }}>
+    <Card sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
-        <Typography fontWeight={600} fontSize={18} mb={2}>
-          Thống kê bài kiểm tra theo lớp
+        <Typography fontWeight={600} fontSize={20} mb={2}>
+          {type === 'quiz' ? 'Tỷ lệ học sinh tham gia làm bài kiểm tra' : 'Tỷ lệ học sinh tham gia đấu trường'}
         </Typography>
 
         <Box
@@ -184,14 +184,14 @@ const QuizStatisticsChart: React.FC<QuizStatisticsChartProps> = ({
             <LoadingSkeleton />
           ) : pieData.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <PieChart width={400} height={300}>
+              <PieChart width={400} height={420}>
                 <Pie
                   data={pieData}
                   dataKey="value"
                   nameKey="label"
                   cx="50%"
                   cy="50%"
-                  outerRadius={120}
+                  outerRadius={150}
                   fill="#8884d8"
                   labelLine={false}
                   label={renderCustomLabel}

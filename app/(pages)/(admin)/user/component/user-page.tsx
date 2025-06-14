@@ -17,12 +17,11 @@ import {
   Alert,
   TablePagination,
   Checkbox,
-  TextField,
   Select,
   MenuItem,
   FormControl,
 } from "@mui/material";
-
+import TextField from "@/app/components/textfield";
 import React, { useState, useEffect, useMemo } from "react";
 import apiService from "@/app/untils/api";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
@@ -270,8 +269,20 @@ const UserPage = () => {
                 <Table size="small">
                   <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
                     <TableRow>
+                      <TableCell sx={{ border: "none" }}></TableCell>
                       <TableCell sx={{ border: "none" }}>
+                        Tên người dùng
+                      </TableCell>
+                      <TableCell sx={{ border: "none" }}>Email</TableCell>
+                      <TableCell sx={{ border: "none" }}>Vai trò</TableCell>
+                      <TableCell sx={{ border: "none" }}>Trạng thái</TableCell>
+                      <TableCell sx={{ border: "none" }}>Ngày tạo</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        {" "}
                         <Checkbox
+                          size="small"
                           indeterminate={
                             selected.length > 0 &&
                             filteredUsers.length > 0 &&
@@ -293,16 +304,6 @@ const UserPage = () => {
                           onChange={handleSelectAllClick}
                         />
                       </TableCell>
-                      <TableCell sx={{ border: "none" }}>
-                        Tên người dùng
-                      </TableCell>
-                      <TableCell sx={{ border: "none" }}>Email</TableCell>
-                      <TableCell sx={{ border: "none" }}>Vai trò</TableCell>
-                      <TableCell sx={{ border: "none" }}>Trạng thái</TableCell>
-                      <TableCell sx={{ border: "none" }}>Ngày tạo</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ paddingTop: 0 }}></TableCell>
                       <TableCell sx={{ paddingTop: 0 }}>
                         <TextField
                           size="small"
@@ -350,7 +351,8 @@ const UserPage = () => {
                       </TableCell>
                       <TableCell sx={{ paddingTop: 0 }}>
                         <FormControl size="small" sx={{ minWidth: 80 }}>
-                          <Select
+                          <TextField
+                            select
                             value={searchStatus}
                             onChange={(e) => setSearchStatus(e.target.value)}
                             sx={{
@@ -361,7 +363,7 @@ const UserPage = () => {
                             <MenuItem value="All">Tất cả</MenuItem>
                             <MenuItem value="On">Hoạt động</MenuItem>
                             <MenuItem value="Off">Không hoạt động</MenuItem>
-                          </Select>
+                          </TextField>
                         </FormControl>
                       </TableCell>
                       <TableCell sx={{ paddingTop: 0 }}>
@@ -387,14 +389,14 @@ const UserPage = () => {
                         <TableCell
                           colSpan={6}
                           align="center"
-                          sx={{ paddingY: "16px" }}
+                          sx={{ paddingY: "12px" }}
                         >
                           Đang tải dữ liệu...
                         </TableCell>
                       </TableRow>
                     ) : paginatedUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">
+                        <TableCell colSpan={6} align="center" sx={{ paddingY: "12px" }}>
                           Không có dữ liệu
                         </TableCell>
                       </TableRow>
@@ -412,11 +414,14 @@ const UserPage = () => {
                           >
                             <TableCell>
                               <Checkbox
+                                size="small"
                                 sx={{
                                   color: "#637381",
                                   "&.Mui-checked": {
                                     color: "#99BC4D",
                                   },
+                                  paddingY:0,
+                                  // m:0,
                                 }}
                                 checked={isItemSelected}
                                 onChange={(event) =>
@@ -427,7 +432,7 @@ const UserPage = () => {
                                 }}
                               />
                             </TableCell>
-                            <TableCell>{user.username}</TableCell>
+                            <TableCell sx={{ paddingY: "12px" }}>{user.username}</TableCell>
                             <TableCell>{user.email}</TableCell>
                             <TableCell>{user.role}</TableCell>
                             <TableCell>

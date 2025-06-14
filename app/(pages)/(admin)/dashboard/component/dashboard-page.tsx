@@ -619,31 +619,30 @@ const DashboardPage = () => {
             />
           </Box>
         </Box>
+
         <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
-          <Box sx={{ flex: 1, overflowX: "auto" }}>
-            <QuizAverageBarChart
-              data={quizAverageData}
-              month={currentMonth}
-              year={currentYear}
-              selectedSubject={selectedSubject}
-              setSelectedSubject={setSelectedSubject}
-              subjects1={subjects}
-              type="quiz"
-              loading={quizAverageLoading}
-            />
-          </Box>
-          <Box sx={{ flex: 1, overflowX: "auto" }}>
-            <QuizAverageBarChart
-              data={battleAverageData}
-              month={currentMonth}
-              year={currentYear}
-              selectedSubject={selectedSubject}
-              setSelectedSubject={setSelectedSubject}
-              subjects1={subjects}
-              type="arena"
-              loading={battleAverageLoading}
-            />
-          </Box>
+          <QuizAverageBarChart
+            data={quizAverageData}
+            month={currentMonth}
+            year={currentYear}
+            selectedSubject={selectedSubject}
+            setSelectedSubject={setSelectedSubject}
+            subjects1={subjects}
+            type="quiz"
+            loading={quizAverageLoading}
+          />
+        </Box>
+        <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
+          <QuizAverageBarChart
+            data={battleAverageData}
+            month={currentMonth}
+            year={currentYear}
+            selectedSubject={selectedSubject}
+            setSelectedSubject={setSelectedSubject}
+            subjects1={subjects}
+            type="arena"
+            loading={battleAverageLoading}
+          />
         </Box>
       </Box>
     </Layout>
