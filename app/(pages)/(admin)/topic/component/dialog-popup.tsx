@@ -20,7 +20,10 @@ interface DialogPopupProps {
   selectedSemester: string;
   selectedBookId: string;
   selectedSubjectId: string;
-  onSuccess: () => string;
+  onSuccess: (message: string) => void;
+}
+interface TopicResponse {
+  message: string;
 }
 
 const DialogPopup: React.FC<
@@ -55,9 +58,8 @@ const DialogPopup: React.FC<
     };
 
     if (type === "add") {
-      // Thêm mới topic
       apiService
-        .post(
+        .post<TopicResponse>(
           `/topics/grade/${selectedGradeId}/subject/${selectedSubjectId}/bookType/${selectedBookId}`,
           body,
           {
@@ -67,26 +69,25 @@ const DialogPopup: React.FC<
         .then((response) => {
           console.log("Topic added:", response);
           if (response.status === 200) {
-            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
-            onTopicAdded(); // Gọi callback để làm mới danh sách
-            onClose(); // Đóng dialog sau khi thành công
+            onSuccess(response.data.message);
+            onTopicAdded();
+            onClose();
           }
         })
         .catch((error) => {
           console.error("Error adding topic:", error);
         });
     } else if (type === "edit" && topic?.topicId) {
-      // Cập nhật topic đã có
       apiService
-        .put(`/topics/${topic.topicId}`, body, {
+        .put<TopicResponse>(`/topics/${topic.topicId}`, body, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
           console.log("Topic updated:", response);
           if (response.status === 200) {
-            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
-            onTopicAdded(); // Gọi callback để làm mới danh sách
-            onClose(); // Đóng dialog sau khi thành công
+            onSuccess(response.data.message);
+            onTopicAdded();
+            onClose();
           }
         })
         .catch((error) => {

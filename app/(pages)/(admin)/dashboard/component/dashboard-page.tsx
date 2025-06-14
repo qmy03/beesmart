@@ -1,183 +1,540 @@
 import Layout from "@/app/components/admin/layout";
-import { Box, Card, Grid, Typography } from "@mui/material";
+import { Box, Card, CircularProgress, Grid, Typography } from "@mui/material";
 import StatCard from "./stat-card";
-import SessionsChart from "./session-chart";
-import { mathSessionData } from "../data/math-session-data";
 import LessonViewsBarChart from "./lesson-view-bar-chart";
+import QuizStatisticsChart from "./quiz-statistics-chart";
+import QuizAverageBarChart from "./quiz-average-bar-chart";
+import apiService from "@/app/untils/api";
+
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import ClassIcon from "@mui/icons-material/Class";
 import PlayLessonIcon from "@mui/icons-material/PlayLesson";
-import { use, useEffect, useState } from "react";
+import SubjectIcon from "@mui/icons-material/Subject";
+
+import { useEffect, useState } from "react";
+import {
+  AccountCircle,
+  Class,
+  MenuBook,
+  School,
+  SvgIconComponent,
+} from "@mui/icons-material";
+import QuizScoreChart from "./quiz-score-chart";
+import BattleScoreChart from "./battle-score-chart";
+import BattleStatisticsChart from "./battle-statistics-chart";
 import { useAuth } from "@/app/hooks/AuthContext";
-import apiService from "@/app/untils/api";
-import QuizStatisticsChart from "./quiz-statistics-chart";
-import QuizAverageBarChart from "./quiz-average-bar-chart";
-interface SummaryDataItem {
-  title: string;
-  value: any;
-  Icon: React.ComponentType;
-  bgColor: string;
-  bgColorIcon: string;
-  iconColor: string;
-  textColor: string;
+
+interface DashboardStats {
+  totalUsers: number;
+  totalGrades: number;
+  totalSubjects: number;
+  totalLessons: number;
+}
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+}
+
+interface ChartDataItem {
+  date: string;
+  "Lớp 1": number;
+  "Lớp 2": number;
+  "Lớp 3": number;
+  "Lớp 4": number;
+  "Lớp 5": number;
+}
+
+interface QuizStatistics {
+  [key: string]: number;
+}
+interface BattleStatistics {
+  [key: string]: number;
+}
+interface QuizScoreData {
+  [subject: string]: {
+    "0.0 - 3.4": number;
+    "3.5 - 4.9": number;
+    "5.0 - 6.4": number;
+    "6.5 - 7.9": number;
+    "8.0 - 10.0": number;
+  };
+}
+interface BattleScoreData {
+  [subject: string]: {
+    "0-50": number;
+    "51-70": number;
+    "71-90": number;
+    "91-100": number;
+  };
 }
 
 const DashboardPage = () => {
-  // const { accessToken } = useAuth();
   const accessToken = localStorage.getItem("accessToken");
-  const [lessonViewData, setLessonViewData] = useState<
-    { date: string; views: number }[]
-  >([]);
-  const [quizAverageData, setQuizAverageData] = useState<
-    { date: string; averages: { [key: string]: number } }[]
-  >([]);
-  const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
+  const { isLoading, setIsLoading } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalUsers: 0,
+    totalGrades: 0,
+    totalSubjects: 0,
+    totalLessons: 0,
+  });
+  const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Chart data states
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [chartLoading, setChartLoading] = useState(false);
+  // const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
+
+  // Quiz and Battle average states
+  const [quizAverageData, setQuizAverageData] = useState<ChartDataItem[]>([]);
+  const [quizAverageLoading, setQuizAverageLoading] = useState(false);
+  const [battleAverageData, setBattleAverageData] = useState<ChartDataItem[]>(
+    []
+  );
+  const [battleAverageLoading, setBattleAverageLoading] = useState(false);
+
+  // Quiz statistics states
+  const [quizStatistics, setQuizStatistics] = useState<QuizStatistics>({});
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [battleStatistics, setBattleStatistics] = useState<BattleStatistics>(
+    {}
+  );
+  const [battleLoading, setBattleLoading] = useState(false);
+  // Thêm state cho Quiz Score Data
+  const [quizScoreData, setQuizScoreData] = useState<QuizScoreData>({});
+  const [quizScoreLoading, setQuizScoreLoading] = useState(false);
+  const [battleScoreData, setBattleScoreData] = useState<BattleScoreData>({});
+  const [battleScoreLoading, setBattleScoreLoading] = useState(false);
+
+  // Current month and year
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+  const dateParam = `${currentMonth}-${currentYear}`;
   useEffect(() => {
-    console.log("Access Token:", accessToken); // Add this line for debugging
-    if (accessToken) {
-      // API calls go here
-    } else {
-      console.error("Access token is missing");
-    }
-  }, [accessToken]);
-  const currentMonth = new Date().getMonth() + 1; // getMonth() trả về tháng từ 0-11, do đó cần cộng thêm 1
-  const currentYear = new Date().getFullYear(); // Lấy năm hiện tại
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
+      if (!accessToken) {
+        setError("Không tìm thấy token xác thực");
+        setIsLoading(false);
+        // setDataLoading(false);
+        // setIsInitialLoad(false);
+        return;
+      }
+
       try {
-        if (accessToken) {
-          const userResponse = await fetch("http://localhost:8080/api/users", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header cho API người dùng
-            },
-          });
-          const userData = await userResponse.json();
-          const totalUsers = userData.data.length;
+        setIsLoading(true);
+        // setDataLoading(true);
+        setError(null);
 
-          // Fetch total number of classes without accessToken
-          const gradeResponse = await fetch("http://localhost:8080/api/grades");
-          const gradeData = await gradeResponse.json();
-          const totalGrades = gradeData.length;
+        const config = {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        };
 
-          // Fetch total number of lessons without accessToken
-          const lessonResponse = await fetch(
-            "http://localhost:8080/api/lessons?page&size"
-          );
-          const lessonData = await lessonResponse.json();
-          const totalLessons = lessonData.data.totalItems;
+        // Fetch all dashboard data including quiz statistics
+        const [
+          usersResponse,
+          gradesResponse,
+          subjectsResponse,
+          lessonsResponse,
+          quizStatsResponse,
+          battleStatsResponse,
+          quizScoreResponse, // Thêm API quiz score
+          battleScoreResponse, // Thêm API battle score
+        ] = await Promise.all([
+          apiService.get("/users", config),
+          apiService.get("/grades", config),
+          apiService.get("/subjects", config),
+          apiService.get("/lessons", config),
+          apiService.get("/statistics/admin/quiz-submit-statistics", config),
+          apiService.get("/statistics/admin/battle-users-by-subject", config),
+          apiService.get("/statistics/admin/quiz-score-by-subject", config), // API mới
+          apiService.get("/statistics/admin/battle-score-by-subject", config),
+        ]);
 
-          // Update summary data
-          setSummaryData([
-            {
-              title: "Tổng số tài khoản hiện có",
-              value: totalUsers,
-              Icon: PeopleAltIcon,
-              bgColor: "#D0ECFE",
-              bgColorIcon: "#FFFFFF",
-              iconColor: "#1877F2",
-              textColor: "#0C44AE",
-            },
-            {
-              title: "Tổng số lớp học",
-              value: totalGrades,
-              Icon: ClassIcon,
-              bgColor: "#EFD6FF",
-              bgColorIcon: "#FFFFFF",
-              iconColor: "#8E33FF",
-              textColor: "#5119B7",
-            },
-            {
-              title: "Tổng số bài học",
-              value: totalLessons,
-              Icon: PlayLessonIcon,
-              bgColor: "#FFF5CC",
-              bgColorIcon: "#FFFFFF",
-              iconColor: "#FFAB00",
-              textColor: "#B76E00",
-            },
-          ]);
-        } else {
-          console.error("Access token is missing");
+        // Check response status for main APIs
+        if (usersResponse.data.status !== 200) {
+          throw new Error(`Lỗi API users: ${usersResponse.data.message}`);
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        if (gradesResponse.data.status !== 200) {
+          throw new Error(`Lỗi API grades: ${gradesResponse.data.message}`);
+        }
+        if (subjectsResponse.data.status !== 200) {
+          throw new Error(`Lỗi API subjects: ${subjectsResponse.data.message}`);
+        }
+        if (lessonsResponse.data.status !== 200) {
+          throw new Error(`Lỗi API lessons: ${lessonsResponse.data.message}`);
+        }
+
+        // Update stats
+        setStats({
+          totalUsers: usersResponse.data.data?.length || 0,
+          totalGrades: gradesResponse.data.data?.totalItems || 0,
+          totalSubjects: subjectsResponse.data.data?.totalItems || 0,
+          totalLessons: lessonsResponse.data.data?.totalItems || 0,
+        });
+
+        // Get subjects list for chart
+        const subjectsList = subjectsResponse.data.data?.subjects || [];
+        setSubjects(subjectsList);
+
+        // Set default subject to first subject
+        if (subjectsList.length > 0 && !selectedSubject) {
+          setSelectedSubject(subjectsList[0].subjectName);
+        }
+
+        // Handle quiz statistics
+        if (quizStatsResponse.data.status === 200) {
+          const processedQuizData = {
+            "Lớp 1": quizStatsResponse.data.data["Lớp 1"] || 0,
+            "Lớp 2": quizStatsResponse.data.data["Lớp 2"] || 0,
+            "Lớp 3": quizStatsResponse.data.data["Lớp 3"] || 0,
+            "Lớp 4": quizStatsResponse.data.data["Lớp 4"] || 0,
+            "Lớp 5": quizStatsResponse.data.data["Lớp 5"] || 0,
+          };
+          setQuizStatistics(processedQuizData);
+        } else {
+          console.warn(
+            "Quiz statistics API failed:",
+            quizStatsResponse.data.message
+          );
+        }
+        if (battleStatsResponse.data.status === 200) {
+          // Sử dụng dữ liệu trực tiếp từ API vì đã có đầy đủ môn học
+          setBattleStatistics(battleStatsResponse.data.data);
+        } else {
+          console.warn(
+            "Battle statistics API failed:",
+            battleStatsResponse.data.message
+          );
+        }
+        if (quizScoreResponse.data.status === 200) {
+          setQuizScoreData(quizScoreResponse.data.data);
+        } else {
+          console.warn(
+            "Quiz score statistics API failed:",
+            quizScoreResponse.data.message
+          );
+          // Set empty data thay vì để loading
+          setQuizScoreData({});
+        }
+        if (battleScoreResponse.data.status === 200) {
+          setBattleScoreData(battleScoreResponse.data.data);
+        } else {
+          console.warn(
+            "Battle score statistics API failed:",
+            battleScoreResponse.data.message
+          );
+          // Set empty data thay vì để loading
+          setBattleScoreData({});
+        }
+      } catch (err: any) {
+        console.error("Lỗi khi fetch dashboard data:", err);
+        let errorMessage = "Có lỗi xảy ra khi tải dữ liệu";
+
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+        // setDataLoading(false);
+        // setIsInitialLoad(false);
+        setQuizScoreLoading(false);
+        setBattleScoreLoading(false);
+        // setQuizAverageLoading(false);
+        // setBattleAverageLoading(false);
       }
     };
 
-    fetchData();
-  }, [accessToken]); // Hook sẽ chạy lại mỗi khi accessToken thay đổi
-
-  useEffect(() => {
-    const fetchQuizAverageData = async () => {
-      try {
-        if (accessToken) {
-          const averageResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/quiz-average-by-month?date=${currentMonth}-${currentYear}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-          const averageData = await averageResponse.json();
-          if (averageData.status === 200) {
-            const chartData = Object.keys(averageData.data).map((date) => {
-              const averages = averageData.data[date];
-              return { date, averages };
-            });
-            setQuizAverageData(chartData);
-          } else {
-            console.error("Failed to fetch data:", averageData.message);
-          }
-        } else {
-          console.error("Access token is missing");
-        }
-      } catch (error) {
-        console.error("Error fetching average data:", error);
-      }
-    };
-
-    fetchQuizAverageData();
+    fetchDashboardData();
   }, [accessToken]);
+
   useEffect(() => {
-    const fetchDataRecord = async () => {
+    const fetchChartData = async () => {
+      if (!accessToken || !selectedSubject || subjects.length === 0) {
+        console.log("[fetchChartData] Missing required data:", {
+          accessToken: !!accessToken,
+          selectedSubject,
+          subjectsLength: subjects.length,
+        });
+        return;
+      }
+
       try {
-        if (accessToken) {
-          const lessonResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}`,
-            {
-              method: "GET",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
-          const lessonData = await lessonResponse.json();
-          if (lessonData.status === 200) {
-            const chartData = Object.keys(lessonData.data).map((date) => {
-              const dayData = lessonData.data[date];
-              return {
+        setChartLoading(true);
+        console.log("[fetchChartData] Fetching lesson views with:", {
+          selectedSubject,
+          dateParam,
+        });
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        };
+
+        const response = await apiService.get(
+          `/statistics/admin/record-lesson-by-month?date=${dateParam}&subject=${encodeURIComponent(selectedSubject)}`,
+          config
+        );
+
+        if (response.data.status === 200) {
+          const rawData = response.data.data;
+          console.log("[fetchChartData] Raw API response:", rawData);
+
+          if (rawData && Object.keys(rawData).length > 0) {
+            const transformedData = Object.entries(rawData).map(
+              ([date, values]: [string, any]) => ({
                 date,
-                ...dayData, // Lưu từng lớp riêng biệt
-              };
-            });
-            setLessonViewData(chartData);
+                "Lớp 1": values["Lớp 1"] || 0,
+                "Lớp 2": values["Lớp 2"] || 0,
+                "Lớp 3": values["Lớp 3"] || 0,
+                "Lớp 4": values["Lớp 4"] || 0,
+                "Lớp 5": values["Lớp 5"] || 0,
+              })
+            );
+            console.log("[fetchChartData] Transformed data:", transformedData);
+            setChartData(transformedData);
+          } else {
+            console.log("[fetchChartData] No lesson view data available");
+            setChartData([]);
           }
         } else {
-          console.error("Access token is missing");
+          console.warn("Lesson views API failed:", response.data.message);
+          setChartData([]);
         }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      } catch (err: any) {
+        console.error("Lỗi khi fetch chart data:", err);
+        setChartData([]);
+      } finally {
+        setChartLoading(false);
       }
     };
 
-    fetchDataRecord();
-  }, [accessToken]);
+    fetchChartData();
+  }, [accessToken, selectedSubject, dateParam, subjects.length]);
+
+  useEffect(() => {
+    const fetchAverageData = async () => {
+      // Thêm kiểm tra điều kiện đầy đủ hơn
+      if (!accessToken || !selectedSubject || subjects.length === 0) {
+        console.log("[fetchAverageData] Missing required data:", {
+          accessToken: !!accessToken,
+          selectedSubject,
+          subjectsLength: subjects.length,
+        });
+        return;
+      }
+
+      try {
+        console.log("[fetchAverageData] Starting fetch with:", {
+          selectedSubject,
+          dateParam,
+        });
+
+        setQuizAverageLoading(true);
+        setBattleAverageLoading(true);
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        };
+
+        const [quizAverageResponse, battleAverageResponse] = await Promise.all([
+          apiService.get(
+            `/statistics/admin/quiz-average-by-month?date=${dateParam}&subject=${encodeURIComponent(selectedSubject)}`,
+            config
+          ),
+          apiService.get(
+            `/statistics/admin/battle-average-by-month?date=${dateParam}&subject=${encodeURIComponent(selectedSubject)}`,
+            config
+          ),
+        ]);
+
+        console.log("[fetchAverageData] API responses:", {
+          quiz: quizAverageResponse.data,
+          battle: battleAverageResponse.data,
+        });
+
+        // Handle quiz average
+        if (quizAverageResponse.data.status === 200) {
+          const rawData = quizAverageResponse.data.data;
+
+          if (rawData && Object.keys(rawData).length > 0) {
+            const transformedQuizAverage = Object.entries(rawData).map(
+              ([date, values]: [string, any]) => ({
+                date,
+                averages: {
+                  "Lớp 1": values["Lớp 1"] || 0,
+                  "Lớp 2": values["Lớp 2"] || 0,
+                  "Lớp 3": values["Lớp 3"] || 0,
+                  "Lớp 4": values["Lớp 4"] || 0,
+                  "Lớp 5": values["Lớp 5"] || 0,
+                },
+              })
+            );
+
+            console.log(
+              "[fetchAverageData] Transformed quiz data:",
+              transformedQuizAverage
+            );
+            setQuizAverageData(transformedQuizAverage);
+          } else {
+            console.log("[fetchAverageData] No quiz data available");
+            setQuizAverageData([]);
+          }
+        } else {
+          console.warn(
+            "Quiz average API failed:",
+            quizAverageResponse.data.message
+          );
+          setQuizAverageData([]);
+        }
+
+        // Handle battle average
+        if (battleAverageResponse.data.status === 200) {
+          const rawData = battleAverageResponse.data.data;
+
+          if (rawData && Object.keys(rawData).length > 0) {
+            const transformedBattleAverage = Object.entries(rawData).map(
+              ([date, values]: [string, any]) => ({
+                date,
+                averages: {
+                  "Lớp 1": values["Lớp 1"] || 0,
+                  "Lớp 2": values["Lớp 2"] || 0,
+                  "Lớp 3": values["Lớp 3"] || 0,
+                  "Lớp 4": values["Lớp 4"] || 0,
+                  "Lớp 5": values["Lớp 5"] || 0,
+                },
+              })
+            );
+
+            console.log(
+              "[fetchAverageData] Transformed battle data:",
+              transformedBattleAverage
+            );
+            setBattleAverageData(transformedBattleAverage);
+          } else {
+            console.log("[fetchAverageData] No battle data available");
+            setBattleAverageData([]);
+          }
+        } else {
+          console.warn(
+            "Battle average API failed:",
+            battleAverageResponse.data.message
+          );
+          setBattleAverageData([]);
+        }
+      } catch (err: any) {
+        console.error("Lỗi khi fetch average data:", err);
+        setQuizAverageData([]);
+        setBattleAverageData([]);
+      } finally {
+        setQuizAverageLoading(false);
+        setBattleAverageLoading(false);
+      }
+    };
+
+    fetchAverageData();
+  }, [accessToken, selectedSubject, dateParam, subjects.length]); // Thêm subjects.length vào dependency
+  const statsConfig = [
+    {
+      title: "Tài khoản hiện có",
+      value: stats.totalUsers,
+      label: "Tài khoản",
+      Icon: AccountCircle,
+      bgColor: "#E3F2FD",
+      bgColorIcon: "#1976D2",
+      iconColor: "#FFFFFF",
+      textColor: "#1976D2",
+    },
+    {
+      title: "Tổng số môn học",
+      value: stats.totalSubjects,
+      label: "Môn học",
+      Icon: MenuBook,
+      bgColor: "#F3E5F5",
+      bgColorIcon: "#7B1FA2",
+      iconColor: "#FFFFFF",
+      textColor: "#7B1FA2",
+    },
+    {
+      title: "Tổng số lớp học",
+      value: stats.totalGrades,
+      label: "Lớp học",
+      Icon: Class,
+      bgColor: "#E8F5E8",
+      bgColorIcon: "#388E3C",
+      iconColor: "#FFFFFF",
+      textColor: "#388E3C",
+    },
+    {
+      title: "Tổng số bài học",
+      value: stats.totalLessons,
+      label: "Bài học",
+      Icon: School,
+      bgColor: "#FFF3E0",
+      bgColorIcon: "#F57C00",
+      iconColor: "#FFFFFF",
+      textColor: "#F57C00",
+    },
+  ];
+
+  // Show loading only for initial load
+  // if (dataLoading && isInitialLoad) {
+  //   return (
+  //     <Layout>
+  //       <Box
+  //         sx={{
+  //           position: "absolute",
+  //           top: 0,
+  //           left: 0,
+  //           right: 0,
+  //           bottom: 0,
+  //           backgroundColor: "rgba(0, 0, 0, 0.1)",
+  //           zIndex: 10, // Đảm bảo overlay nằm trên nội dung main nhưng không vượt qua Sidebar
+  //           display: "flex",
+  //           justifyContent: "center",
+  //           alignItems: "center",
+  //         }}
+  //       >
+  //         <CircularProgress size={30} color="inherit" />
+  //       </Box>
+  //     </Layout>
+  //   );
+  // }
+
+  if (error) {
+    return (
+      <Layout>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100%",
+            backgroundColor: "#F4F5F9",
+            flex: 1,
+          }}
+        >
+          <Typography color="error" variant="h6">
+            {error}
+          </Typography>
+        </Box>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -187,6 +544,8 @@ const DashboardPage = () => {
           flexDirection: "column",
           padding: "0 10px",
           gap: 2,
+          backgroundColor: "#F4F5F9",
+          flex: 1,
         }}
       >
         <Box
@@ -196,6 +555,7 @@ const DashboardPage = () => {
             alignItems: "center",
             boxShadow: 4,
             borderRadius: "8px",
+            backgroundColor: "#FFFFFF",
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
@@ -203,53 +563,87 @@ const DashboardPage = () => {
           </Typography>
         </Box>
 
-        {/* Display StatCards */}
         <Grid container spacing={3}>
-          {summaryData.map((item, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
+          {statsConfig.map((stat, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
               <StatCard
-                title={item.title}
-                value={item.value}
-                Icon={item.Icon}
-                bgColor={item.bgColor}
-                bgColorIcon={item.bgColorIcon}
-                iconColor={item.iconColor}
-                textColor={item.textColor}
+                title={stat.title}
+                value={stat.value}
+                label={stat.label}
+                Icon={stat.Icon}
+                bgColor={stat.bgColor}
+                bgColorIcon={stat.bgColorIcon}
+                iconColor={stat.iconColor}
+                textColor={stat.textColor}
               />
             </Grid>
           ))}
         </Grid>
 
-        {/* Add SessionsChart */}
-        <Box sx={{ display: "flex", marginY: 4, gap: 2, flexGrow: 1 }}>
+        <Box sx={{ mt: 2 }}>
           <LessonViewsBarChart
-            data={lessonViewData}
+            data={chartData}
             month={currentMonth}
             year={currentYear}
+            selectedSubject={selectedSubject}
+            setSelectedSubject={setSelectedSubject}
+            subjects={subjects}
+            loading={chartLoading}
+            hasData={chartData.length > 0}
           />
         </Box>
-        <Card
-          variant="outlined"
-          sx={{
-            marginBottom: 4,
-            borderRadius: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            padding: 3,
-          }}
-        >
-          <Typography fontWeight={700} fontSize="20px">
-            Tỉ lệ phần trăm làm bài quiz theo từng lớp
-          </Typography>
-          <QuizStatisticsChart />
-        </Card>
-        <Box sx={{ display: "flex", marginBottom: 4, gap: 2, flexGrow: 1 }}>
-          <QuizAverageBarChart
-            data={quizAverageData}
-            month={currentMonth}
-            year={currentYear}
-          />
+        <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <QuizStatisticsChart
+              data={quizStatistics}
+              loading={quizLoading}
+              type="quiz"
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <QuizStatisticsChart
+              data={battleStatistics}
+              loading={battleLoading}
+              type="battle"
+            />
+          </Box>
+        </Box>
+        <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
+          <Box sx={{ flex: 1 }}>
+            <QuizScoreChart data={quizScoreData} loading={quizScoreLoading} />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <BattleScoreChart
+              data={battleScoreData}
+              loading={battleScoreLoading}
+            />
+          </Box>
+        </Box>
+        <Box sx={{ display: "flex", flex: 1, gap: 2 }}>
+          <Box sx={{ flex: 1, overflowX: "auto" }}>
+            <QuizAverageBarChart
+              data={quizAverageData}
+              month={currentMonth}
+              year={currentYear}
+              selectedSubject={selectedSubject}
+              setSelectedSubject={setSelectedSubject}
+              subjects1={subjects}
+              type="quiz"
+              loading={quizAverageLoading}
+            />
+          </Box>
+          <Box sx={{ flex: 1, overflowX: "auto" }}>
+            <QuizAverageBarChart
+              data={battleAverageData}
+              month={currentMonth}
+              year={currentYear}
+              selectedSubject={selectedSubject}
+              setSelectedSubject={setSelectedSubject}
+              subjects1={subjects}
+              type="arena"
+              loading={battleAverageLoading}
+            />
+          </Box>
         </Box>
       </Box>
     </Layout>

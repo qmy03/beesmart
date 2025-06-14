@@ -7,21 +7,35 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import ChildCareIcon from "@mui/icons-material/ChildCare";
 import { useAuth } from "@/app/hooks/AuthContext";
 import apiService from "@/app/untils/api";
+type UserInfo = {
+  username: string;
+  role: string;
+};
 
 const Aside = () => {
   const router = useRouter();
-  const {accessToken} = useAuth();
-  const [userInfo, setUserInfo] = useState<any | null>(null);
+  const { accessToken } = useAuth();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await apiService.get("/users/user-info", {
+        const response: {
+          data: {
+            status: number;
+            message?: string;
+            data: {
+              username: string;
+              role: string;
+            };
+          };
+        } = await apiService.get("/users/user-info", {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
+            Authorization: `Bearer ${accessToken}`,
           },
         });
-        if (response?.data?.status === 200) {
+
+        if (response.data.status === 200) {
           setUserInfo(response.data.data);
         } else {
           console.error("Failed to fetch user info:", response.data.message);
@@ -33,6 +47,7 @@ const Aside = () => {
 
     fetchUserInfo();
   }, [accessToken]);
+
   return (
     <Box
       sx={{
@@ -45,20 +60,25 @@ const Aside = () => {
       }}
     >
       <Box sx={{ textAlign: "center", mb: 3 }}>
-        <Avatar
-          sx={{
-            bgcolor: "#99BC4D",
-            width: 64,
-            height: 64,
-            fontSize: 32,
-            margin: "0 auto",
-          }}
-        >
-          {userInfo.username[0]}
-        </Avatar>
-        <Typography variant="h6" fontWeight="bold" mt={1}>
-          {userInfo.username}
-        </Typography>
+        {userInfo && (
+          <Avatar
+            sx={{
+              bgcolor: "#99BC4D",
+              width: 64,
+              height: 64,
+              fontSize: 32,
+              margin: "0 auto",
+            }}
+          >
+            {userInfo.username[0]}
+          </Avatar>
+        )}
+
+        {userInfo && (
+          <Typography variant="h6" fontWeight="bold" mt={1}>
+            {userInfo.username}
+          </Typography>
+        )}
       </Box>
       <Divider />
       <Box sx={{ mt: 2 }}>
@@ -89,7 +109,7 @@ const Aside = () => {
         >
           Đổi mật khẩu
         </Button>
-        {userInfo.role === "PARENT" && (
+        {userInfo && userInfo.role === "PARENT" && (
           <Button
             fullWidth
             startIcon={<ChildCareIcon />}
@@ -104,6 +124,7 @@ const Aside = () => {
             Tạo tài khoản cho con
           </Button>
         )}
+
         <Button
           fullWidth
           startIcon={<LogoutIcon />}

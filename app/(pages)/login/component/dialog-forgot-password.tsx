@@ -1,196 +1,3 @@
-// import React, { useState } from "react";
-// import {
-//   Button,
-//   Dialog,
-//   DialogTitle,
-//   DialogContent,
-//   DialogActions,
-//   TextField,
-//   Typography,
-//   Snackbar,
-//   Grid,
-// } from "@mui/material";
-// import apiService from "@/app/untils/api";
-// interface ForgotPasswordProps {
-//     open: boolean; // Explicitly type 'open' as boolean
-//     onClose: () => void; // Explicitly type 'onClose' as a function
-//   }
-
-//   const ForgotPassword: React.FC<ForgotPasswordProps> = ({ open, onClose }) => {
-//   const [email, setEmail] = useState("");
-//   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-//   const [newPassword, setNewPassword] = useState("");
-//   const [confirmPassword, setConfirmPassword] = useState("");
-//   const [snackbarMessage, setSnackbarMessage] = useState("");
-//   const [openSnackbar, setOpenSnackbar] = useState(false);
-//   const [step, setStep] = useState(1); // Step: 1 - Forgot, 2 - OTP, 3 - Reset
-//   const [resetToken, setResetToken] = useState("");
-
-//   const handleSnackbarClose = () => setOpenSnackbar(false);
-
-//   const handleSendOtp = async () => {
-//     try {
-//       const response = await apiService.post(`/auth/forgot-password?email=${email}`);
-//       console.log("sendOtp", response);
-//       setSnackbarMessage(response.data.message);
-//       setOpenSnackbar(true);
-//       setStep(2); // Chuyển sang bước OTP
-//     } catch (error: any) {
-//       setSnackbarMessage(error.response?.data?.message || "Đã xảy ra lỗi");
-//       setOpenSnackbar(true);
-//     }
-//   };
-
-//   const handleVerifyOtp = async () => {
-//     try {
-//       const otpCode = otp.join(""); // Nối OTP thành chuỗi
-//       const response = await apiService.post("/auth/verify-otp", { email, otp: otpCode });
-//       console.log("verifyOtp", response);
-
-//       // Lưu token vào state
-//       const token = response.data.data; // Đảm bảo đây là đường dẫn đúng đến token trong response
-//       setResetToken(token);
-
-//       setSnackbarMessage(response.data.message);
-//       setOpenSnackbar(true);
-//       setStep(3); // Chuyển sang bước reset password
-//     } catch (error: any) {
-//       setSnackbarMessage(error.response?.data?.message || "Đã xảy ra lỗi");
-//       setOpenSnackbar(true);
-//     }
-//   };
-
-//   const handleResetPassword = async () => {
-//     try {
-//       const response = await apiService.post("/auth/reset-password", {
-//         token: resetToken, // Sử dụng token từ state
-//         newPassword,
-//       });
-//       console.log("resetPass", response);
-//       setSnackbarMessage(response.data.message);
-//       setOpenSnackbar(true);
-//       onClose();
-//       // Reset trạng thái về bước đầu
-//       setStep(1);
-//       setEmail("");
-//       setOtp(["", "", "", "", "", ""]);
-//       setNewPassword("");
-//       setConfirmPassword("");
-//       setResetToken(""); // Reset token
-//     } catch (error: any) {
-//       setSnackbarMessage(error.response?.data?.message || "Đã xảy ra lỗi");
-//       setOpenSnackbar(true);
-//     }
-//   };
-
-//   return (
-//     <>
-//       {/* Dialog - Forgot Password */}
-//       <Dialog open={open} onClose={onClose}>
-//         {step === 1 && (
-//           <>
-//             <DialogTitle>Quên mật khẩu</DialogTitle>
-//             <DialogContent>
-//               <Typography>Vui lòng nhập email để gửi OTP về email</Typography>
-//               <TextField
-//                 label="Email"
-//                 type="email"
-//                 value={email}
-//                 onChange={(e) => setEmail(e.target.value)}
-//                 fullWidth
-//               />
-//             </DialogContent>
-//             <DialogActions>
-//               <Button onClick={handleSendOtp}>Gửi</Button>
-//             </DialogActions>
-//           </>
-//         )}
-//         {step === 2 && (
-//           <>
-//             <DialogTitle>Nhập OTP</DialogTitle>
-//             <DialogContent>
-//               <Typography>
-//                 Vui lòng nhập OTP đã được gửi đến email của bạn
-//               </Typography>
-//               <Grid container spacing={1}>
-//                 {otp.map((digit, index) => (
-//                   <Grid item key={index}>
-//                     <TextField
-//                       value={digit}
-//                       onChange={(e) => {
-//                         const newOtp = [...otp];
-//                         newOtp[index] = e.target.value.slice(-1);
-//                         setOtp(newOtp);
-//                         if (e.target.value && index < 5) {
-//                           document.getElementById(`otp-${index + 1}`)?.focus();
-//                         }
-//                       }}
-//                       id={`otp-${index}`}
-//                       inputProps={{
-//                         maxLength: 1,
-//                         style: { textAlign: "center" },
-//                       }}
-//                     />
-//                   </Grid>
-//                 ))}
-//               </Grid>
-//             </DialogContent>
-//             <DialogActions>
-//               <Button
-//                 onClick={handleVerifyOtp}
-//                 disabled={otp.some((digit) => !digit)}
-//               >
-//                 Xác nhận
-//               </Button>
-//             </DialogActions>
-//           </>
-//         )}
-//         {step === 3 && (
-//           <>
-//             <DialogTitle>Đặt lại mật khẩu</DialogTitle>
-//             <DialogContent>
-//               <TextField
-//                 label="Mật khẩu mới"
-//                 type="password"
-//                 value={newPassword}
-//                 onChange={(e) => setNewPassword(e.target.value)}
-//                 fullWidth
-//               />
-//               <TextField
-//                 label="Xác nhận mật khẩu"
-//                 type="password"
-//                 value={confirmPassword}
-//                 onChange={(e) => setConfirmPassword(e.target.value)}
-//                 fullWidth
-//                 error={newPassword !== confirmPassword}
-//                 helperText={
-//                   newPassword !== confirmPassword && "Mật khẩu không khớp"
-//                 }
-//               />
-//             </DialogContent>
-//             <DialogActions>
-//               <Button
-//                 onClick={handleResetPassword}
-//                 disabled={!newPassword || newPassword !== confirmPassword}
-//               >
-//                 Đặt lại mật khẩu
-//               </Button>
-//             </DialogActions>
-//           </>
-//         )}
-//       </Dialog>
-//       {/* Snackbar */}
-//       <Snackbar
-//         open={openSnackbar}
-//         message={snackbarMessage}
-//         onClose={handleSnackbarClose}
-//         autoHideDuration={3000}
-//       />
-//     </>
-//   );
-// };
-
-// export default ForgotPassword;
 import React, { useState } from "react";
 import {
   //   Button,
@@ -216,6 +23,10 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 interface ForgotPasswordProps {
   open: boolean;
   onClose: () => void;
+}
+interface ApiResponse<T> {
+  message: string;
+  data: T;
 }
 
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ open, onClose }) => {
@@ -259,7 +70,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ open, onClose }) => {
 
   const handleSendOtp = async () => {
     try {
-      const response = await apiService.post(
+      const response = await apiService.post<ApiResponse<null>>(
         `/auth/forgot-password?email=${email}`
       );
       setSnackbarMessage(response.data.message);
@@ -276,7 +87,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ open, onClose }) => {
   const handleVerifyOtp = async () => {
     try {
       const otpCode = otp.join("");
-      const response = await apiService.post("/auth/verify-otp", {
+      const response = await apiService.post<ApiResponse<string>>("/auth/verify-otp", {
         email,
         otp: otpCode,
       });
@@ -295,7 +106,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ open, onClose }) => {
 
   const handleResetPassword = async () => {
     try {
-      const response = await apiService.post("/auth/reset-password", {
+      const response = await apiService.post<ApiResponse<null>>("/auth/reset-password", {
         token: resetToken,
         newPassword,
       });

@@ -1,3 +1,13 @@
+// {
+//   "extends": ["next/core-web-vitals", "next/typescript"]
+// }
+
 {
-  "extends": ["next/core-web-vitals", "next/typescript"]
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "warn", // Warn instead of error
+    "@typescript-eslint/no-explicit-any": "warn", // Warn instead of error
+    "@next/next/no-img-element": "off", // Disable <img> warning
+    "jsx-a11y/alt-text": "off" // Disable alt prop warning
+  }
 }

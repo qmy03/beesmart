@@ -1,17 +1,11 @@
-// import Layout from "@/app/components/admin/layout";
 // import { Box, Card, Grid, Typography } from "@mui/material";
-// // import StatCard from "./stat-card";
-// // import SessionsChart from "./session-chart";
-// // import { mathSessionData } from "../data/math-session-data";
-// import LessonViewsBarChart from "../../dashboard/component/lesson-view-bar-chart";
-// import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-// import ClassIcon from "@mui/icons-material/Class";
-// import PlayLessonIcon from "@mui/icons-material/PlayLesson";
+// import TextField from "@/app/components/textfield";
 // import { useEffect, useState } from "react";
 // import { useAuth } from "@/app/hooks/AuthContext";
+// import LessonViewsBarChart from "../../dashboard/component/lesson-view-bar-chart";
 // import apiService from "@/app/untils/api";
-// import TextField from "@/app/components/textfield";
-// // import QuizStatisticsChart from "./quiz-statistics-chart";
+// import Layout from "@/app/components/admin/layout";
+
 // interface SummaryDataItem {
 //   title: string;
 //   value: any;
@@ -22,49 +16,69 @@
 //   textColor: string;
 // }
 
+// interface Subject {
+//   subjectId: string;
+//   subjectName: string;
+// }
 // const StatisticLessonsPage = () => {
 //   const [lessonViewData, setLessonViewData] = useState<
 //     { date: string; views: number }[]
 //   >([]);
 //   const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
-//   const { accessToken } = useAuth(); // Lấy accessToken từ context hoặc nơi lưu trữ
-//   const currentMonth = new Date().getMonth() + 1; // getMonth() trả về tháng từ 0-11, do đó cần cộng thêm 1
-//   const currentYear = new Date().getFullYear(); // Lấy năm hiện tại
-//   // useEffect(() => {
-//   //   const fetchData = async () => {
-//   //     try {
-//   //       if (accessToken) {
-//   //         const lessonResponse = await fetch(`http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}`, {
-//   //           method: "GET",
-//   //           headers: {
-//   //             "Content-Type": "application/json",
-//   //             Authorization: `Bearer ${accessToken}`,
-//   //           },
-//   //         });
-//   //         const lessonData = await lessonResponse.json();
-//   //         if (lessonData.status === 200) {
-//   //           const chartData = Object.keys(lessonData.data).map(date => {
-//   //             const views = Object.values(lessonData.data[date]);
-//   //             return { date, views: views.reduce((acc, view) => acc + view, 0) }; // Tổng lượt truy cập trong ngày
-//   //           });
-//   //           setLessonViewData(chartData);
-//   //         }
-//   //       } else {
-//   //         console.error("Access token is missing");
-//   //       }
-//   //     } catch (error) {
-//   //       console.error("Error fetching data:", error);
-//   //     }
-//   //   };
+//   const [selectedMonth, setSelectedMonth] = useState<string>(
+//     `${new Date().getMonth() + 1}`.padStart(2, "0")
+//   );
+//   const [selectedYear, setSelectedYear] = useState<string>(
+//     `${new Date().getFullYear()}`
+//   );
+//   const { accessToken } = useAuth();
+//   const [subjects, setSubjects] = useState<
+//     { subjectId: string; subjectName: string }[]
+//   >([]);
+//   const [selectedSubjectForLessonView, setSelectedSubjectForLessonView] =
+//     useState<string>("");
+//   const [loading, setLoading] = useState<boolean>(false);
+//   const [dateInput, setDateInput] = useState<string>(
+//     `${selectedMonth.padStart(2, "0")} ${selectedYear}`
+//   );
+//   const [error, setError] = useState<string>("");
 
-//   //   fetchData();
-//   // }, [accessToken]);
+//   useEffect(() => {
+//     const fetchSubjects = async () => {
+//       try {
+//         const response = (await apiService.get("/subjects")) as {
+//           data: {
+//             data: {
+//               subjects: Subject[];
+//               totalItems: number;
+//               totalPages: number;
+//               currentPage: number;
+//             };
+//           };
+//         };
+//         console.log("Fetched subjects:", response.data);
+
+//         const data = response.data?.data?.subjects || [];
+//         setSubjects(data);
+//         if (data.length > 0) {
+//           // Khởi tạo cả hai state với môn học đầu tiên
+//           setSelectedSubjectForLessonView(data[0].subjectName);
+//         }
+//       } catch (error) {
+//         console.error("Lỗi khi lấy danh sách môn học:", error);
+//       }
+//     };
+//     fetchSubjects();
+//   }, []);
+
 //   useEffect(() => {
 //     const fetchData = async () => {
+//       setLoading(true);
 //       try {
 //         if (accessToken) {
+//           const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`;
 //           const lessonResponse = await fetch(
-//             `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${currentMonth}-${currentYear}`,
+//             `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${date}&subject=${selectedSubjectForLessonView}`,
 //             {
 //               method: "GET",
 //               headers: {
@@ -79,7 +93,7 @@
 //               const dayData = lessonData.data[date];
 //               return {
 //                 date,
-//                 ...dayData, // Lưu từng lớp riêng biệt
+//                 ...dayData,
 //               };
 //             });
 //             setLessonViewData(chartData);
@@ -89,79 +103,46 @@
 //         }
 //       } catch (error) {
 //         console.error("Error fetching data:", error);
+//       } finally {
+//         setLoading(false);
 //       }
 //     };
 
 //     fetchData();
-//   }, [accessToken]);
+//   }, [accessToken, selectedMonth, selectedYear, selectedSubjectForLessonView]);
 
+//   // Xử lý khi người dùng thay đổi giá trị trong TextField
+//   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+//     const value = e.target.value;
+//     setDateInput(value);
+
+//     // Kiểm tra định dạng "MM YYYY" (ví dụ: "06 2025")
+//     const regex = /^(\d{2})\s(\d{4})$/;
+//     const match = value.match(regex);
+
+//     if (match) {
+//       const month = match[1];
+//       const year = match[2];
+
+//       // Kiểm tra tính hợp lệ của tháng và năm
+//       const monthNum = parseInt(month, 10);
+//       const yearNum = parseInt(year, 10);
+//       if (monthNum >= 1 && monthNum <= 12 && yearNum >= 1900 && yearNum <= 9999) {
+//         setSelectedMonth(month);
+//         setSelectedYear(year);
+//         setError("");
+//       } else {
+//         setError("Vui lòng nhập tháng (01-12) và năm hợp lệ (ví dụ: 06 2025)");
+//       }
+//     } else {
+//       setError("Vui lòng nhập đúng định dạng: MM YYYY (ví dụ: 06 2025)");
+//     }
+//   };
+
+//   // Cập nhật giá trị hiển thị khi selectedMonth hoặc selectedYear thay đổi
 //   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         if (accessToken) {
-//           // Fetch total number of users with accessToken
-//           const userResponse = await fetch("http://localhost:8080/api/users", {
-//             method: "GET",
-//             headers: {
-//               "Content-Type": "application/json",
-//               Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header cho API người dùng
-//             },
-//           });
-//           const userData = await userResponse.json();
-//           const totalUsers = userData.data.length;
-
-//           // Fetch total number of classes without accessToken
-//           const gradeResponse = await fetch("http://localhost:8080/api/grades");
-//           const gradeData = await gradeResponse.json();
-//           const totalGrades = gradeData.length;
-
-//           // Fetch total number of lessons without accessToken
-//           const lessonResponse = await fetch(
-//             "http://localhost:8080/api/lessons?page&size"
-//           );
-//           const lessonData = await lessonResponse.json();
-//           const totalLessons = lessonData.data.totalItems;
-
-//           // Update summary data
-//           setSummaryData([
-//             {
-//               title: "Tổng số tài khoản hiện có",
-//               value: totalUsers,
-//               Icon: PeopleAltIcon,
-//               bgColor: "#D0ECFE",
-//               bgColorIcon: "#FFFFFF",
-//               iconColor: "#1877F2",
-//               textColor: "#0C44AE",
-//             },
-//             {
-//               title: "Tổng số lớp học",
-//               value: totalGrades,
-//               Icon: ClassIcon,
-//               bgColor: "#EFD6FF",
-//               bgColorIcon: "#FFFFFF",
-//               iconColor: "#8E33FF",
-//               textColor: "#5119B7",
-//             },
-//             {
-//               title: "Tổng số bài học",
-//               value: totalLessons,
-//               Icon: PlayLessonIcon,
-//               bgColor: "#FFF5CC",
-//               bgColorIcon: "#FFFFFF",
-//               iconColor: "#FFAB00",
-//               textColor: "#B76E00",
-//             },
-//           ]);
-//         } else {
-//           console.error("Access token is missing");
-//         }
-//       } catch (error) {
-//         console.error("Error fetching data:", error);
-//       }
-//     };
-
-//     fetchData();
-//   }, [accessToken]); // Hook sẽ chạy lại mỗi khi accessToken thay đổi
+//     setDateInput(`${selectedMonth.padStart(2, "0")} ${selectedYear}`);
+//   }, [selectedMonth, selectedYear]);
 
 //   return (
 //     <Layout>
@@ -171,6 +152,7 @@
 //           flexDirection: "column",
 //           padding: "0 10px",
 //           gap: 2,
+//           // backgroundColor: "#F4F5F9",
 //         }}
 //       >
 //         <Box
@@ -180,38 +162,68 @@
 //             alignItems: "center",
 //             boxShadow: 4,
 //             borderRadius: "8px",
+//             backgroundColor: "#FFFFFF",
 //           }}
 //         >
 //           <Typography fontWeight={700} flexGrow={1}>
 //             Thống kê Bài học
 //           </Typography>
 //         </Box>
-
-//         <Box sx={{ display: "flex", flexDirection: "column", marginY: 4, gap: 2, flexGrow: 1 }}>
-//           <TextField
-//           type="month"
-//           ></TextField>
-//           <LessonViewsBarChart
-//             data={lessonViewData}
-//             month={currentMonth}
-//             year={currentYear}
-//           />
+//         <Box
+//           sx={{
+//             display: "flex",
+//             gap: 2,
+//             alignItems: "center",
+//             flexDirection: "column",
+//             overflowX: "auto",
+//           }}
+//         >
+//           <Box sx={{ display: "flex", flexDirection: "column", gap: 1, width: "100%" }}>
+//             <TextField
+//               type="text"
+//               value={dateInput}
+//               onChange={handleDateChange}
+//               label="Chọn tháng và năm"
+//               placeholder="MM YYYY (ví dụ: 06 2025)"
+//               sx={{ flexGrow: 1 }}
+//               error={!!error}
+//               helperText={error}
+//             />
+//           </Box>
+//           <Card
+//             sx={{
+//               width: "100%",
+//               flexGrow: 1,
+//               borderRadius: 2,
+//               boxShadow: 3,
+//               border: "none",
+//             }}
+//           >
+//             <LessonViewsBarChart
+//               data={lessonViewData}
+//               month={Number(selectedMonth)}
+//               year={Number(selectedYear)}
+//               selectedSubject={selectedSubjectForLessonView}
+//               setSelectedSubject={setSelectedSubjectForLessonView}
+//               subjects={subjects}
+//               loading={loading}
+//             />
+//           </Card>
 //         </Box>
 //       </Box>
 //     </Layout>
 //   );
 // };
 
-// export default StatisticLessonsPage;
-import { Box, Card, Grid, Typography } from "@mui/material";
+// export default StatisticLessonsPage;import { Box, Card, Grid, Typography } from "@mui/material";
 import TextField from "@/app/components/textfield";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/AuthContext";
 import LessonViewsBarChart from "../../dashboard/component/lesson-view-bar-chart";
 import apiService from "@/app/untils/api";
 import Layout from "@/app/components/admin/layout";
+import { Box, Card, Typography } from "@mui/material";
 
-// Define the type of the data you want to display
 interface SummaryDataItem {
   title: string;
   value: any;
@@ -222,27 +234,69 @@ interface SummaryDataItem {
   textColor: string;
 }
 
+interface Subject {
+  subjectId: string;
+  subjectName: string;
+}
+
 const StatisticLessonsPage = () => {
+  const accessToken = localStorage.getItem("accessToken");
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
   >([]);
   const [summaryData, setSummaryData] = useState<SummaryDataItem[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>(
-    `${new Date().getMonth() + 1}`
-  ); // Default to current month
+    `${new Date().getMonth() + 1}`.padStart(2, "0")
+  );
   const [selectedYear, setSelectedYear] = useState<string>(
     `${new Date().getFullYear()}`
-  ); // Default to current year
-  const { accessToken } = useAuth();
+  );
+  const [subjects, setSubjects] = useState<
+    { subjectId: string; subjectName: string }[]
+  >([]);
+  const [selectedSubjectForLessonView, setSelectedSubjectForLessonView] =
+    useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [dateInput, setDateInput] = useState<string>(
+    `${selectedMonth.padStart(2, "0")}-${selectedYear}`
+  );
+  const [error, setError] = useState<string>("");
 
-  // Fetch lesson data when the selected month or year changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const response = (await apiService.get("/subjects")) as {
+          data: {
+            data: {
+              subjects: Subject[];
+              totalItems: number;
+              totalPages: number;
+              currentPage: number;
+            };
+          };
+        };
+        console.log("Fetched subjects:", response.data);
+
+        const data = response.data?.data?.subjects || [];
+        setSubjects(data);
+        if (data.length > 0) {
+          setSelectedSubjectForLessonView(data[0].subjectName);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy danh sách môn học:", error);
+      }
+    };
+    fetchSubjects();
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         if (accessToken) {
-          const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`; // Format the date to mm-yyyy
+          const date = `${selectedMonth.padStart(2, "0")}-${selectedYear}`;
           const lessonResponse = await fetch(
-            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${date}`,
+            `http://localhost:8080/api/statistics/admin/record-lesson-by-month?date=${date}&subject=${selectedSubjectForLessonView}`,
             {
               method: "GET",
               headers: {
@@ -267,11 +321,51 @@ const StatisticLessonsPage = () => {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [accessToken, selectedMonth, selectedYear]); // Dependency array includes selectedMonth and selectedYear
+  }, [accessToken, selectedMonth, selectedYear, selectedSubjectForLessonView]);
+
+  // Xử lý khi người dùng thay đổi giá trị trong TextField
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setDateInput(value);
+
+    // Kiểm tra định dạng "MM-YYYY" (ví dụ: "06-2025")
+    const regex = /^(\d{2})-(\d{4})$/;
+    const match = value.match(regex);
+
+    if (match) {
+      const month = match[1];
+      const year = match[2];
+
+      // Kiểm tra tính hợp lệ của tháng và năm
+      const monthNum = parseInt(month, 10);
+      const yearNum = parseInt(year, 10);
+      if (
+        monthNum >= 1 &&
+        monthNum <= 12 &&
+        yearNum >= 1900 &&
+        yearNum <= 9999
+      ) {
+        setSelectedMonth(month);
+        setSelectedYear(year);
+        setError("");
+      } else {
+        setError("Vui lòng nhập tháng (01-12) và năm hợp lệ (ví dụ: 06-2025)");
+      }
+    } else {
+      setError("Vui lòng nhập đúng định dạng: MM-YYYY (ví dụ: 06-2025)");
+    }
+  };
+
+  // Cập nhật giá trị hiển thị khi selectedMonth hoặc selectedYear thay đổi
+  useEffect(() => {
+    setDateInput(`${selectedMonth.padStart(2, "0")}-${selectedYear}`);
+  }, [selectedMonth, selectedYear]);
 
   return (
     <Layout>
@@ -280,7 +374,7 @@ const StatisticLessonsPage = () => {
           display: "flex",
           flexDirection: "column",
           padding: "0 10px",
-          gap: 2,
+          gap: 1,
         }}
       >
         <Box
@@ -290,34 +384,60 @@ const StatisticLessonsPage = () => {
             alignItems: "center",
             boxShadow: 4,
             borderRadius: "8px",
+            backgroundColor: "#FFFFFF",
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
             Thống kê Bài học
           </Typography>
         </Box>
-
-        {/* Date picker for selecting month and year */}
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center", margin: "0 0 32px 0", flexDirection: "column" }}>
-          <TextField
-            type="month"
-            value={`${selectedYear}-${selectedMonth.padStart(2, "0")}`} // Format to yyyy-mm
-            onChange={(e) => {
-              const [year, month] = e.target.value.split("-");
-              setSelectedMonth(month);
-              setSelectedYear(year);
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            alignItems: "center",
+            flexDirection: "column",
+            overflowX: "auto",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              width: "100%",
             }}
-            label="Chọn tháng và năm"
-            sx={{ flexGrow: 1 }}
-          />
-          <LessonViewsBarChart
-            data={lessonViewData}
-            month={selectedMonth}
-            year={selectedYear}
-          />
+          >
+            <TextField
+              type="text"
+              value={dateInput}
+              onChange={handleDateChange}
+              label="Chọn tháng và năm"
+              placeholder="MM-YYYY (ví dụ: 06-2025)"
+              sx={{ flexGrow: 1 }}
+              error={!!error}
+              helperText={error}
+            />
+          </Box>
+          <Box
+            sx={{
+              width: "100%",
+              flexGrow: 1,
+              borderRadius: 2,
+              // border: "none",
+            }}
+          >
+            <LessonViewsBarChart
+              data={lessonViewData}
+              month={Number(selectedMonth)}
+              year={Number(selectedYear)}
+              selectedSubject={selectedSubjectForLessonView}
+              setSelectedSubject={setSelectedSubjectForLessonView}
+              subjects={subjects}
+              loading={loading}
+            />
+          </Box>
         </Box>
-
-        {/* Displaying the lesson view chart */}
       </Box>
     </Layout>
   );

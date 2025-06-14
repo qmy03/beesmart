@@ -17,65 +17,90 @@ import {
   Alert,
   TablePagination,
   Checkbox,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
 } from "@mui/material";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import apiService from "@/app/untils/api";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+
+// Helper function to format date to dd/mm/yyyy
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+interface User {
+  userId: string;
+  username: string;
+  email: string;
+  role: string;
+  active: boolean;
+  createdAt: string;
+}
+
+interface UserResponse {
+  data: User[];
+  message: string;
+}
+
 const UserPage = () => {
-  const { accessToken } = useAuth(); // Lấy accessToken từ context
-  const [users, setUsers] = useState<any[]>([]); // State để lưu danh sách người dùng
-  const [loading, setLoading] = useState(false); // State để xử lý loading
+  const { accessToken } = useAuth();
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [openDelete, setOpenDelete] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+
+  // Search states
+  const [searchUsername, setSearchUsername] = useState("");
+  const [searchEmail, setSearchEmail] = useState("");
+  const [searchRole, setSearchRole] = useState("");
+  const [searchStatus, setSearchStatus] = useState("All");
+  const [searchDate, setSearchDate] = useState("");
+
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
+
   const handleSelectRowClick = (
-    event: React.MouseEvent<HTMLElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
     userId: string
   ) => {
-    // Kiểm tra nếu sự kiện đến từ checkbox (input[type="checkbox"])
-    if ((event.target as HTMLElement).closest('input[type="checkbox"]')) {
-      const selectedIndex = selected.indexOf(userId);
-      let newSelected: string[] = [];
-  
-      if (selectedIndex === -1) {
-        newSelected = newSelected.concat(selected, userId);
-      } else {
-        newSelected = newSelected.concat(
-          selected.slice(0, selectedIndex),
-          selected.slice(selectedIndex + 1)
-        );
-      }
-  
-      setSelected(newSelected);
-  
-      // Chỉ mở dialog nếu có ít nhất một mục được chọn
-      if (newSelected.length > 0) {
-        setOpenDelete(true);
-      } else {
-        setOpenDelete(false);
-      }
+    const checked = event.target.checked;
+    let newSelected: string[] = [];
+
+    if (checked) {
+      newSelected = [...selected, userId];
+    } else {
+      newSelected = selected.filter((id) => id !== userId);
     }
+
+    setSelected(newSelected);
+    setOpenDelete(newSelected.length > 0);
   };
-  
+
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = users.map((user) => user.userId);
+      const newSelected = filteredUsers.map((user) => user.userId);
       setSelected(newSelected);
-      setOpenDelete(true); // Mở dialog khi chọn tất cả
+      setOpenDelete(true);
     } else {
       setSelected([]);
-      setOpenDelete(false); // Đóng dialog khi không chọn gì
+      setOpenDelete(false);
     }
   };
-  
+
   const handleDelete = async () => {
     try {
-      const response = await apiService.delete("/users", {
+      const response = await apiService.delete<UserResponse>("/users", {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
@@ -93,7 +118,7 @@ const UserPage = () => {
 
   const handleCloseDelete = () => {
     setOpenDelete(false);
-    setSelected([]); // Optionally clear the selected users after closing
+    setSelected([]);
   };
 
   const handleChangeRowsPerPage = (
@@ -103,32 +128,70 @@ const UserPage = () => {
     setPage(0);
   };
 
-  // Dữ liệu hiển thị trên trang hiện tại
-  const paginatedUsers = users.slice(
+  // Filter users based on search criteria
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchUsername = user.username
+        .toLowerCase()
+        .includes(searchUsername.toLowerCase());
+      const matchEmail = user.email
+        .toLowerCase()
+        .includes(searchEmail.toLowerCase());
+      const matchRole = user.role
+        .toLowerCase()
+        .includes(searchRole.toLowerCase());
+
+      let matchStatus = true;
+      if (searchStatus === "On") {
+        matchStatus = user.active === true;
+      } else if (searchStatus === "Off") {
+        matchStatus = user.active === false;
+      }
+
+      let matchDate = true;
+      if (searchDate) {
+        const userFormattedDate = formatDate(user.createdAt);
+        matchDate = userFormattedDate.includes(searchDate);
+      }
+
+      return (
+        matchUsername && matchEmail && matchRole && matchStatus && matchDate
+      );
+    });
+  }, [
+    users,
+    searchUsername,
+    searchEmail,
+    searchRole,
+    searchStatus,
+    searchDate,
+  ]);
+
+  const paginatedUsers = filteredUsers.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-  // Snackbar state
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
   const handleSnackbarClose = () => {
-    setSnackbarOpen(false); // Đóng Snackbar
+    setSnackbarOpen(false);
   };
+
   useEffect(() => {
     if (accessToken) {
       setLoading(true);
-      // Gọi API để lấy danh sách người dùng
       apiService
-        .get("/users", {
+        .get<UserResponse>("/users", {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
+            Authorization: `Bearer ${accessToken}`,
           },
         })
         .then((response) => {
-          setUsers(response.data.data); // Lưu danh sách người dùng vào state
+          setUsers(response.data.data);
           setLoading(false);
         })
         .catch((error) => {
@@ -136,35 +199,32 @@ const UserPage = () => {
           setLoading(false);
         });
     }
-  }, [accessToken]); // Chạy lại khi accessToken thay đổi
+  }, [accessToken]);
 
   const handleStatusChange = async (userId: string, currentStatus: boolean) => {
     try {
-      // Toggle the active status
       const newStatus = !currentStatus;
 
-      // Gửi API để cập nhật trạng thái người dùng
-      const response = await apiService.patch(
-        `/users/${userId}/status?active=${newStatus}`, // Include the `active` query parameter
+      const response = await apiService.patch<UserResponse>(
+        `/users/${userId}/status?active=${newStatus}`,
         {},
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Thêm accessToken vào header
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
 
       if (response.status === 200) {
-        // Cập nhật lại trạng thái trong danh sách người dùng
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
             user.userId === userId ? { ...user, active: newStatus } : user
           )
         );
-        showSnackbar(response.data.message, "success"); // Hiển thị thông báo thành công
+        showSnackbar(response.data.message, "success");
       }
     } catch (error) {
-      showSnackbar("Cập nhật trạng thái thất bại", "error"); // Hiển thị thông báo lỗi
+      showSnackbar("Cập nhật trạng thái thất bại", "error");
       console.error("Error updating user status:", error);
     }
   };
@@ -172,11 +232,11 @@ const UserPage = () => {
   const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
-    setSnackbarOpen(true); // Mở snackbar
+    setSnackbarOpen(true);
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbarOpen(false); // Đóng snackbar
+    setSnackbarOpen(false);
   };
 
   return (
@@ -194,159 +254,241 @@ const UserPage = () => {
           <Typography fontWeight={700} flexGrow={1}>
             Quản lý Người dùng
           </Typography>
-          {/* <Button>Thêm mới</Button> */}
         </Box>
 
-        {/* Bảng danh sách người dùng */}
         <Box sx={{ marginY: 2, maxHeight: "50vh" }}>
-          {loading ? (
-            <Typography>Đang tải...</Typography>
-          ) : (
-            <>
-              <Box sx={{ boxShadow: 4, borderRadius: 2, overflow: "auto" }}>
-                <TableContainer
-                  sx={{
-                    // boxShadow: 4,
-                    borderRadius: 2,
-                    flex: 1,
-                    height: "80vh",
-                    // width: "76vw", // Set a fixed height for the table
-                    overflow: "auto",
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                      <TableRow>
-                        <TableCell>
-                          <Checkbox
-                            indeterminate={
-                              selected.length > 0 &&
-                              users.length > 0 &&
-                              selected.length < users.length
-                            }
+          <>
+            <Box sx={{ boxShadow: 4, borderRadius: 2, overflow: "auto" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  flex: 1,
+                  height: "80vh",
+                  overflow: "auto",
+                }}
+              >
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell sx={{ border: "none" }}>
+                        <Checkbox
+                          indeterminate={
+                            selected.length > 0 &&
+                            filteredUsers.length > 0 &&
+                            selected.length < filteredUsers.length
+                          }
+                          sx={{
+                            color: "#637381",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                            "&.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                          }}
+                          checked={
+                            filteredUsers.length > 0 &&
+                            selected.length === filteredUsers.length
+                          }
+                          onChange={handleSelectAllClick}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ border: "none" }}>
+                        Tên người dùng
+                      </TableCell>
+                      <TableCell sx={{ border: "none" }}>Email</TableCell>
+                      <TableCell sx={{ border: "none" }}>Vai trò</TableCell>
+                      <TableCell sx={{ border: "none" }}>Trạng thái</TableCell>
+                      <TableCell sx={{ border: "none" }}>Ngày tạo</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ paddingTop: 0 }}></TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchUsername}
+                          onChange={(e) => setSearchUsername(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchEmail}
+                          onChange={(e) => setSearchEmail(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder=""
+                          value={searchRole}
+                          onChange={(e) => setSearchRole(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <FormControl size="small" sx={{ minWidth: 80 }}>
+                          <Select
+                            value={searchStatus}
+                            onChange={(e) => setSearchStatus(e.target.value)}
                             sx={{
-                              color: "#637381",
-                              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D", // Màu cho trạng thái checked và indeterminate
-                              },
-                              "&.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D", // Màu cho trạng thái indeterminate
-                              },
+                              bgcolor: "#FFF",
+                              borderRadius: "4px",
                             }}
-                            checked={
-                              users.length > 0 &&
-                              selected.length === users.length
-                            }
-                            onChange={handleSelectAllClick}
-                          />
+                          >
+                            <MenuItem value="All">Tất cả</MenuItem>
+                            <MenuItem value="On">Hoạt động</MenuItem>
+                            <MenuItem value="Off">Không hoạt động</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell sx={{ paddingTop: 0 }}>
+                        <TextField
+                          size="small"
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder="dd/mm/yyyy"
+                          value={searchDate}
+                          onChange={(e) => setSearchDate(e.target.value)}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={6}
+                          align="center"
+                          sx={{ paddingY: "16px" }}
+                        >
+                          Đang tải dữ liệu...
                         </TableCell>
-                        {/* <TableCell>Mã người dùng</TableCell> */}
-                        <TableCell>Tên người dùng</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Vai trò</TableCell>
-                        <TableCell>Trạng thái</TableCell>
-                        <TableCell>Ngày tạo</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {users
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((user) => {
-                          const isItemSelected =
-                            selected.indexOf(user.userId) !== -1;
-                          return (
-                            <TableRow
-                              key={user.userId}
-                              hover
-                              role="checkbox"
-                              aria-checked={isItemSelected}
-                              selected={isItemSelected}
-                            >
-                              <TableCell>
-                                <Checkbox
-                                  sx={{
-                                    color: "#637381",
-                                    "&.Mui-checked": {
-                                      color: "#99BC4D",
-                                    },
-                                  }}
-                                  checked={isItemSelected}
-                                  onChange={(event) =>
-                                    handleSelectRowClick(event, user.userId)
-                                  }
-                                  inputProps={{
-                                    "aria-labelledby": user.userId,
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell>{user.username}</TableCell>
-                              <TableCell>{user.email}</TableCell>
-                              <TableCell>{user.role}</TableCell>
-                              <TableCell>
-                                <Switch
-                                  size="small"
-                                  sx={{ fontSize: "small" }}
-                                  checked={user.active}
-                                  onChange={() =>
-                                    handleStatusChange(user.userId, user.active)
-                                  }
-                                  name="active"
-                                  color="primary"
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {new Date(user.createdAt).toLocaleString()}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <div>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="flex-end"
-                  >
-                    <TablePagination
-                      component="div"
-                      count={users.length}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      rowsPerPage={rowsPerPage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
-                  </Box>
-                </div>
-              </Box>
-            </>
-          )}
+                    ) : paginatedUsers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          Không có dữ liệu
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedUsers.map((user) => {
+                        const isItemSelected =
+                          selected.indexOf(user.userId) !== -1;
+                        return (
+                          <TableRow
+                            key={user.userId}
+                            hover
+                            role="checkbox"
+                            aria-checked={isItemSelected}
+                            selected={isItemSelected}
+                          >
+                            <TableCell>
+                              <Checkbox
+                                sx={{
+                                  color: "#637381",
+                                  "&.Mui-checked": {
+                                    color: "#99BC4D",
+                                  },
+                                }}
+                                checked={isItemSelected}
+                                onChange={(event) =>
+                                  handleSelectRowClick(event, user.userId)
+                                }
+                                inputProps={{
+                                  "aria-labelledby": user.userId,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>{user.username}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.role}</TableCell>
+                            <TableCell>
+                              <Switch
+                                size="small"
+                                sx={{ fontSize: "small" }}
+                                checked={user.active}
+                                onChange={() =>
+                                  handleStatusChange(user.userId, user.active)
+                                }
+                                name="active"
+                                color="primary"
+                              />
+                            </TableCell>
+                            <TableCell>{formatDate(user.createdAt)}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <div>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="flex-end"
+                >
+                  <TablePagination
+                    component="div"
+                    count={filteredUsers.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </Box>
+              </div>
+            </Box>
+          </>
         </Box>
       </Box>
 
-      {/* Snackbar */}
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000} // Đóng sau 3 giây
-        onClose={handleSnackbarClose} // Đóng khi người dùng nhấn
-        anchorOrigin={{ vertical: "top", horizontal: "right" }} // Vị trí
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarSeverity} // success hoặc error
+          severity={snackbarSeverity}
           sx={{ width: "100%" }}
         >
-          {snackbarMessage} {/* Nội dung thông báo */}
+          {snackbarMessage}
         </Alert>
       </Snackbar>
       <DeleteDialog
         open={openDelete}
         handleClose={handleCloseDelete}
-        quantity={selected.length} // Pass the selected length as the quantity
+        quantity={selected.length}
         onDelete={handleDelete}
       />
     </Layout>

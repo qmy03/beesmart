@@ -11,22 +11,15 @@ const Footer = () => {
   return (
     <Box
       sx={{
-        backgroundColor: "#FFFBF3", // Màu nền Footer
+        backgroundColor: "#FFFBF3", 
         padding: "20px 100px",
         display: "flex",
         gap: 4,
-        // justifyContent: "space-between", // Giãn đều các cột
-        // flexWrap: "wrap", // Để đảm bảo bố cục không bị lỗi trên màn hình nhỏ
         borderTop: "1px solid #ccc",
-        // position: "fixed", // Cố định Footer ở cuối trang
-        // bottom: 0,
-        // left: 0,
-        width: "100%", // Đảm bảo Footer trải dài toàn trang
+        width: "100%", 
         justifyContent: "center",
-        // alignItems: "center",
       }}
     >
-      {/* Cột 1: Giới thiệu */}
       <Box sx={{ flex: "1", minWidth: "40%" }}>
         <Typography
           sx={{ fontWeight: "bold", marginBottom: "10px", fontSize: "16px" }}
@@ -78,7 +71,6 @@ const Footer = () => {
         </Box>
       </Box>
 
-      {/* Cột 2: Về BeeSmart */}
       <Box sx={{ flex: "1", minWidth: "40%" }}>
         <Typography
           sx={{ fontWeight: "bold", marginBottom: "10px", fontSize: "16px" }}
@@ -108,12 +100,10 @@ const Footer = () => {
         ))}
       </Box>
 
-      {/* Cột 3: Logo và mạng xã hội */}
       <Box
         sx={{
           flex: "1",
           minWidth: "200px",
-          // textAlign: "center",
         }}
       >
         <img

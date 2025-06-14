@@ -22,12 +22,30 @@ import { useAuth } from "@/app/hooks/AuthContext";
 import Layout from "@/app/components/admin/layout";
 import { Button } from "@/app/components/button";
 import TextField from "@/app/components/textfield";
-import CloseIcon from "@mui/icons-material/close";
+import Close from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
+interface Grade {
+  gradeId: number;
+  gradeName: string;
+}
+
+interface GradeResponse {
+  data: {
+    grades: Grade[];
+  };
+}
+interface GradeDetailResponse {
+  status: number;
+  message: string;
+  data: {
+    gradeId: string;
+    gradeName: string;
+  };
+}
 const GradePage = () => {
   const { accessToken, isLoading, setIsLoading } = useAuth();
-  const [grades, setGrades] = useState<any[]>([]);
+  const [grades, setGrades] = useState<Grade[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selected, setSelected] = useState<readonly number[]>([]);
@@ -40,7 +58,7 @@ const GradePage = () => {
   const [error, setError] = useState("");
   const [openDelete, setOpenDelete] = useState(false);
   const [editMode, setEditMode] = useState<"add" | "edit">("add");
-  const [selectedGrade, setSelectedGrade] = useState<any | null>(null);
+  const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
@@ -54,7 +72,7 @@ const GradePage = () => {
       const requestBody = query ? { gradeName: query } : {};
 
       apiService
-        .get("/grades", {
+        .get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: query ? { gradeName: query } : undefined,
         })
@@ -94,7 +112,7 @@ const GradePage = () => {
     if (accessToken) {
       setIsLoading(true);
       apiService
-        .get("/grades", {
+        .get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
@@ -143,8 +161,8 @@ const GradePage = () => {
 
     const apiCall =
       editMode === "edit"
-        ? apiService.put(
-            `/grades/${selectedGrade.gradeId}`,
+        ? apiService.put<GradeResponse>(
+            `/grades/${selectedGrade?.gradeId}`,
             { gradeName: newGradeName.trim() },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )
@@ -156,7 +174,7 @@ const GradePage = () => {
 
     apiCall
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -185,12 +203,12 @@ const GradePage = () => {
 
     setIsLoading(true);
     apiService
-      .delete("/grades", {
+      .delete<GradeResponse>("/grades", {
         data: selected,
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then(() => {
-        return apiService.get("/grades", {
+        return apiService.get<GradeResponse>("/grades", {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       })
@@ -227,15 +245,15 @@ const GradePage = () => {
     setError("");
     setOpenDialog(true);
 
-    // Gọi API lấy thông tin chi tiết
     apiService
-      .get(`/grades/${grade.gradeId}`, {
+      .get<GradeDetailResponse>(`/grades/${grade.gradeId}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       .then((response) => {
         const { gradeName } = response.data.data;
-        setNewGradeName(gradeName); // set vào TextField
+        setNewGradeName(gradeName);
       })
+
       .catch((error) => {
         console.error("Error fetching grade detail:", error);
         setError("Không thể lấy thông tin lớp học.");
@@ -295,157 +313,149 @@ const GradePage = () => {
             minHeight: 0,
           }}
         >
-          {loading ? (
+          {/* {isLoading ? (
             <Typography>Đang tải...</Typography>
-          ) : (
-            <>
-              <Box
+          ) : ( */}
+          <>
+            <Box
+              sx={{
+                boxShadow: 4,
+                borderRadius: 2,
+                display: "flex",
+                flexDirection: "column",
+                height: "100%",
+                mb: 1,
+              }}
+            >
+              <TableContainer
                 sx={{
-                  boxShadow: 4,
-                  borderRadius: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  height: "100%",
-                  mb: 1,
+                  borderRadius: "8px 8px 0 0",
+                  flexGrow: 1,
+                  overflow: "auto",
                 }}
               >
-                <TableContainer
-                  sx={{
-                    borderRadius: "8px 8px 0 0",
-                    flexGrow: 1,
-                    overflow: "auto",
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
-                      <TableRow>
-                        <TableCell
-                          width="5%"
-                          sx={{ border: "none" }}
-                        ></TableCell>
-                        <TableCell
-                          width="5%"
-                          sx={{ border: "none" }}
-                        ></TableCell>
-                        <TableCell width="20%" sx={{ border: "none" }}>
-                          Số thứ tự
-                        </TableCell>
-                        <TableCell width="80%" sx={{ border: "none" }}>
-                          Lớp
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>
-                          <Checkbox
-                            indeterminate={
-                              selected.length > 0 &&
-                              grades.length > 0 &&
-                              selected.length < grades.length
-                            }
-                            sx={{
-                              color: "#637381",
-                              "&.Mui-checked, &.MuiCheckbox-indeterminate": {
-                                color: "#99BC4D",
-                              },
-                              p: 0,
-                              ml: 1.5,
-                            }}
-                            checked={
-                              grades.length > 0 &&
-                              selected.length === grades.length
-                            }
-                            onChange={handleSelectAllClick}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>
-                          {" "}
-                          <TextField
-                            sx={{
-                              p: 0,
-                              m: 0,
-                              bgcolor: "#EAEDF0",
-                              borderRadius: "4px",
-                            }}
-                            disabled
-                          ></TextField>
-                        </TableCell>
-                        <TableCell>
-                          <TextField
-                            sx={{
-                              p: 0,
-                              m: 0,
-                              bgcolor: "#FFF",
-                              borderRadius: "4px",
-                            }}
-                            placeholder="Tìm kiếm..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {grades
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((grade, index) => {
-                          const isItemSelected = selected.includes(
-                            grade.gradeId
-                          );
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
+                    <TableRow>
+                      <TableCell width="5%" sx={{ border: "none" }}></TableCell>
+                      <TableCell width="5%" sx={{ border: "none" }}></TableCell>
+                      <TableCell width="20%" sx={{ border: "none" }}>
+                        Số thứ tự
+                      </TableCell>
+                      <TableCell width="80%" sx={{ border: "none" }}>
+                        Lớp
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <Checkbox
+                          indeterminate={
+                            selected.length > 0 &&
+                            grades.length > 0 &&
+                            selected.length < grades.length
+                          }
+                          sx={{
+                            color: "#637381",
+                            "&.Mui-checked, &.MuiCheckbox-indeterminate": {
+                              color: "#99BC4D",
+                            },
+                            p: 0,
+                            ml: 1.5,
+                          }}
+                          checked={
+                            grades.length > 0 &&
+                            selected.length === grades.length
+                          }
+                          onChange={handleSelectAllClick}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell>
+                        {" "}
+                        <TextField
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#EAEDF0",
+                            borderRadius: "4px",
+                          }}
+                          disabled
+                        ></TextField>
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          sx={{
+                            p: 0,
+                            m: 0,
+                            bgcolor: "#FFF",
+                            borderRadius: "4px",
+                          }}
+                          placeholder="Tìm kiếm..."
+                          value={searchTerm}
+                          onChange={handleSearchChange}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {grades
+                      .slice(
+                        page * rowsPerPage,
+                        page * rowsPerPage + rowsPerPage
+                      )
+                      .map((grade, index) => {
+                        const isItemSelected = selected.includes(grade.gradeId);
 
-                          return (
-                            <TableRow key={grade.gradeId}>
-                              <TableCell sx={{ paddingY: "12px" }}>
-                                <Checkbox
-                                  size="small"
-                                  checked={isItemSelected}
-                                  sx={{
-                                    color: "#637381",
-                                    "&.Mui-checked": { color: "#99BC4D" },
-                                    p: 0,
-                                    ml: 1.5,
-                                  }}
-                                  onChange={(event) =>
-                                    handleCheckboxClick(event, grade.gradeId)
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <EditIcon
-                                  fontSize="small"
-                                  sx={{ color: "#637381", cursor: "pointer" }}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleOpenEdit(grade);
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {page * rowsPerPage + index + 1}
-                              </TableCell>
-                              <TableCell>{grade.gradeName}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                <TablePagination
-                  component="div"
-                  count={grades.length}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  rowsPerPage={rowsPerPage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-              </Box>
-            </>
-          )}
+                        return (
+                          <TableRow key={grade.gradeId}>
+                            <TableCell sx={{ paddingY: "12px" }}>
+                              <Checkbox
+                                size="small"
+                                checked={isItemSelected}
+                                sx={{
+                                  color: "#637381",
+                                  "&.Mui-checked": { color: "#99BC4D" },
+                                  p: 0,
+                                  ml: 1.5,
+                                }}
+                                onChange={(event) =>
+                                  handleCheckboxClick(event, grade.gradeId)
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <EditIcon
+                                fontSize="small"
+                                sx={{ color: "#637381", cursor: "pointer" }}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenEdit(grade);
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {page * rowsPerPage + index + 1}
+                            </TableCell>
+                            <TableCell>{grade.gradeName}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={grades.length}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+              />
+            </Box>
+          </>
+          {/* )} */}
         </Box>
 
         <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth>
@@ -454,7 +464,7 @@ const GradePage = () => {
             <Typography fontSize="24px" fontWeight={600} sx={{ flexGrow: 1 }}>
               {editMode === "edit" ? "Chỉnh sửa lớp học" : "Thêm mới lớp học"}
             </Typography>
-            <CloseIcon fontSize="small" onClick={handleCloseDialog} />
+            <Close fontSize="small" onClick={handleCloseDialog} />
           </DialogTitle>
           <DialogContent>
             <TextField

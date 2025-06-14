@@ -18,7 +18,6 @@ const AboutUsPage: React.FC = () => {
           gap: "20px",
         }}
       >
-        {/* Tiêu đề */}
         <Typography
           fontSize="32px"
           color={theme.palette.primary.main}
@@ -28,7 +27,6 @@ const AboutUsPage: React.FC = () => {
           Về Chúng Tôi
         </Typography>
 
-        {/* Nội dung */}
         <Box
           sx={{
             maxWidth: "800px",

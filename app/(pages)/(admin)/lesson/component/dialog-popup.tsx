@@ -10,21 +10,36 @@ import {
 import TextField from "@/app/components/textfield";
 import { Button } from "@/app/components/button";
 import apiService from "@/app/untils/api";
-import { Close } from "@mui/icons-material";
+import Close from '@mui/icons-material/Close';
 
 interface DialogPopupProps {
   open: boolean;
   onClose: () => void;
   onTopicAdded: () => void;
-  accessToken: string;
   selectedGradeId: string;
   selectedSemester: string;
-  selectedLessonId: string; // Use this prop for lesson fetching
   selectedGradeName: string;
   selectedSubjectName: string;
   selectedBookName: string;
-  
-  onSuccess: () => void;
+  onSuccess: (message: string) => void;
+  accessToken: string | null;
+  selectedLessonId: string | null;
+}
+interface LessonType {
+  lessonName: string;
+  lessonNumber: number;
+  description: string;
+  content: string;
+}
+interface Topic {
+  topicId: string;
+  topicName: string;
+}
+
+interface TopicApiResponse {
+  data: {
+    topics: Topic[];
+  };
 }
 
 const DialogPopup: React.FC<
@@ -34,6 +49,8 @@ const DialogPopup: React.FC<
     lesson?: any;
     topicId?: any;
     gradeName?: any;
+    accessToken: string | null;
+    selectedLessonId: string | null;
   }
 > = ({
   open,
@@ -50,6 +67,7 @@ const DialogPopup: React.FC<
   selectedSubjectName,
   selectedBookName,
   onSuccess,
+  selectedLessonId,
 }) => {
   const [topicName, setTopicName] = useState(topic?.topicName || "");
   const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
@@ -60,16 +78,15 @@ const DialogPopup: React.FC<
   );
   const [availableTopics, setAvailableTopics] = useState<any[]>([]);
   console.log(topicId);
-  // Fetch lesson data when the selectedLessonId changes
   useEffect(() => {
     if (lesson) {
       apiService
-        .get(`/lessons/${lesson}`, {
+        .get<{ data: LessonType }>(`/lessons/${lesson}`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
           const fetchedLesson = response.data.data;
-          console.log("fetchLesson", fetchedLesson); // Assume lesson data is here
+          console.log("fetchLesson", fetchedLesson);
           setTopicName(fetchedLesson.lessonName || "");
           console.log("lessonNumber", fetchedLesson.lessonNumber);
           setTopicNumber(fetchedLesson.lessonNumber || 1);
@@ -80,15 +97,25 @@ const DialogPopup: React.FC<
           console.error("Error fetching lesson data:", error);
         });
     }
-  }, [lesson, accessToken]); // Re-run when selectedLessonId changes
+  }, [lesson, accessToken]);
 
-  // Fetch available topics when selectedGradeId or selectedSemester changes
-  console.log("Fetching topics with:", selectedGradeName, selectedSemester, selectedSubjectName, selectedBookName);
+  console.log(
+    "Fetching topics with:",
+    selectedGradeName,
+    selectedSemester,
+    selectedSubjectName,
+    selectedBookName
+  );
   useEffect(() => {
-    if (selectedGradeName && selectedSemester && selectedSubjectName && selectedBookName) {
+    if (
+      selectedGradeName &&
+      selectedSemester &&
+      selectedSubjectName &&
+      selectedBookName
+    ) {
       console.log("Fetching topics with:", selectedGradeName, selectedSemester);
       apiService
-        .get(
+        .get<TopicApiResponse>(
           `/topics?grade=${selectedGradeName}&semester=${selectedSemester}&subject=${selectedSubjectName}&bookType=${selectedBookName}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -108,7 +135,13 @@ const DialogPopup: React.FC<
           console.error("Error fetching topics:", error);
         });
     }
-  }, [selectedGradeName, selectedSemester, accessToken, selectedBookName, selectedSubjectName]);
+  }, [
+    selectedGradeName,
+    selectedSemester,
+    accessToken,
+    selectedBookName,
+    selectedSubjectName,
+  ]);
 
   console.log("ABC", topic);
   const handleSubmit = () => {
@@ -121,15 +154,14 @@ const DialogPopup: React.FC<
 
     if (type === "add") {
       apiService
-        .post(`/lessons/topic/${selectedTopicId}`, body, {
+        .post<{ message: string }>(`/lessons/topic/${selectedTopicId}`, body, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
           console.log("Lesson added:", response);
           if (response.status === 201) {
-
-            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
-            onClose(); // Đóng dialog sau khi thành công
+            onSuccess(response.data.message);
+            onClose();
           }
           onTopicAdded();
           onClose();
@@ -139,14 +171,14 @@ const DialogPopup: React.FC<
         });
     } else if (type === "edit") {
       apiService
-        .put(`/lessons/${lesson}`, body, {
+        .put<{ message: string }>(`/lessons/${lesson}`, body, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         .then((response) => {
           console.log("Lesson updated:", response);
           if (response.status === 200) {
-            onSuccess(response.data.message); // Gọi callback để hiển thị thông báo
-            onClose(); // Đóng dialog sau khi thành công
+            onSuccess(response.data.message);
+            onClose();
           }
           onTopicAdded();
           onClose();

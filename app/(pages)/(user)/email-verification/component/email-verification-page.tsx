@@ -1,264 +1,391 @@
-// import React, { useState, useEffect } from "react";
-// import { useRouter } from "next/navigation";
-// import { useSearchParams } from "next/navigation";
-// import { Box, Typography, Button, TextField } from "@mui/material";
-// import Layout from "@/app/components/user/Home/layout";
-// import SnackbarComponent from "@/app/components/snackbar";
-// import apiService from "@/app/untils/api";
+"use client";
 
-// const EmailVerification: React.FC = () => {
-//   const router = useRouter();
-//   const searchParams = useSearchParams();
-//   const token = searchParams.get("token");
-
-//   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-//   const [snackbarOpen, setSnackbarOpen] = useState(false);
-//   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
-//     "success"
-//   );
-//   const [email, setEmail] = useState<string>("");
-//   const [resendEmail, setResendEmail] = useState(false);
-//   const [isVerified, setIsVerified] = useState(false); // Track verification status
-
-//   useEffect(() => {
-//     if (token && !isVerified) {
-//       apiService
-//         .get(`/auth/verify?token=${token}`)
-//         .then((response) => {
-//           const data = response.data;
-//           if (data.success) {
-//             setSnackbarMessage("Email verified successfully!");
-//             setSnackbarSeverity("success");
-//             setSnackbarOpen(true);
-//             setIsVerified(true);
-//             // Xóa token khỏi URL sau khi xác thực thành công
-//             router.push("/login"); // Chuyển hướng sau khi xác thực
-//           } else {
-//             setSnackbarMessage(data?.message || "Verification failed.");
-//             // setSnackbarSeverity("error");
-//             setSnackbarOpen(true);
-//           }
-//         })
-//         .catch((error) => {
-//           console.error("API Error: ", error.response || error);
-//           setSnackbarMessage("An error occurred. Please try again.");
-//           setSnackbarSeverity("error");
-//           setSnackbarOpen(true);
-//         });
-//     }
-//   }, [token, isVerified, router]);
-
-//   const handleResendEmail = () => {
-//     if (email) {
-//       // Use ApiService to resend verification email
-//       apiService
-//         .get(`/auth/resend-confirm-email?email=${email}`)
-//         .then((response) => {
-//           const data = response.data;
-//           if (data.success) {
-//             setSnackbarMessage("Verification email sent successfully!");
-//             setSnackbarSeverity("success");
-//             setSnackbarOpen(true);
-//           } else {
-//             setSnackbarMessage("Failed to resend email. Please try again.");
-//             setSnackbarSeverity("error");
-//             setSnackbarOpen(true);
-//           }
-//         })
-//         .catch(() => {
-//           setSnackbarMessage("Failed to resend email. Please try again.");
-//           setSnackbarSeverity("error");
-//           setSnackbarOpen(true);
-//         });
-//     } else {
-//       setSnackbarMessage("Please enter your email address.");
-//       setSnackbarSeverity("error");
-//       setSnackbarOpen(true);
-//     }
-//   };
-
-//   const handleSnackbarClose = () => {
-//     setSnackbarOpen(false);
-//   };
-
-//   return (
-    
-//   );
-// };
-
-// export default EmailVerification;
-// "use client"; // Chỉ thị client-side rendering trong Next.js 13+
-
-// import React, { useEffect, useState } from "react";
-// import { useSearchParams } from "next/navigation"; // Sử dụng useSearchParams thay vì useRouter
-// import apiService from "@/app/untils/api";
-// import Layout from "@/app/components/user/Home/layout";
-// import { Box } from "@mui/material";
-
-// const EmailVerification = () => {
-//   const searchParams = useSearchParams();
-//   const token = searchParams?.get("token"); // Lấy token từ URL
-//   const [status, setStatus] = useState<"loading" | "success" | "error">(
-//     "loading"
-//   );
-//   const [isVerified, setIsVerified] = useState(false); // Thêm state để kiểm tra nếu đã xác thực
-
-//   // Kiểm tra nếu token có trong URL, sau đó thực hiện xác thực
-//   useEffect(() => {
-//     if (token && !isVerified) {
-//       // Kiểm tra nếu token có và chưa xác thực
-//       // Gửi request xác thực đến API backend sử dụng apiService
-//       apiService
-//         .get(`/auth/verify?token=${token}`)
-//         .then((response) => {
-//           // Nếu xác thực thành công
-//           console.log("Xác thực thành công:", response.data.message);
-//           setStatus("success");
-//           setIsVerified(true); // Đánh dấu là đã xác thực
-//         })
-//         .catch((error) => {
-//           // Lỗi chi tiết
-//           console.error(
-//             "Lỗi xác thực:",
-//             error.response ? error.response.data : error.message
-//           );
-//           // setStatus('error');
-//         });
-//     } else if (!token) {
-//       setStatus("error"); // Nếu không có token
-//     }
-//   }, [token, isVerified]); // Thêm isVerified để tránh gọi lại API sau khi đã xác thực
-
-//   if (status === "loading") {
-//     return <div>Đang xác thực...</div>;
-//   }
-
-//   return (
-//     <Layout>
-//       <Box>
-//         {status === "success" ? (
-//           <div>
-//             <h1>Xác thực thành công!</h1>
-//             <p>
-//               Cảm ơn bạn đã xác thực email. Bạn có thể bắt đầu sử dụng dịch vụ
-//               ngay bây giờ.
-//             </p>
-//           </div>
-//         ) : (
-//           <div>
-//             <h1>Đã xảy ra lỗi!</h1>
-//             <p>Không thể xác thực email của bạn. Vui lòng thử lại sau.</p>
-//           </div>
-//         )}
-//       </Box>
-//     </Layout>
-//   );
-// };
-
-// export default EmailVerification;
-"use client"; // Chỉ thị client-side rendering trong Next.js 13+
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import apiService from "@/app/untils/api";
 import Layout from "@/app/components/user/Home/layout";
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Box, Typography, CircularProgress, Alert } from "@mui/material";
+import Image from "next/image";
+import { Button } from "@/app/components/button";
+
+interface VerifyResponse {
+  status: number;
+  message: string;
+  data: any;
+}
 
 const EmailVerification = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams?.get("token"); // Lấy token từ URL
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
-  const [message, setMessage] = useState(""); // Message thông báo
-  const [email, setEmail] = useState(""); // Email để gửi lại xác thực
+  const [verificationStatus, setVerificationStatus] = useState<
+    "loading" | "success" | "error"
+  >("loading");
+  const [message, setMessage] = useState("");
+  const [countdown, setCountdown] = useState(5);
+  const hasVerified = useRef(false);
 
   useEffect(() => {
-    // Chỉ thực hiện xác thực nếu trạng thái chưa phải là success
-    if (token && status === "loading") {
-      apiService
-        .get(`/auth/verify?token=${token}`)
-        .then((response) => {
-          setStatus("success");
-          setMessage(response.data.message);
-          setTimeout(() => router.push("/login"), 3000); // Điều hướng sau 3 giây
-        })
-        .catch((error) => {
-          if (status !== "success") {
-            // setStatus("error");
-            setMessage(
-              error.response?.data?.message || "Không thể xác thực email của bạn."
-            );
-          }
-        });
-    } else if (!token && status === "loading") {
-      setStatus("error");
-      setMessage("Token không hợp lệ hoặc không tìm thấy.");
-    }
-  }, [token, status, router]);
+    const token = searchParams.get("token");
 
-  const resendEmailVerification = () => {
-    if (!email) {
-      setMessage("Vui lòng nhập email.");
+    // Ngăn việc gọi API nhiều lần (React Strict Mode)
+    if (hasVerified.current) {
       return;
     }
 
-    apiService
-      .get(`/auth/resend-confirm-email?email=${email}`)
-      .then((response) => {
-        setMessage(response.data.message || "Email xác thực đã được gửi lại.");
-      })
-      .catch((error) => {
-        setMessage(
-          error.response?.data?.message || "Không thể gửi lại email xác thực."
+    if (!token) {
+      setVerificationStatus("error");
+      setMessage("Token xác thực không hợp lệ hoặc không tìm thấy");
+      return;
+    }
+
+    console.log("Attempting to verify token:", token);
+    hasVerified.current = true;
+
+    // Gọi API xác thực email
+    const verifyEmail = async () => {
+      try {
+        const verifyUrl = `/auth/verify?token=${token}`;
+        console.log("Calling API:", verifyUrl);
+
+        const response = await apiService.get(verifyUrl);
+        console.log("API Response:", response);
+
+        // Kiểm tra response từ API
+        if (response.status === 200 && response.data?.status === 200) {
+          setVerificationStatus("success");
+          setMessage(response.data.message || "Xác thực email thành công!");
+        } else {
+          setVerificationStatus("error");
+          setMessage(response.data?.message || "Xác thực email thất bại");
+        }
+      } catch (error: any) {
+        console.error("Verification error details:", error);
+
+        setVerificationStatus("error");
+
+        // Xử lý các loại lỗi khác nhau
+        if (error.response?.status === 500) {
+          setMessage(
+            error.response?.data?.message || 
+            "Lỗi server (500). Token có thể đã được sử dụng hoặc hết hạn."
+          );
+        } else if (error.response?.status === 404) {
+          setMessage("Token không tồn tại hoặc đã hết hạn.");
+        } else if (error.response?.status === 400) {
+          setMessage("Token không hợp lệ.");
+        } else if (error.response?.status === 401) {
+          setMessage("Token không được ủy quyền hoặc đã hết hạn.");
+        } else if (error.code === "ERR_NETWORK") {
+          setMessage("Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.");
+        } else {
+          setMessage(
+            error.response?.data?.message || "Có lỗi xảy ra khi xác thực email"
+          );
+        }
+      }
+    };
+
+    verifyEmail();
+  }, []); // Empty dependency array
+
+  // Separate useEffect for countdown and redirect
+  useEffect(() => {
+    if (verificationStatus === "success") {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            router.push("/login");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [verificationStatus, router]);
+
+  const handleGoToLogin = () => {
+    router.push("/login");
+  };
+
+  const handleRetryVerification = () => {
+    setVerificationStatus("loading");
+    setMessage("");
+    hasVerified.current = false; // Reset để có thể thử lại
+    
+    // Trigger re-verification by getting token again
+    const token = searchParams.get("token");
+    if (token) {
+      hasVerified.current = true;
+      verifyEmail(token);
+    }
+  };
+
+  const verifyEmail = async (token: string) => {
+    try {
+      const verifyUrl = `/auth/verify?token=${token}`;
+      console.log("Retrying API:", verifyUrl);
+
+      const response = await apiService.get(verifyUrl);
+      console.log("Retry API Response:", response);
+
+      if (response.status === 200 && response.data?.status === 200) {
+        setVerificationStatus("success");
+        setMessage(response.data.message || "Xác thực email thành công!");
+      } else {
+        setVerificationStatus("error");
+        setMessage(response.data?.message || "Xác thực email thất bại");
+      }
+    } catch (error: any) {
+      console.error("Retry verification error:", error);
+      setVerificationStatus("error");
+      setMessage(
+        error.response?.data?.message || "Có lỗi xảy ra khi xác thực email"
+      );
+    }
+  };
+
+  const renderContent = () => {
+    switch (verificationStatus) {
+      case "loading":
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+            }}
+          >
+            <CircularProgress size={60} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Đang xác thực email...
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Vui lòng đợi trong giây lát
+            </Typography>
+          </Box>
         );
-      });
+
+      case "success":
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+            }}
+          >
+            <Box
+              sx={{
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                backgroundColor: "#4caf50",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 2,
+              }}
+            >
+              <Typography sx={{ fontSize: "48px", color: "white" }}>
+                ✓
+              </Typography>
+            </Box>
+
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "#4caf50", mb: 1 }}
+            >
+              Xác thực thành công!
+            </Typography>
+
+            <Typography
+              variant="body1"
+              sx={{ mb: 2, textAlign: "center", maxWidth: 400 }}
+            >
+              {message}
+            </Typography>
+
+            <Alert severity="success" sx={{ mb: 3 }}>
+              Tài khoản của bạn đã được kích hoạt thành công. Bạn có thể đăng
+              nhập ngay bây giờ.
+            </Alert>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Tự động chuyển hướng sau {countdown} giây...
+            </Typography>
+
+            <Button
+              onClick={handleGoToLogin}
+              sx={{
+                backgroundColor: "#1976d2",
+                color: "white",
+                padding: "12px 32px",
+                borderRadius: "8px",
+                textTransform: "none",
+                fontSize: "16px",
+                fontWeight: 600,
+                "&:hover": {
+                  backgroundColor: "#1565c0",
+                },
+              }}
+            >
+              Đăng nhập ngay
+            </Button>
+          </Box>
+        );
+
+      case "error":
+        return (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+            }}
+          >
+            <Box
+              sx={{
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                backgroundColor: "#f44336",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 2,
+              }}
+            >
+              <Typography sx={{ fontSize: "48px", color: "white" }}>
+                ✗
+              </Typography>
+            </Box>
+
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "#f44336", mb: 1 }}
+            >
+              Xác thực thất bại
+            </Typography>
+
+            <Typography
+              variant="body1"
+              sx={{ mb: 2, textAlign: "center", maxWidth: 400 }}
+            >
+              {message}
+            </Typography>
+
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {message}
+            </Alert>
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              <Button
+                onClick={handleRetryVerification}
+                variant="outlined"
+                sx={{
+                  borderColor: "#ff9800",
+                  color: "#ff9800",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  textTransform: "none",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  minWidth: "140px",
+                  "&:hover": {
+                    borderColor: "#f57c00",
+                    color: "#f57c00",
+                  },
+                }}
+              >
+                Thử lại
+              </Button>
+
+              <Button
+                onClick={() => (window.location.href = "/register")}
+                variant="outlined"
+                sx={{
+                  borderColor: "#1976d2",
+                  color: "#1976d2",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  textTransform: "none",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  minWidth: "140px",
+                }}
+              >
+                Đăng ký lại
+              </Button>
+
+              <Button
+                onClick={handleGoToLogin}
+                sx={{
+                  backgroundColor: "#1976d2",
+                  color: "white",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  textTransform: "none",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  minWidth: "140px",
+                  "&:hover": {
+                    backgroundColor: "#1565c0",
+                  },
+                }}
+              >
+                Về trang đăng nhập
+              </Button>
+            </Box>
+          </Box>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
     <Layout>
-      <Box sx={{ textAlign: "center", padding: "20px" }}>
-        {status === "loading" ? (
-          <Typography variant="h6">Đang xác thực...</Typography>
-        ) : status === "success" ? (
-          <div>
-            <Typography variant="h5" color="primary">
-              Xác thực thành công!
-            </Typography>
-            <Typography>
-              Cảm ơn bạn đã xác thực email. Bạn sẽ được chuyển đến trang đăng nhập.
-            </Typography>
-          </div>
-        ) : (
-          <div>
-            <Typography variant="h5" color="error">
-              Đã xảy ra lỗi!
-            </Typography>
-            <Typography>{message}</Typography>
-            <Box sx={{ marginTop: "20px" }}>
-              <TextField
-                label="Nhập email"
-                variant="outlined"
-                fullWidth
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={resendEmailVerification}
-                sx={{ marginTop: "10px" }}
-              >
-                Gửi lại email xác thực
-              </Button>
-            </Box>
-          </div>
-        )}
+      <Box
+        sx={{
+          minHeight: "80vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          padding: "60px 20px",
+          backgroundColor: "#f8f9fa",
+        }}
+      >
+        <Box
+          sx={{
+            maxWidth: 600,
+            width: "100%",
+            backgroundColor: "white",
+            borderRadius: "16px",
+            padding: "48px 32px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
+            border: "1px solid #e0e0e0",
+          }}
+        >
+          {renderContent()}
+        </Box>
       </Box>
     </Layout>
   );
 };
 
 export default EmailVerification;
-
