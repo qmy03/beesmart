@@ -687,6 +687,8 @@ const SkillListPage: React.FC = () => {
                       padding: "24px",
                       borderRadius: "16px",
                       border: "1px solid #A8A8A8",
+                      maxHeight: "450px",
+                      overflowY: "auto"
                     }}
                   >
                     {selectedTopic.lessons.map((lesson: Lesson) => (
@@ -699,11 +701,12 @@ const SkillListPage: React.FC = () => {
                           overflow: "hidden",
                           display: "flex",
                           flexDirection: "column",
+                          flex: 1
                         }}
                       >
                         {lesson.content && lesson.content.includes(".mp4") && (
                           <Box
-                            sx={{ width: "100%", cursor: "pointer" }}
+                            sx={{ width: "100%", cursor: "pointer", flex: 1 }}
                             onClick={() => handleLessonClick(lesson.lessonId)}
                           >
                             <VideoThumbnail
