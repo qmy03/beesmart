@@ -1042,6 +1042,8 @@ interface UserInfo {
 
 interface QuizRecord {
   recordId: string;
+  topicName: string;
+  lessonName: string
   quizName: string;
   totalQuestions: number;
   correctAnswers: number;
@@ -1372,7 +1374,7 @@ const AccountPage: React.FC = () => {
           flexDirection: { xs: "column", md: "row" },
           gap: 4,
           padding: 7,
-          bgcolor: "#f9f9f9",
+          bgcolor: "#EFF3E6",
           minHeight: "100vh",
           flex: 1,
         }}
@@ -1606,6 +1608,8 @@ const AccountPage: React.FC = () => {
                       <TableRow>
                         <TableCell sx={{ padding: "12px" }}>Thứ tự</TableCell>
                         <TableCell>Tên bài kiểm tra</TableCell>
+                        <TableCell>Tên chủ đề</TableCell>
+                        <TableCell>Tên bài học</TableCell>
                         <TableCell>Số câu hỏi</TableCell>
                         <TableCell>Số câu đúng</TableCell>
                         <TableCell>Điểm</TableCell>
@@ -1620,6 +1624,8 @@ const AccountPage: React.FC = () => {
                           <TableRow key={record.recordId}>
                             <TableCell sx={{ padding: "12px" }}>{index + 1}</TableCell>
                             <TableCell>{record.quizName}</TableCell>
+                            <TableCell>{record.topicName}</TableCell>
+                            <TableCell>{record.lessonName}</TableCell>
                             <TableCell>{record.totalQuestions}</TableCell>
                             <TableCell>{record.correctAnswers}</TableCell>
                             <TableCell>{record.points}</TableCell>

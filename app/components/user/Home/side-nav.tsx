@@ -2111,7 +2111,7 @@ const SideNav: React.FC = () => {
           <Button
             fullWidth
             variant="text"
-            sx={{ textTransform: "none", color: "white" }}
+            sx={{ textTransform: "none", color: "white", }}
             onClick={() => handleNavigation("/home")}
           >
             Trang chủ
@@ -2124,14 +2124,18 @@ const SideNav: React.FC = () => {
           >
             Vào học
           </Button>
-          <Button
-            fullWidth
-            variant="text"
-            sx={{ textTransform: "none", color: "white" }}
-            onClick={() => handleNavigation("/dashboard-report")}
-          >
-            Đánh giá
-          </Button>
+          {accessToken && (
+            <>
+              <Button
+                fullWidth
+                variant="text"
+                sx={{ textTransform: "none", color: "white" }}
+                onClick={() => handleNavigation("/dashboard-report")}
+              >
+                Đánh giá
+              </Button>
+            </>
+          )}
           <Button
             fullWidth
             variant="text"
@@ -2157,14 +2161,16 @@ const SideNav: React.FC = () => {
           >
             Liên hệ
           </Button>
-          <Button
-            fullWidth
-            variant="text"
-            color="primary"
-            onClick={() => handleNavigation("/battle-home")}
-          >
-            Đấu trường
-          </Button>
+          {accessToken && (
+            <Button
+              fullWidth
+              variant="text"
+              color="primary"
+              onClick={() => handleNavigation("/battle-home")}
+            >
+              Đấu trường
+            </Button>
+          )}
         </Box>
       </AppBar>
     </>

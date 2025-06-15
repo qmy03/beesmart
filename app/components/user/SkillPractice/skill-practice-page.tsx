@@ -213,7 +213,7 @@ const SkillPracticePage = () => {
         setDialogOpen(true);
         setIsSubmitted(true);
         handleCloseConfirm();
-        router.push(`/skill-list/${response.data.data.recordId}`);
+        router.push(`/skill-test/${response.data.data.recordId}`);
       })
       .catch((error) => {
         console.error(

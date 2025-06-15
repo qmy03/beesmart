@@ -552,6 +552,8 @@ interface Student {
 
 interface QuizRecord {
   recordId: string;
+  topicName: string;
+  lessonName: string;
   quizName: string;
   totalQuestions: number;
   correctAnswers: number;
@@ -1087,70 +1089,90 @@ const DashboardReportPage: React.FC = () => {
               >
                 Lịch sử làm bài
               </Typography>
-              <Box sx={{ height: "70vh", boxShadow: 3, borderRadius: 3 }}>
-                <TableContainer
-                  sx={{ borderRadius: 3, overflow: "auto", height: "60vh" }}
-                >
-                  <Table size="small">
-                    <TableHead sx={{ bgcolor: "#FFFBF3" }}>
-                      <TableRow>
-                        <TableCell sx={{ paddingY: "16px" }}>
-                          Tên bài kiểm tra
-                        </TableCell>
-                        <TableCell>Tổng số câu hỏi</TableCell>
-                        <TableCell>Số đáp án đúng</TableCell>
-                        <TableCell>Điểm</TableCell>
-                        <TableCell>Thời gian hoàn thành</TableCell>
-                        <TableCell>Ngày</TableCell>
-                        <TableCell>Xem lại</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {quizRecords && quizRecords.length > 0 ? (
-                        quizRecords.map((record, index) => (
-                          <TableRow key={index}>
-                            <TableCell sx={{ paddingY: "16px" }}>
-                              {record.quizName}
-                            </TableCell>
-                            <TableCell>{record.totalQuestions}</TableCell>
-                            <TableCell>{record.correctAnswers}</TableCell>
-                            <TableCell>{record.points}</TableCell>
-                            <TableCell>{record.timeSpentFormatted}</TableCell>
-                            <TableCell>
-                              {new Date(record.createdAt).toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              <Link
-                                href={`/skill-test/${record.recordId}`}
-                                sx={{
-                                  textDecoration: "underline",
-                                  cursor: "pointer",
-                                  color: "#1976d2",
-                                }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  router.push(`/skill-test/${record.recordId}`);
-                                }}
-                              >
-                                Xem lại bài làm
-                              </Link>
+              <Box
+                sx={{
+                  height: "70vh",
+                  boxShadow: 3,
+                  borderRadius: 3,
+                  overflowX: "auto",
+                }}
+              >
+                <Box>
+                  <TableContainer
+                    sx={{
+                      borderRadius: 3,
+                      overflow: "auto",
+                      height: "60vh",
+                      minWidth: "1600px",
+                    }}
+                  >
+                    <Table size="small">
+                      <TableHead sx={{ bgcolor: "#FFFBF3" }}>
+                        <TableRow>
+                          <TableCell sx={{ paddingY: "16px" }}>
+                            Tên bài kiểm tra
+                          </TableCell>
+                          <TableCell>Tên chủ đề</TableCell>
+                          <TableCell>Tên bài học</TableCell>
+                          <TableCell>Tổng số câu hỏi</TableCell>
+                          <TableCell>Số đáp án đúng</TableCell>
+                          <TableCell>Điểm</TableCell>
+                          <TableCell>Thời gian hoàn thành</TableCell>
+                          <TableCell>Ngày</TableCell>
+                          <TableCell>Xem lại</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {quizRecords && quizRecords.length > 0 ? (
+                          quizRecords.map((record, index) => (
+                            <TableRow key={index}>
+                              <TableCell sx={{ paddingY: "16px" }}>
+                                {record.quizName}
+                              </TableCell>
+                              <TableCell>{record.topicName}</TableCell>
+                              <TableCell>{record.lessonName}</TableCell>
+                              <TableCell>{record.totalQuestions}</TableCell>
+                              <TableCell>{record.correctAnswers}</TableCell>
+                              <TableCell>{record.points}</TableCell>
+                              <TableCell>{record.timeSpentFormatted}</TableCell>
+                              <TableCell>
+                                {new Date(record.createdAt).toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                <Link
+                                  href={`/skill-test/${record.recordId}`}
+                                  sx={{
+                                    textDecoration: "underline",
+                                    cursor: "pointer",
+                                    color: "#1976d2",
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    router.push(
+                                      `/skill-test/${record.recordId}`
+                                    );
+                                  }}
+                                >
+                                  Xem lại bài làm
+                                </Link>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={7}
+                              align="center"
+                              sx={{ paddingY: "16px" }}
+                            >
+                              Không có dữ liệu
                             </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            align="center"
-                            sx={{ paddingY: "16px" }}
-                          >
-                            Không có dữ liệu
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
                 <TablePagination
                   component="div"
                   count={totalItems}

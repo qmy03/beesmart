@@ -197,11 +197,15 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = React.memo(
         ) : thumbnail ? (
           <img
             src={thumbnail}
-            srcSet={thumbnailUrls ? `
+            srcSet={
+              thumbnailUrls
+                ? `
               ${thumbnailUrls.low} 100w,
               ${thumbnailUrls.medium} 300w,
               ${thumbnailUrls.high} 600w
-            ` : undefined}
+            `
+                : undefined
+            }
             sizes="(max-width: 600px) 100px, 300px"
             alt={altText}
             width="100%"
@@ -213,7 +217,18 @@ const VideoThumbnail: React.FC<VideoThumbnailProps> = React.memo(
             }}
           />
         ) : (
-          <Typography color="error">Không thể tải thumbnail</Typography>
+          <Box
+            sx={{
+              width: "100%",
+              height: `${height}px`,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: "#f0f0f0",
+            }}
+          >
+            <Typography color="error">Không thể tải thumbnail</Typography>
+          </Box>
         )}
       </Box>
     );

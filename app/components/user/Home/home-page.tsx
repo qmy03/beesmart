@@ -32,7 +32,8 @@ const HomePage: React.FC = () => {
   const router = useRouter();
   const handleSkillClick = (subjectId: string) => {
     const gradeName = grade || "Lớp 1"; // Nếu userInfo null, mặc định là "Lớp 1"
-    router.push(`/skill-list?subjectId=${subjectId}&gradeName=${gradeName}`);
+    // router.push(`/skill-list?subjectId=${subjectId}&gradeName=${gradeName}`);
+    router.push(`/skill-list`);
   };
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
