@@ -96,7 +96,8 @@ interface GradesResponse {
 }
 
 const SideNav: React.FC = () => {
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const { logoutUser, userInfo } = useAuth();
   const pathname = usePathname();
   const role = userInfo?.role;
@@ -122,7 +123,12 @@ const SideNav: React.FC = () => {
     open: boolean;
     battleId: string | null;
   }>({ open: false, battleId: null });
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   // useEffect(() => {
   //   if (accessToken && userInfo) {
   //     connectWebSocket();
@@ -2111,7 +2117,7 @@ const SideNav: React.FC = () => {
           <Button
             fullWidth
             variant="text"
-            sx={{ textTransform: "none", color: "white", }}
+            sx={{ textTransform: "none", color: "white" }}
             onClick={() => handleNavigation("/home")}
           >
             Trang chủ

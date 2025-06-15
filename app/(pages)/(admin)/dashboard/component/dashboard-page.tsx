@@ -72,7 +72,9 @@ interface BattleScoreData {
 }
 
 const DashboardPage = () => {
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const { isLoading, setIsLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -116,6 +118,12 @@ const DashboardPage = () => {
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
   const dateParam = `${currentMonth}-${currentYear}`;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!accessToken) {

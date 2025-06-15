@@ -1161,7 +1161,7 @@ const DashboardReportPage: React.FC = () => {
                         ) : (
                           <TableRow>
                             <TableCell
-                              colSpan={7}
+                              colSpan={9}
                               align="center"
                               sx={{ paddingY: "16px" }}
                             >

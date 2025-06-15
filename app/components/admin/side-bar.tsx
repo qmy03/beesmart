@@ -31,9 +31,20 @@ const Sidebar: React.FC = () => {
   //     setAccessToken(token);
   //   }
   // }, []);
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      const userInfo = localStorage.getItem("userInfo");
 
-  const userInfo = localStorage.getItem("userInfo");
+      setAccessToken(token);
+      setUserInfo(userInfo);
+    }
+  }, []);
+
+  // const userInfo = localStorage.getItem("userInfo");
 
   const parsedUserInfo = userInfo ? JSON.parse(userInfo) : null;
 
@@ -41,7 +52,7 @@ const Sidebar: React.FC = () => {
   console.log("userInfo", parsedUserInfo);
 
   const defaultUser = { username: "Guest", role: "user" };
-  const currentUser = parsedUserInfo || defaultUser; 
+  const currentUser = parsedUserInfo || defaultUser;
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const router = useRouter();
