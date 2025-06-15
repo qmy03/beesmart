@@ -30,6 +30,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteDialog from "@/app/components/admin/delete-dialog";
 import QuestionDialog from "./question-dialog";
 import EditQuestionDialog from "./multi-select-dialog";
+import CloseIcon from "@mui/icons-material/Close";
 interface Grade {
   gradeId: string;
   gradeName: string;
@@ -1166,6 +1167,17 @@ const QuizPage = () => {
               InputLabelProps={{
                 shrink: selectedLessonId ? true : false,
               }}
+              InputProps={{
+              endAdornment: selectedLessonId && (
+                <IconButton
+                  onClick={() => setSelectedLessonId(null)}
+                  size="small"
+                  sx={{ marginRight: 1 }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              ),
+            }}
             >
               {lessons.map((lesson) => (
                 <MenuItem
