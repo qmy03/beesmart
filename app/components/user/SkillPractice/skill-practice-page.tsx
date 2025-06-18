@@ -21,10 +21,12 @@ import {
 import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
 import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import AccessAlarmIcon from "@mui/icons-material/AccessAlarm";
+import FlagIcon from "@mui/icons-material/Flag";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/hooks/AuthContext";
 import TextField from "../../textfield";
 import { Key } from "@mui/icons-material";
+
 interface Question {
   questionId: string;
   content: string;
@@ -60,32 +62,52 @@ interface QuizResult {
     answers?: string[];
     correct: boolean;
   }>;
-  recordId: string;
 }
 
 interface SubmitResponse {
   data: QuizResult;
 }
+
 const SkillPracticePage = () => {
   const router = useRouter();
   const { quizId } = useParams();
   const [questions, setQuestions] = useState<Question[]>([]);
-  // const [answers, setAnswers] = useState([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
+  const [flaggedQuestions, setFlaggedQuestions] = useState<boolean[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const { accessToken } = useAuth();
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
+  const [warningDialogOpen, setWarningDialogOpen] = useState<boolean>(false);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [quizDuration, setQuizDuration] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
-  const [warningDialogOpen, setWarningDialogOpen] = useState<boolean>(false);
+
+  // Check if all questions are answered
+  const checkAllQuestionsAnswered = () => {
+    return questions.every((question, index) => {
+      const answer = answers[index];
+      if (!answer) return false;
+
+      switch (question.questionType) {
+        case "MULTIPLE_CHOICE":
+          return answer.selectedAnswerIndex !== undefined;
+        case "MULTI_SELECT":
+          return answer.selectedAnswers && answer.selectedAnswers.length > 0;
+        case "FILL_IN_THE_BLANK":
+          return answer.inputAnswer && answer.inputAnswer.trim() !== "";
+        default:
+          return false;
+      }
+    });
+  };
 
   const handleOpenConfirm = () => {
-    if (!checkAllQuestionsAnswered()) {
+    // Check if all questions are answered and there's still time left
+    if (timeLeft > 0 && !checkAllQuestionsAnswered()) {
       setWarningDialogOpen(true);
       return;
     }
@@ -95,6 +117,11 @@ const SkillPracticePage = () => {
   const handleCloseConfirm = () => {
     setConfirmDialogOpen(false);
   };
+
+  const handleCloseWarning = () => {
+    setWarningDialogOpen(false);
+  };
+
   const handleNext = () => {
     if (currentPage < questions.length - 1) {
       setCurrentPage(currentPage + 1);
@@ -105,6 +132,12 @@ const SkillPracticePage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
     }
+  };
+
+  const handleFlagToggle = (questionIndex: number) => {
+    const updatedFlags = [...flaggedQuestions];
+    updatedFlags[questionIndex] = !updatedFlags[questionIndex];
+    setFlaggedQuestions(updatedFlags);
   };
 
   const question = questions[currentPage];
@@ -155,6 +188,9 @@ const SkillPracticePage = () => {
         .then((response) => {
           console.log("responseQ", response);
           setQuestions(response.data.data.questions);
+          setFlaggedQuestions(
+            new Array(response.data.data.questions.length).fill(false)
+          );
 
           const duration = response.data.data.quizDuration || 10;
           setQuizDuration(duration);
@@ -228,28 +264,13 @@ const SkillPracticePage = () => {
         );
       });
   };
+
   useEffect(() => {
     if (timeLeft === 0 && !isSubmitted) {
       handleSubmit();
     }
   }, [timeLeft, isSubmitted]);
-  const checkAllQuestionsAnswered = () => {
-    return questions.every((question, index) => {
-      const answer = answers[index];
-      if (!answer) return false;
 
-      switch (question.questionType) {
-        case "MULTIPLE_CHOICE":
-          return answer.selectedAnswerIndex !== undefined;
-        case "MULTI_SELECT":
-          return answer.selectedAnswers && answer.selectedAnswers.length > 0;
-        case "FILL_IN_THE_BLANK":
-          return answer.inputAnswer && answer.inputAnswer.trim() !== "";
-        default:
-          return false;
-      }
-    });
-  };
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -284,16 +305,12 @@ const SkillPracticePage = () => {
           backgroundColor: "#EFF3E6",
           padding: "40px 120px",
           height: "100%",
-          // alignItem: "center",
         }}
       >
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            // padding: "40px",
-            // alignItems: "center",
-            // justifyContent: "space-between",
             bgcolor: "#FFFFFF",
             border: "1px solid #ccc",
             borderRadius: 4,
@@ -311,18 +328,14 @@ const SkillPracticePage = () => {
             Luyện tập Quiz
           </Typography>
           <Divider />
-          {/* Timer */}
 
-          {/* Left Section: Question Area */}
           <Box sx={{}}>
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "center", // To align the left and right sections
+                justifyContent: "center",
                 padding: "40px",
                 gap: "20px",
-                // backgroundColor: "#EFF3E6",
-                // alignItems: "flex-start",
               }}
             >
               <Box
@@ -330,17 +343,16 @@ const SkillPracticePage = () => {
                   flex: 3,
                   display: "flex",
                   flexDirection: "column",
-                  // alignItems: "center",
                   border: "1px solid #ccc",
                   borderRadius: 4,
                 }}
               >
-                {/* Question display */}
                 <Box sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    fontSize="16px"
-                    fontWeight={700}
+                  <Box
                     sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       padding: "8px 20px",
                       backgroundColor: "#99BC4D",
                       borderTopLeftRadius: "16px",
@@ -348,8 +360,26 @@ const SkillPracticePage = () => {
                       color: "#fff",
                     }}
                   >
-                    Câu hỏi số {currentPage + 1}
-                  </Typography>
+                    <Typography fontSize="16px" fontWeight={700}>
+                      Câu hỏi số {currentPage + 1}
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={flaggedQuestions[currentPage] || false}
+                          onChange={() => handleFlagToggle(currentPage)}
+                          icon={<FlagIcon sx={{ color: "white" }} />}
+                          checkedIcon={<FlagIcon sx={{ color: "#F8AC59" }} />}
+                          sx={{ color: "white" }}
+                        />
+                      }
+                      label="Đang cân nhắc"
+                      sx={{
+                        color: "white",
+                        "& .MuiTypography-root": { fontSize: "14px" },
+                      }}
+                    />
+                  </Box>
                   <Divider />
                   <Box
                     sx={{
@@ -375,18 +405,7 @@ const SkillPracticePage = () => {
                         />
                       )}
                     </FormControl>
-                    {/* Render the different question types (radio, checkbox, text input) */}
-                    <FormControl
-                      component="fieldset"
-                      // sx={{ alignItems: "center" }}
-                    >
-                      {/* {question.image && (
-                        <img
-                          src={question.image}
-                          alt="Question"
-                          style={{ maxWidth: "300px" }}
-                        />
-                      )} */}
+                    <FormControl component="fieldset">
                       {question.questionType === "FILL_IN_THE_BLANK" && (
                         <TextField
                           value={answers[currentPage]?.inputAnswer || ""}
@@ -433,14 +452,14 @@ const SkillPracticePage = () => {
                       {question.questionType === "MULTI_SELECT" && (
                         <Box>
                           {question.options
-                            .filter((option) => option.trim() !== "") // Filter out empty options
+                            .filter((option) => option.trim() !== "")
                             .map((option, index) => (
                               <FormControlLabel
                                 key={index}
                                 sx={{
                                   display: "flex",
                                   flexDirection: "row",
-                                  "& .MuiTypography-root": { fontSize: "16px" }, // Sửa fontSize của label
+                                  "& .MuiTypography-root": { fontSize: "16px" },
                                 }}
                                 control={
                                   <Checkbox
@@ -563,7 +582,7 @@ const SkillPracticePage = () => {
                     }}
                   >
                     {questions.map((_, index) => {
-                      const answer = answers[index]; // Get the answer object first
+                      const answer = answers[index];
                       const isAnswered =
                         answer &&
                         (answer.inputAnswer ||
@@ -571,6 +590,7 @@ const SkillPracticePage = () => {
                             answer.selectedAnswers.length > 0) ||
                           answer.selectedAnswerIndex !== undefined);
                       const isCurrent = index === currentPage;
+                      const isFlagged = flaggedQuestions[index];
 
                       return (
                         <Button
@@ -579,27 +599,28 @@ const SkillPracticePage = () => {
                           onClick={() => setCurrentPage(index)}
                           sx={{
                             backgroundColor: isCurrent
-                              ? isAnswered
-                                ? "#99BC4D"
-                                : "#FF9900"
-                              : isAnswered
-                                ? "#99BC4D"
-                                : "transparent",
-                            color: isCurrent
-                              ? isAnswered
-                                ? "#fff"
-                                : "#fff"
-                              : isAnswered
+                              ? "#6593DA"
+                              : isFlagged
+                                ? "#F8AC59"
+                                : isAnswered
+                                  ? "#99BC4D"
+                                  : "transparent",
+                            color:
+                              isCurrent || isFlagged || isAnswered
                                 ? "#fff"
                                 : "#000",
+                            border:
+                              !isCurrent && !isFlagged && !isAnswered
+                                ? "1px solid #ccc"
+                                : "none",
                             "&:hover": {
                               backgroundColor: isCurrent
-                                ? isAnswered
-                                  ? "#7A9F38"
-                                  : "#FF7A00"
-                                : isAnswered
-                                  ? "#7A9F38"
-                                  : "#D9D9D9",
+                                ? "#5A7BC4"
+                                : isFlagged
+                                  ? "#E89A48"
+                                  : isAnswered
+                                    ? "#7A9F38"
+                                    : "#D9D9D9",
                             },
                           }}
                         >
@@ -623,11 +644,136 @@ const SkillPracticePage = () => {
                 >
                   Nộp bài
                 </Button>
+                <Box
+                  sx={{
+                    padding: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    border: "1px solid #ccc",
+                    borderRadius: 2,
+                  }}
+                >
+                  {/* Chú thích màu sắc */}
+                  <Box sx={{ padding: "0 8px", fontSize: "12px" }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={700}
+                      sx={{
+                        textAlign: "center",
+                        borderBottom: "1px dashed #ccc",
+                        padding: "8px",
+                      }}
+                    >
+                      Chú thích
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          paddingTop: "8px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 53,
+                            height: 25,
+                            bgcolor: "transparent",
+                            border: "1px solid #ccc",
+                            borderRadius: 2,
+                          }}
+                        />
+                        <Typography variant="caption">Chưa trả lời</Typography>
+                      </Box>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 53,
+                            height: 25,
+                            borderRadius: 2,
+                            bgcolor: "#6593DA",
+                          }}
+                        />
+                        <Typography variant="caption">
+                          Câu hỏi hiện tại
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 53,
+                            height: 25,
+                            borderRadius: 2,
+                            bgcolor: "#F8AC59",
+                          }}
+                        />
+                        <Typography variant="caption">Đang cân nhắc</Typography>
+                      </Box>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 53,
+                            height: 25,
+                            borderRadius: 2,
+                            bgcolor: "#99BC4D",
+                          }}
+                        />
+                        <Typography variant="caption">Đã trả lời</Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
               </Box>
             </Box>
           </Box>
         </Box>
       </Box>
+
+      {/* Warning Dialog - when not all questions are answered */}
+      <Dialog
+        open={warningDialogOpen}
+        onClose={handleCloseWarning}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Typography fontSize="18px" fontWeight={600} textAlign="center">
+            Thông báo
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography textAlign="center">
+            Xin lỗi không thể hoàn thành bài kiểm tra khi chưa trả lời hết câu
+            hỏi.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCloseWarning}
+            sx={{ textTransform: "none", backgroundColor: "#99BC4D" }}
+          >
+            Đóng
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmation Dialog - when all questions are answered */}
       <Dialog
         open={confirmDialogOpen}
         onClose={handleCloseConfirm}
@@ -662,239 +808,6 @@ const SkillPracticePage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      {/* <Dialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        fullWidth
-        maxWidth="lg"
-      >
-        {dialogOpen && quizResult && (
-          <Box
-            sx={{
-              paddingX: "20px",
-              backgroundColor: "#fff",
-              borderRadius: "8px",
-              boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <DialogTitle>
-              <Typography
-                fontSize="20px"
-                fontWeight={600}
-                textAlign="center"
-                gutterBottom
-              >
-                Kết quả bài quiz
-              </Typography>
-            </DialogTitle>
-            <Typography>Số điểm: {quizResult.points}/10</Typography>
-            <Typography>
-              Số câu đúng: {quizResult.correctAnswers}/
-              {quizResult.totalQuestions}
-            </Typography>
-
-            <Divider sx={{ my: 2 }} />
-
-            {quizResult.questions.map((question: any, index: number) => (
-              <Box
-                key={index}
-                sx={{
-                  marginBottom: "16px",
-                  padding: "12px",
-                  border: "1px solid #ccc",
-                  borderRadius: "8px",
-                  backgroundColor: "#f9f9f9",
-                }}
-              >
-                <Typography variant="h6" fontWeight={700}>
-                  Câu {index + 1}: {question.content}
-                </Typography>
-
-                {question.image && (
-                  <img
-                    src={question.image}
-                    alt="Question"
-                    style={{
-                      maxWidth: "100%",
-                      marginTop: "10px",
-                      marginBottom: "10px",
-                      borderRadius: "5px",
-                    }}
-                  />
-                )}
-
-                {question.options &&
-                  question.options.length > 0 &&
-                  !question.correctAnswers &&
-                  question.options.map((option: string, optIndex: number) => {
-                    const isCorrect = question.correctAnswer === option;
-                    const isUserAnswer = question.userAnswer === option;
-
-                    return (
-                      <Typography
-                        key={optIndex}
-                        sx={{
-                          padding: "4px 8px",
-                          marginBottom: "4px",
-                          borderRadius: "5px",
-                          backgroundColor: isCorrect
-                            ? "#99BC4D"
-                            : isUserAnswer
-                              ? "#FFCCCB"
-                              : "transparent",
-                          textDecoration:
-                            isUserAnswer && !isCorrect
-                              ? "line-through"
-                              : "none",
-                        }}
-                      >
-                        {option}
-                      </Typography>
-                    );
-                  })}
-
-                {question.correctAnswers &&
-                  question.correctAnswers.length > 0 &&
-                  question.options &&
-                  question.options.length > 0 && (
-                    <Box>
-                      {question.options &&
-                        [...new Set(question.options as string[])].map(
-                          (option: string, optIndex: number) => {
-                            const isCorrect =
-                              question.correctAnswers.includes(option);
-                            const isUserAnswer =
-                              question.answers?.includes(option);
-                            const isIncorrectUserAnswer =
-                              isUserAnswer && !isCorrect;
-
-                            return (
-                              <Typography
-                                key={optIndex}
-                                sx={{
-                                  padding: "4px 8px",
-                                  marginBottom: "4px",
-                                  borderRadius: "5px",
-                                  backgroundColor: isCorrect
-                                    ? "#99BC4D"
-                                    : isIncorrectUserAnswer
-                                      ? "#FFCCCB"
-                                      : "transparent",
-                                  textDecoration: isIncorrectUserAnswer
-                                    ? "line-through"
-                                    : "none",
-                                }}
-                              >
-                                {option}
-                              </Typography>
-                            );
-                          }
-                        )}
-                    </Box>
-                  )}
-
-                {!question.options && question.correctAnswers && (
-                  <Box>
-                    {question.correctAnswers.map(
-                      (correctAnswer: string, ansIndex: number) => {
-                        const isCorrect =
-                          question.userAnswer?.toLowerCase() ===
-                          correctAnswer.toLowerCase();
-                        const isIncorrectUserAnswer =
-                          question.userAnswer && !isCorrect;
-
-                        return (
-                          <Typography
-                            key={ansIndex}
-                            sx={{
-                              padding: "4px 8px",
-                              marginBottom: "4px",
-                              borderRadius: "5px",
-                              backgroundColor: isCorrect
-                                ? "#99BC4D"
-                                : isIncorrectUserAnswer
-                                  ? "#FFCCCB"
-                                  : "transparent",
-                              textDecoration: isIncorrectUserAnswer
-                                ? "line-through"
-                                : "none",
-                            }}
-                          >
-                            {correctAnswer}
-                          </Typography>
-                        );
-                      }
-                    )}
-                  </Box>
-                )}
-
-                {!question.correct && (
-                  <Box sx={{ marginTop: "12px" }}>
-                    <Typography variant="body1" fontWeight={600}>
-                      Câu trả lời của bạn:
-                    </Typography>
-                    <Typography
-                      sx={{
-                        padding: "4px 8px",
-                        backgroundColor: "#FFCCCB",
-                        borderRadius: "5px",
-                      }}
-                    >
-                      {question.answers
-                        ? question.answers.join(", ")
-                        : question.userAnswer}
-                    </Typography>
-
-                    <Typography
-                      variant="body1"
-                      fontWeight={600}
-                      sx={{ marginTop: "8px" }}
-                    >
-                      Câu trả lời đúng:
-                    </Typography>
-                    <Typography
-                      sx={{
-                        padding: "4px 8px",
-                        backgroundColor: "#99BC4D",
-                        borderRadius: "5px",
-                      }}
-                    >
-                      {question.correctAnswers
-                        ? question.correctAnswers.join(", ")
-                        : question.correctAnswer}
-                    </Typography>
-                  </Box>
-                )}
-
-                <Typography
-                  sx={{
-                    fontWeight: "bold",
-                    color: question.correct ? "green" : "red",
-                  }}
-                >
-                  {question.correct ? "Đúng" : "Sai"}
-                </Typography>
-              </Box>
-            ))}
-            <DialogActions>
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{
-                  marginTop: "20px",
-                  textTransform: "none",
-                  ":hover": { backgroundColor: "#99BC4D" },
-                  color: "#FFF",
-                  alignItems: "center",
-                }}
-                onClick={() => router.push(`/skill-list`)}
-              >
-                Hoàn thành
-              </Button>
-            </DialogActions>
-          </Box>
-        )}
-      </Dialog> */}
     </Layout>
   );
 };

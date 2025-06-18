@@ -989,7 +989,7 @@ const SideNav: React.FC = () => {
                       aria-describedby={notificationId}
                     >
                       <Badge badgeContent={unreadCount} color="error">
-                        <NotificationsIcon sx={{ color: "#99BC4D" }} />
+                        <NotificationsIcon sx={{ color: "#99BC4D", fontSize: "24px" }} />
                       </Badge>
                     </IconButton>
 
