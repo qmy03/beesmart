@@ -49,17 +49,18 @@ const formatTimeSpent = (seconds: number): string => {
 const SkillTestPage = () => {
   const router = useRouter();
   const { recordId } = useParams();
-  // const accessToken = localStorage.getItem("accessToken");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const accessToken = localStorage.getItem("accessToken");
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
   const [quizRecord, setQuizRecord] = useState<QuizRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const token = localStorage.getItem("accessToken");
+  //     setAccessToken(token);
+  //   }
+  // }, []);
+  // console.log("Access Token:", accessToken);
   useEffect(() => {
     if (recordId) {
       setLoading(true);
