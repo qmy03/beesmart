@@ -29,6 +29,9 @@ import CancelIcon from "@mui/icons-material/Cancel";
 interface PlayerScore {
   userId: string;
   score: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  lastQuestionId?: string | null;
 }
 
 interface BattleData {
@@ -1186,7 +1189,7 @@ export default function BattleDetailPage() {
                                 "&:hover": { backgroundColor: "#7A9F38" },
                               }}
                             >
-                              Submit Answers
+                              Nộp bài
                             </Button>
                           </Box>
                         </Box>
@@ -1228,7 +1231,7 @@ export default function BattleDetailPage() {
                                 "&:hover": { backgroundColor: "#7A9F38" },
                               }}
                             >
-                              Submit Answer
+                              Nộp bài
                             </Button>
                           </Box>
                         </Box>

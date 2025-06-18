@@ -60,6 +60,7 @@ interface QuizResult {
     answers?: string[];
     correct: boolean;
   }>;
+  recordId: string;
 }
 
 interface SubmitResponse {
@@ -81,8 +82,13 @@ const SkillPracticePage = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
+  const [warningDialogOpen, setWarningDialogOpen] = useState<boolean>(false);
 
   const handleOpenConfirm = () => {
+    if (!checkAllQuestionsAnswered()) {
+      setWarningDialogOpen(true);
+      return;
+    }
     setConfirmDialogOpen(true);
   };
 
@@ -227,7 +233,23 @@ const SkillPracticePage = () => {
       handleSubmit();
     }
   }, [timeLeft, isSubmitted]);
+  const checkAllQuestionsAnswered = () => {
+    return questions.every((question, index) => {
+      const answer = answers[index];
+      if (!answer) return false;
 
+      switch (question.questionType) {
+        case "MULTIPLE_CHOICE":
+          return answer.selectedAnswerIndex !== undefined;
+        case "MULTI_SELECT":
+          return answer.selectedAnswers && answer.selectedAnswers.length > 0;
+        case "FILL_IN_THE_BLANK":
+          return answer.inputAnswer && answer.inputAnswer.trim() !== "";
+        default:
+          return false;
+      }
+    });
+  };
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
