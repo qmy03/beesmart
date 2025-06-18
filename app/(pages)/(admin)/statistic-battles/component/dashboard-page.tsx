@@ -27,7 +27,8 @@ interface BattleScoreData {
 }
 
 const StatisticBattlesPage = () => {
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(
     `${new Date().getMonth() + 1}`.padStart(2, "0")
   );
@@ -46,11 +47,19 @@ const StatisticBattlesPage = () => {
     `${selectedMonth.padStart(2, "0")}-${selectedYear}`
   );
   const [error, setError] = useState<string>("");
-  const [battleStatistics, setBattleStatistics] = useState<BattleStatistics>({});
+  const [battleStatistics, setBattleStatistics] = useState<BattleStatistics>(
+    {}
+  );
   const [battleScoreData, setBattleScoreData] = useState<BattleScoreData>({});
   const [battleStatisticsLoading, setBattleStatisticsLoading] = useState(false);
   const [battleScoreLoading, setBattleScoreLoading] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   useEffect(() => {
     const fetchSubjectsAndStats = async () => {
       if (!accessToken) {
@@ -145,7 +154,12 @@ const StatisticBattlesPage = () => {
     };
 
     fetchBattleAverageData();
-  }, [accessToken, selectedMonth, selectedYear, selectedSubjectForBattleAverage]);
+  }, [
+    accessToken,
+    selectedMonth,
+    selectedYear,
+    selectedSubjectForBattleAverage,
+  ]);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;

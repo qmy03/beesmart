@@ -98,10 +98,9 @@ const QuizPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [severity, setSeverity] = useState<"success" | "error">("success");
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const { isLoading, setIsLoading } = useAuth();
-
-  console.log(accessToken);
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedGradeName, setSelectedGradeName] = useState<string>("");
@@ -142,6 +141,13 @@ const QuizPage = () => {
   );
 
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   const handleInputChange = (questionId: string, answer: any) => {
     setUserAnswers((prev) => ({
       ...prev,
@@ -1168,16 +1174,16 @@ const QuizPage = () => {
                 shrink: selectedLessonId ? true : false,
               }}
               InputProps={{
-              endAdornment: selectedLessonId && (
-                <IconButton
-                  onClick={() => setSelectedLessonId(null)}
-                  size="small"
-                  sx={{ marginRight: 1 }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              ),
-            }}
+                endAdornment: selectedLessonId && (
+                  <IconButton
+                    onClick={() => setSelectedLessonId(null)}
+                    size="small"
+                    sx={{ marginRight: 1 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                ),
+              }}
             >
               {lessons.map((lesson) => (
                 <MenuItem

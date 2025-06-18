@@ -120,7 +120,8 @@ export default function BattlePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOpponent, setSelectedOpponent] = useState<any | null>(null);
   const [sendingInvitation, setSendingInvitation] = useState(false);
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const { userInfo } = useAuth();
   console.log("User Info:", userInfo);
   console.log("Access Token:", accessToken);
@@ -145,7 +146,12 @@ export default function BattlePage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [loadingUsers, setLoadingUsers] = useState(false);
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   const fetchOnlineUsers = async (page: number = 0, search: string = "") => {
     if (!accessToken) return;
     try {
@@ -736,7 +742,13 @@ export default function BattlePage() {
                       maxHeight: "200px",
                     }}
                   >
-                    <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
                       <Avatar
                         sx={{
                           width: 50,
@@ -806,7 +818,7 @@ export default function BattlePage() {
                 <>
                   <Box
                     sx={{
-                      display:"flex",
+                      display: "flex",
                       alignItems: "center",
                       fontWeight: "bold",
                       fontSize: 18,
@@ -989,7 +1001,8 @@ export default function BattlePage() {
                 border: "1px solid #ccc",
                 borderRadius: 4,
                 flex: 1,
-                maxHeight: 300,
+                maxHeight: 500,
+                overflowY: "auto",
               }}
             >
               <Typography

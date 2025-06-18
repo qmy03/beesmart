@@ -103,7 +103,14 @@ interface QuizzesResponse {
 }
 
 const SkillListPage: React.FC = () => {
-  const userInfo = localStorage.getItem("userInfo");
+  // const userInfo = localStorage.getItem("userInfo");
+  const [userInfo, setUserInfo] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userInfo = localStorage.getItem("userInfo");
+      setUserInfo(userInfo);
+    }
+  }, []);
   const userInfoParsed = userInfo ? JSON.parse(userInfo) : null;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -134,15 +141,75 @@ const SkillListPage: React.FC = () => {
   };
 
   // Handle term change
+  // const handleTermChange = (termDisplay: string) => {
+  //   setSelectedTerm(termDisplay);
+  //   setSelectedTopic(null);
+  //   setTopics([]);
+  //   setCurrentPage(1);
+  //   setSearchText("");
+  // };
   const handleTermChange = (termDisplay: string) => {
     setSelectedTerm(termDisplay);
+    localStorage.setItem("selectedSemester", termDisplay);
     setSelectedTopic(null);
+    localStorage.removeItem("selectedTopic"); // Xóa topic khi thay đổi term
     setTopics([]);
     setCurrentPage(1);
     setSearchText("");
   };
 
+  // Thêm logic để lưu selectedTopic
+  const handleTopicClick = (topic: Topic) => {
+    setSelectedTopic(topic);
+    localStorage.setItem("selectedTopic", JSON.stringify(topic));
+  };
+
   // Fetch initial data (grades, subjects, bookTypes)
+  // useEffect(() => {
+  //   const fetchInitialData = async () => {
+  //     try {
+  //       const gradesResponse =
+  //         await apiService.get<ApiResponse<GradesResponse>>("/grades");
+  //       const gradesData = gradesResponse.data.data.grades;
+  //       setGrades(gradesData);
+
+  //       const subjectsResponse =
+  //         await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
+  //       const subjectsData = subjectsResponse.data.data.subjects;
+  //       setSubjects(subjectsData);
+
+  //       const bookTypesResponse =
+  //         await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
+  //       const bookTypesData = bookTypesResponse.data.data.bookTypes;
+  //       setBookTypes(bookTypesData);
+
+  //       if (!searchParams.get("subjectId") && subjectsData.length > 0) {
+  //         setSelectedSubjectId(subjectsData[0].subjectId);
+  //         setSelectedSubjectName(subjectsData[0].subjectName);
+  //       }
+  //       if (!searchParams.get("gradeName") && gradesData.length > 0) {
+  //         const userGrade = gradesData.find(
+  //           (grade) => grade.gradeName === userInfoParsed?.grade
+  //         );
+  //         if (userGrade) {
+  //           setSelectedGradeId(userGrade.gradeId);
+  //           setSelectedGradeName(userGrade.gradeName);
+  //         } else {
+  //           setSelectedGradeId(gradesData[0].gradeId);
+  //           setSelectedGradeName(gradesData[0].gradeName);
+  //         }
+  //       }
+  //       if (bookTypesData.length > 0) {
+  //         setSelectedBookTypeId(bookTypesData[0].bookId);
+  //         setSelectedBookTypeName(bookTypesData[0].bookName);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching initial data:", error);
+  //     }
+  //   };
+
+  //   fetchInitialData();
+  // }, [userInfo, searchParams]);
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -161,25 +228,83 @@ const SkillListPage: React.FC = () => {
         const bookTypesData = bookTypesResponse.data.data.bookTypes;
         setBookTypes(bookTypesData);
 
-        if (!searchParams.get("subjectId") && subjectsData.length > 0) {
-          setSelectedSubjectId(subjectsData[0].subjectId);
-          setSelectedSubjectName(subjectsData[0].subjectName);
-        }
-        if (!searchParams.get("gradeName") && gradesData.length > 0) {
+        // Khôi phục từ localStorage
+        const storedGradeName = localStorage.getItem("selectedGradeName");
+        const storedGradeId = localStorage.getItem("selectedGradeId");
+        const storedSubjectName = localStorage.getItem("selectedSubjectName");
+        const storedSubjectId = localStorage.getItem("selectedSubjectId");
+        const storedBookTypeName = localStorage.getItem("selectedBookTypeName");
+        const storedBookTypeId = localStorage.getItem("selectedBookTypeId");
+        const storedSemester = localStorage.getItem("selectedSemester");
+        const storedTopic = localStorage.getItem("selectedTopic");
+
+        if (
+          storedGradeName &&
+          storedGradeId &&
+          gradesData.find((g) => g.gradeName === storedGradeName)
+        ) {
+          setSelectedGradeId(storedGradeId);
+          setSelectedGradeName(storedGradeName);
+        } else if (!searchParams.get("gradeName") && gradesData.length > 0) {
           const userGrade = gradesData.find(
             (grade) => grade.gradeName === userInfoParsed?.grade
           );
           if (userGrade) {
             setSelectedGradeId(userGrade.gradeId);
             setSelectedGradeName(userGrade.gradeName);
+            localStorage.setItem("selectedGradeName", userGrade.gradeName);
+            localStorage.setItem("selectedGradeId", userGrade.gradeId);
           } else {
             setSelectedGradeId(gradesData[0].gradeId);
             setSelectedGradeName(gradesData[0].gradeName);
+            localStorage.setItem("selectedGradeName", gradesData[0].gradeName);
+            localStorage.setItem("selectedGradeId", gradesData[0].gradeId);
           }
         }
-        if (bookTypesData.length > 0) {
+
+        if (
+          storedSubjectName &&
+          storedSubjectId &&
+          subjectsData.find((s) => s.subjectName === storedSubjectName)
+        ) {
+          setSelectedSubjectId(storedSubjectId);
+          setSelectedSubjectName(storedSubjectName);
+        } else if (!searchParams.get("subjectId") && subjectsData.length > 0) {
+          setSelectedSubjectId(subjectsData[0].subjectId);
+          setSelectedSubjectName(subjectsData[0].subjectName);
+          localStorage.setItem(
+            "selectedSubjectName",
+            subjectsData[0].subjectName
+          );
+          localStorage.setItem("selectedSubjectId", subjectsData[0].subjectId);
+        }
+
+        if (
+          storedBookTypeName &&
+          storedBookTypeId &&
+          bookTypesData.find((b) => b.bookName === storedBookTypeName)
+        ) {
+          setSelectedBookTypeId(storedBookTypeId);
+          setSelectedBookTypeName(storedBookTypeName);
+        } else if (bookTypesData.length > 0) {
           setSelectedBookTypeId(bookTypesData[0].bookId);
           setSelectedBookTypeName(bookTypesData[0].bookName);
+          localStorage.setItem(
+            "selectedBookTypeName",
+            bookTypesData[0].bookName
+          );
+          localStorage.setItem("selectedBookTypeId", bookTypesData[0].bookId);
+        }
+
+        if (storedSemester) {
+          setSelectedTerm(storedSemester);
+        } else {
+          setSelectedTerm("Học kì 1");
+          localStorage.setItem("selectedSemester", "Học kì 1");
+        }
+
+        if (storedTopic) {
+          setSelectedTopic(JSON.parse(storedTopic));
         }
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -262,15 +387,25 @@ const SkillListPage: React.FC = () => {
   };
 
   // Handle subject selection
+  // const handleSubjectClick = (subject: Subject) => {
+  //   setSelectedSubjectId(subject.subjectId);
+  //   setSelectedSubjectName(subject.subjectName);
+  //   setSelectedTopic(null);
+  //   setTopics([]);
+  //   setCurrentPage(1);
+  //   setSearchText("");
+  // };
   const handleSubjectClick = (subject: Subject) => {
     setSelectedSubjectId(subject.subjectId);
     setSelectedSubjectName(subject.subjectName);
+    localStorage.setItem("selectedSubjectName", subject.subjectName);
+    localStorage.setItem("selectedSubjectId", subject.subjectId);
     setSelectedTopic(null);
+    localStorage.removeItem("selectedTopic"); // Xóa topic khi thay đổi subject
     setTopics([]);
     setCurrentPage(1);
     setSearchText("");
   };
-
   const getSubjectImage = (subjectName: string) => {
     switch (subjectName) {
       case "Toán":
@@ -284,6 +419,37 @@ const SkillListPage: React.FC = () => {
     }
   };
 
+  // const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  //   const selectedGrade = event.target.value as string;
+  //   const selectedGradeItem = grades.find(
+  //     (grade) => grade.gradeName === selectedGrade
+  //   );
+  //   if (selectedGradeItem) {
+  //     setSelectedGradeId(selectedGradeItem.gradeId);
+  //     setSelectedGradeName(selectedGradeItem.gradeName);
+  //     setSelectedTopic(null);
+  //     setCurrentPage(1);
+  //     setSearchText(""); // Reset search text when changing grade
+  //   }
+  // };
+
+  // const handleBookTypeChange = (
+  //   event: React.ChangeEvent<{ value: unknown }>
+  // ) => {
+  //   const selectedBookType = event.target.value as string;
+  //   const selectedBookTypeItem = bookTypes.find(
+  //     (bookType) => bookType.bookName === selectedBookType
+  //   );
+  //   if (selectedBookTypeItem) {
+  //     setSelectedBookTypeId(selectedBookTypeItem.bookId);
+  //     setSelectedBookTypeName(selectedBookTypeItem.bookName);
+  //     setSelectedTopic(null);
+  //     setTopics([]);
+  //     setCurrentPage(1);
+  //     setSearchText(""); // Reset search text when changing book type
+  //   }
+  // };
+
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
     const selectedGradeItem = grades.find(
@@ -292,9 +458,13 @@ const SkillListPage: React.FC = () => {
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
+      localStorage.setItem("selectedGradeName", selectedGradeItem.gradeName);
+      localStorage.setItem("selectedGradeId", selectedGradeItem.gradeId);
       setSelectedTopic(null);
+      localStorage.removeItem("selectedTopic"); // Xóa topic khi thay đổi grade
+      setTopics([]);
       setCurrentPage(1);
-      setSearchText(""); // Reset search text when changing grade
+      setSearchText("");
     }
   };
 
@@ -308,13 +478,18 @@ const SkillListPage: React.FC = () => {
     if (selectedBookTypeItem) {
       setSelectedBookTypeId(selectedBookTypeItem.bookId);
       setSelectedBookTypeName(selectedBookTypeItem.bookName);
+      localStorage.setItem(
+        "selectedBookTypeName",
+        selectedBookTypeItem.bookName
+      );
+      localStorage.setItem("selectedBookTypeId", selectedBookTypeItem.bookId);
       setSelectedTopic(null);
+      localStorage.removeItem("selectedTopic"); // Xóa topic khi thay đổi book type
       setTopics([]);
       setCurrentPage(1);
-      setSearchText(""); // Reset search text when changing book type
+      setSearchText("");
     }
   };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
   };
@@ -552,7 +727,7 @@ const SkillListPage: React.FC = () => {
                                 : "transparent",
                             borderBottom: "1px solid #E0E0E0",
                           }}
-                          onClick={() => setSelectedTopic(topic)}
+                          onClick={() => handleTopicClick(topic)}
                         >
                           <Box
                             component="img"
@@ -687,8 +862,9 @@ const SkillListPage: React.FC = () => {
                       padding: "24px",
                       borderRadius: "16px",
                       border: "1px solid #A8A8A8",
-                      maxHeight: "450px",
-                      overflowY: "auto"
+                      minHeight: "450px",
+                      maxHeight: "900px",
+                      overflowY: "auto",
                     }}
                   >
                     {selectedTopic.lessons.map((lesson: Lesson) => (
@@ -701,7 +877,7 @@ const SkillListPage: React.FC = () => {
                           overflow: "hidden",
                           display: "flex",
                           flexDirection: "column",
-                          flex: 1
+                          flex: 1,
                         }}
                       >
                         {lesson.content && lesson.content.includes(".mp4") && (

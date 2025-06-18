@@ -51,7 +51,8 @@ interface PlayerInfo {
 }
 
 export default function BattleDetailPage() {
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const { userInfo } = useAuth();
   const { battleId } = useParams();
   const router = useRouter();
@@ -80,7 +81,12 @@ export default function BattleDetailPage() {
   const [currentQuestionAnswer, setCurrentQuestionAnswer] = useState<any>(null);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
   const [battleStarted, setBattleStarted] = useState(false);
-
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   const getPlayerStatusMessage = (
     isCorrect: boolean | null,
     isAnswered: boolean

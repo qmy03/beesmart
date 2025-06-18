@@ -120,6 +120,45 @@ const TopicPage = () => {
   }, [searchKeyword]);
 
   // Fetch grades, subjects, and books
+  // useEffect(() => {
+  //   if (accessToken) {
+  //     setIsLoading(true);
+  //     Promise.all([
+  //       apiService.get<GradesResponse>("/grades", {}),
+  //       apiService.get<BooksResponse>("/book-types", {}),
+  //       apiService.get<SubjectsResponse>("/subjects", {}),
+  //     ])
+  //       .then(([gradesRes, booksRes, subjectsRes]) => {
+  //         const fetchedGrades = gradesRes.data.data.grades;
+  //         const fetchedBooks = booksRes.data.data.bookTypes;
+  //         const fetchedSubjects = subjectsRes.data.data.subjects;
+
+  //         setGrades(fetchedGrades);
+  //         setBooks(fetchedBooks);
+  //         setSubjects(fetchedSubjects);
+
+  //         if (fetchedGrades.length > 0) {
+  //           setSelectedGradeId(fetchedGrades[0].gradeId);
+  //           setSelectedGradeName(fetchedGrades[0].gradeName);
+  //         }
+  //         if (fetchedBooks.length > 0) {
+  //           setSelectedBookId(fetchedBooks[0].bookId);
+  //           setSelectedBookName(fetchedBooks[0].bookName);
+  //         }
+  //         if (fetchedSubjects.length > 0) {
+  //           setSelectedSubjectId(fetchedSubjects[0].subjectId);
+  //           setSelectedSubjectName(fetchedSubjects[0].subjectName);
+  //         }
+
+  //         setIsLoading(false);
+  //       })
+  //       .catch((error) => {
+  //         console.error("Error fetching data:", error);
+  //         setIsLoading(false);
+  //         handleSnackbarOpen("Lỗi khi tải dữ liệu", "error");
+  //       });
+  //   }
+  // }, [accessToken]);
   useEffect(() => {
     if (accessToken) {
       setIsLoading(true);
@@ -137,17 +176,71 @@ const TopicPage = () => {
           setBooks(fetchedBooks);
           setSubjects(fetchedSubjects);
 
-          if (fetchedGrades.length > 0) {
+          // Restore from localStorage if available
+          const storedGradeName = localStorage.getItem("selectedGradeName");
+          const storedGradeId = localStorage.getItem("selectedGradeId");
+          const storedBookName = localStorage.getItem("selectedBookName");
+          const storedBookId = localStorage.getItem("selectedBookId");
+          const storedSubjectName = localStorage.getItem("selectedSubjectName");
+          const storedSubjectId = localStorage.getItem("selectedSubjectId");
+          const storedSemester = localStorage.getItem("selectedSemester");
+
+          if (
+            storedGradeName &&
+            storedGradeId &&
+            fetchedGrades.find((g) => g.gradeName === storedGradeName)
+          ) {
+            setSelectedGradeId(storedGradeId);
+            setSelectedGradeName(storedGradeName);
+          } else if (fetchedGrades.length > 0) {
             setSelectedGradeId(fetchedGrades[0].gradeId);
             setSelectedGradeName(fetchedGrades[0].gradeName);
+            localStorage.setItem(
+              "selectedGradeName",
+              fetchedGrades[0].gradeName
+            );
+            localStorage.setItem("selectedGradeId", fetchedGrades[0].gradeId);
           }
-          if (fetchedBooks.length > 0) {
+
+          if (
+            storedBookName &&
+            storedBookId &&
+            fetchedBooks.find((b) => b.bookName === storedBookName)
+          ) {
+            setSelectedBookId(storedBookId);
+            setSelectedBookName(storedBookName);
+          } else if (fetchedBooks.length > 0) {
             setSelectedBookId(fetchedBooks[0].bookId);
             setSelectedBookName(fetchedBooks[0].bookName);
+            localStorage.setItem("selectedBookName", fetchedBooks[0].bookName);
+            localStorage.setItem("selectedBookId", fetchedBooks[0].bookId);
           }
-          if (fetchedSubjects.length > 0) {
+
+          if (
+            storedSubjectName &&
+            storedSubjectId &&
+            fetchedSubjects.find((s) => s.subjectName === storedSubjectName)
+          ) {
+            setSelectedSubjectId(storedSubjectId);
+            setSelectedSubjectName(storedSubjectName);
+          } else if (fetchedSubjects.length > 0) {
             setSelectedSubjectId(fetchedSubjects[0].subjectId);
             setSelectedSubjectName(fetchedSubjects[0].subjectName);
+            localStorage.setItem(
+              "selectedSubjectName",
+              fetchedSubjects[0].subjectName
+            );
+            localStorage.setItem(
+              "selectedSubjectId",
+              fetchedSubjects[0].subjectId
+            );
+          }
+
+          if (storedSemester) {
+            setSelectedSemester(storedSemester);
+          } else {
+            setSelectedSemester("Học kì 1");
+            localStorage.setItem("selectedSemester", "Học kì 1");
           }
 
           setIsLoading(false);
@@ -196,6 +289,50 @@ const TopicPage = () => {
     accessToken,
   ]);
 
+  // const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  //   const selectedGrade = event.target.value as string;
+  //   const selectedGradeItem = grades.find(
+  //     (grade) => grade.gradeName === selectedGrade
+  //   );
+  //   if (selectedGradeItem) {
+  //     setSelectedGradeId(selectedGradeItem.gradeId);
+  //     setSelectedGradeName(selectedGradeItem.gradeName);
+  //     setPage(0); // Reset page when changing grade
+  //   }
+  // };
+
+  // const handleBookChange = (event: React.ChangeEvent<{ value: unknown }>) => {
+  //   const selectedBook = event.target.value as string;
+  //   const selectedBookItem = books.find(
+  //     (book) => book.bookName === selectedBook
+  //   );
+  //   if (selectedBookItem) {
+  //     setSelectedBookId(selectedBookItem.bookId);
+  //     setSelectedBookName(selectedBookItem.bookName);
+  //     setPage(0); // Reset page when changing book
+  //   }
+  // };
+
+  // const handleSubjectChange = (
+  //   event: React.ChangeEvent<{ value: unknown }>
+  // ) => {
+  //   const selectedSubject = event.target.value as string;
+  //   const selectedSubjectItem = subjects.find(
+  //     (subject) => subject.subjectName === selectedSubject
+  //   );
+  //   if (selectedSubjectItem) {
+  //     setSelectedSubjectId(selectedSubjectItem.subjectId);
+  //     setSelectedSubjectName(selectedSubjectItem.subjectName);
+  //     setPage(0); // Reset page when changing subject
+  //   }
+  // };
+
+  // const handleSemesterChange = (
+  //   event: React.ChangeEvent<{ value: unknown }>
+  // ) => {
+  //   setSelectedSemester(event.target.value as string);
+  //   setPage(0); // Reset page when changing semester
+  // };
   const handleGradeChange = (event: React.ChangeEvent<{ value: unknown }>) => {
     const selectedGrade = event.target.value as string;
     const selectedGradeItem = grades.find(
@@ -204,7 +341,9 @@ const TopicPage = () => {
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
-      setPage(0); // Reset page when changing grade
+      localStorage.setItem("selectedGradeName", selectedGradeItem.gradeName);
+      localStorage.setItem("selectedGradeId", selectedGradeItem.gradeId);
+      setPage(0);
     }
   };
 
@@ -216,7 +355,9 @@ const TopicPage = () => {
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
       setSelectedBookName(selectedBookItem.bookName);
-      setPage(0); // Reset page when changing book
+      localStorage.setItem("selectedBookName", selectedBookItem.bookName);
+      localStorage.setItem("selectedBookId", selectedBookItem.bookId);
+      setPage(0);
     }
   };
 
@@ -230,15 +371,22 @@ const TopicPage = () => {
     if (selectedSubjectItem) {
       setSelectedSubjectId(selectedSubjectItem.subjectId);
       setSelectedSubjectName(selectedSubjectItem.subjectName);
-      setPage(0); // Reset page when changing subject
+      localStorage.setItem(
+        "selectedSubjectName",
+        selectedSubjectItem.subjectName
+      );
+      localStorage.setItem("selectedSubjectId", selectedSubjectItem.subjectId);
+      setPage(0);
     }
   };
 
   const handleSemesterChange = (
     event: React.ChangeEvent<{ value: unknown }>
   ) => {
-    setSelectedSemester(event.target.value as string);
-    setPage(0); // Reset page when changing semester
+    const semester = event.target.value as string;
+    setSelectedSemester(semester);
+    localStorage.setItem("selectedSemester", semester);
+    setPage(0);
   };
 
   const handleOpenDialog = () => {
@@ -510,7 +658,12 @@ const TopicPage = () => {
           }}
         >
           <TableContainer
-            sx={{ borderRadius: "8px 8px 0 0", flexGrow: 1, overflow: "auto", maxHeight: "calc(100% - 52px)", }}
+            sx={{
+              borderRadius: "8px 8px 0 0",
+              flexGrow: 1,
+              overflow: "auto",
+              maxHeight: "calc(100% - 52px)",
+            }}
           >
             <Table size="small">
               <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
@@ -520,7 +673,9 @@ const TopicPage = () => {
                   <TableCell sx={{ width: "15%", border: "none" }}>
                     Thứ tự
                   </TableCell>
-                  <TableCell sx={{ width: "70%", border: "none", paddingY: "12px" }}>
+                  <TableCell
+                    sx={{ width: "70%", border: "none", paddingY: "12px" }}
+                  >
                     Tên chủ điểm
                   </TableCell>
                 </TableRow>
@@ -570,7 +725,7 @@ const TopicPage = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {topicsLoading ? ( // Use separate loading state instead of isLoading
+                {topicsLoading ? (
                   <TableRow>
                     <TableCell
                       colSpan={4}
