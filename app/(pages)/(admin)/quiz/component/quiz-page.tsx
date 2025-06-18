@@ -98,10 +98,9 @@ const QuizPage = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [severity, setSeverity] = useState<"success" | "error">("success");
-  const accessToken = localStorage.getItem("accessToken");
+  // const accessToken = localStorage.getItem("accessToken");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const { isLoading, setIsLoading } = useAuth();
-
-  console.log(accessToken);
   const [grades, setGrades] = useState<any[]>([]);
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedGradeName, setSelectedGradeName] = useState<string>("");
@@ -142,6 +141,13 @@ const QuizPage = () => {
   );
 
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("accessToken");
+      setAccessToken(token);
+    }
+  }, []);
   const handleInputChange = (questionId: string, answer: any) => {
     setUserAnswers((prev) => ({
       ...prev,
@@ -255,19 +261,84 @@ const QuizPage = () => {
           setGrades(fetchedGrades);
           setBooks(fetchedBooks);
           setSubjects(fetchedSubjects);
+          // Restore from localStorage if available
+          const storedGradeName = localStorage.getItem("selectedGradeName");
+          const storedGradeId = localStorage.getItem("selectedGradeId");
+          const storedBookName = localStorage.getItem("selectedBookName");
+          const storedBookId = localStorage.getItem("selectedBookId");
+          const storedSubjectName = localStorage.getItem("selectedSubjectName");
+          const storedSubjectId = localStorage.getItem("selectedSubjectId");
+          const storedSemester = localStorage.getItem("selectedSemester");
 
           // Set default values sau khi tất cả API đã hoàn thành
-          if (fetchedGrades.length > 0) {
+          // if (fetchedGrades.length > 0) {
+          //   setSelectedGradeId(fetchedGrades[0].gradeId);
+          //   setSelectedGradeName(fetchedGrades[0].gradeName);
+          // }
+          // if (fetchedBooks.length > 0) {
+          //   setSelectedBookId(fetchedBooks[0].bookId);
+          //   setSelectedBookName(fetchedBooks[0].bookName);
+          // }
+          // if (fetchedSubjects.length > 0) {
+          //   setSelectedSubjectId(fetchedSubjects[0].subjectId);
+          //   setSelectedSubjectName(fetchedSubjects[0].subjectName);
+          // }
+          if (
+            storedGradeName &&
+            storedGradeId &&
+            fetchedGrades.find((g) => g.gradeName === storedGradeName)
+          ) {
+            setSelectedGradeId(storedGradeId);
+            setSelectedGradeName(storedGradeName);
+          } else if (fetchedGrades.length > 0) {
             setSelectedGradeId(fetchedGrades[0].gradeId);
             setSelectedGradeName(fetchedGrades[0].gradeName);
+            localStorage.setItem(
+              "selectedGradeName",
+              fetchedGrades[0].gradeName
+            );
+            localStorage.setItem("selectedGradeId", fetchedGrades[0].gradeId);
           }
-          if (fetchedBooks.length > 0) {
+
+          if (
+            storedBookName &&
+            storedBookId &&
+            fetchedBooks.find((b) => b.bookName === storedBookName)
+          ) {
+            setSelectedBookId(storedBookId);
+            setSelectedBookName(storedBookName);
+          } else if (fetchedBooks.length > 0) {
             setSelectedBookId(fetchedBooks[0].bookId);
             setSelectedBookName(fetchedBooks[0].bookName);
+            localStorage.setItem("selectedBookName", fetchedBooks[0].bookName);
+            localStorage.setItem("selectedBookId", fetchedBooks[0].bookId);
           }
-          if (fetchedSubjects.length > 0) {
+
+          if (
+            storedSubjectName &&
+            storedSubjectId &&
+            fetchedSubjects.find((s) => s.subjectName === storedSubjectName)
+          ) {
+            setSelectedSubjectId(storedSubjectId);
+            setSelectedSubjectName(storedSubjectName);
+          } else if (fetchedSubjects.length > 0) {
             setSelectedSubjectId(fetchedSubjects[0].subjectId);
             setSelectedSubjectName(fetchedSubjects[0].subjectName);
+            localStorage.setItem(
+              "selectedSubjectName",
+              fetchedSubjects[0].subjectName
+            );
+            localStorage.setItem(
+              "selectedSubjectId",
+              fetchedSubjects[0].subjectId
+            );
+          }
+
+          if (storedSemester) {
+            setSelectedSemester(storedSemester);
+          } else {
+            setSelectedSemester("Học kì 1");
+            localStorage.setItem("selectedSemester", "Học kì 1");
           }
 
           setIsLoading(false);
@@ -363,6 +434,8 @@ const QuizPage = () => {
     if (selectedGradeItem) {
       setSelectedGradeId(selectedGradeItem.gradeId);
       setSelectedGradeName(selectedGradeItem.gradeName);
+      localStorage.setItem("selectedGradeName", selectedGradeItem.gradeName);
+      localStorage.setItem("selectedGradeId", selectedGradeItem.gradeId);
       setTopics([]);
       setLessons([]);
       setSelectedTopicId(null);
@@ -378,6 +451,8 @@ const QuizPage = () => {
     if (selectedBookItem) {
       setSelectedBookId(selectedBookItem.bookId);
       setSelectedBookName(selectedBookItem.bookName);
+      localStorage.setItem("selectedBookName", selectedBookItem.bookName);
+      localStorage.setItem("selectedBookId", selectedBookItem.bookId);
       setTopics([]);
       setLessons([]);
       setSelectedTopicId(null);
@@ -395,6 +470,11 @@ const QuizPage = () => {
     if (selectedSubjectItem) {
       setSelectedSubjectId(selectedSubjectItem.subjectId);
       setSelectedSubjectName(selectedSubjectItem.subjectName);
+      localStorage.setItem(
+        "selectedSubjectName",
+        selectedSubjectItem.subjectName
+      );
+      localStorage.setItem("selectedSubjectId", selectedSubjectItem.subjectId);
       setTopics([]);
       setLessons([]);
       setSelectedTopicId(null);
@@ -406,7 +486,10 @@ const QuizPage = () => {
   const handleSemesterChange = (
     event: React.ChangeEvent<{ value: unknown }>
   ) => {
-    setSelectedSemester(event.target.value as string);
+    const semester = event.target.value as string;
+    setSelectedSemester(semester);
+    localStorage.setItem("selectedSemester", semester);
+    // setSelectedSemester(event.target.value as string);
     setTopics([]);
     setLessons([]);
     setSelectedTopicId(null);
@@ -661,7 +744,7 @@ const QuizPage = () => {
                 <img
                   src={question.image}
                   alt="question-image"
-                  style={{ maxWidth: "50%", height: "auto" }}
+                  style={{ maxWidth: "200px", height: "auto" }}
                 />
               )}
               {validOptions.length > 0 &&
@@ -693,7 +776,7 @@ const QuizPage = () => {
                 }
                 sx={{ maxWidth: "200px" }}
               >
-                Submit
+                Kiểm tra
               </Button>
             </Box>
           );
@@ -731,7 +814,7 @@ const QuizPage = () => {
                 <img
                   src={question.image}
                   alt="question-image"
-                  style={{ maxWidth: "50%", height: "auto" }}
+                  style={{ maxWidth: "200px", height: "auto" }}
                 />
               )}
               {validOptions.length > 0 &&
@@ -759,7 +842,7 @@ const QuizPage = () => {
                 }
                 sx={{ maxWidth: "100px" }}
               >
-                Submit
+                Kiểm tra
               </Button>
             </Box>
           );
@@ -806,7 +889,7 @@ const QuizPage = () => {
                   <img
                     src={question.image}
                     alt="question-image"
-                    style={{ width: "50%", height: "auto" }}
+                    style={{ maxWidth: "200px", height: "auto" }}
                   />
                 )}
               </Box>
@@ -816,7 +899,7 @@ const QuizPage = () => {
                 }
                 sx={{ maxWidth: "100px" }}
               >
-                Submit
+                Kiểm tra
               </Button>
             </Box>
           );
@@ -1168,16 +1251,16 @@ const QuizPage = () => {
                 shrink: selectedLessonId ? true : false,
               }}
               InputProps={{
-              endAdornment: selectedLessonId && (
-                <IconButton
-                  onClick={() => setSelectedLessonId(null)}
-                  size="small"
-                  sx={{ marginRight: 1 }}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              ),
-            }}
+                endAdornment: selectedLessonId && (
+                  <IconButton
+                    onClick={() => setSelectedLessonId(null)}
+                    size="small"
+                    sx={{ marginRight: 1 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                ),
+              }}
             >
               {lessons.map((lesson) => (
                 <MenuItem

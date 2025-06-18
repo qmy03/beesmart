@@ -172,6 +172,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("userInfo");
+        localStorage.removeItem("selectedGradeName");
+        localStorage.removeItem("selectedGradeId");
+        localStorage.removeItem("selectedSubjectName");
+        localStorage.removeItem("selectedSubjectId");
+        localStorage.removeItem("selectedBookTypeName");
+        localStorage.removeItem("selectedBookTypeId");
+        localStorage.removeItem("selectedSemester");
+        localStorage.removeItem("selectedTopic");
         setAccessToken(null);
         setRefreshToken(null);
         setUserInfo(null);
