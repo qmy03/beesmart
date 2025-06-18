@@ -719,7 +719,7 @@ export default function BattlePage() {
                 flex: 2,
                 borderRadius: 2,
                 textAlign: "center",
-                gap: 3,
+                gap: 5,
                 display: "flex",
                 flexDirection: "column",
               }}
@@ -916,7 +916,7 @@ export default function BattlePage() {
                 </Box>
               </Box>
               {/* Time */}
-              <Box
+              {/* <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
@@ -951,7 +951,7 @@ export default function BattlePage() {
                     10 PHÚT
                   </Typography>
                 </Box>
-              </Box>
+              </Box> */}
               <Box
                 sx={{
                   display: "flex",
@@ -987,7 +987,7 @@ export default function BattlePage() {
                     </Box>
 
                     <Button onClick={cancelMatching} variant="outlined">
-                      Cancel
+                      Hủy
                     </Button>
                   </>
                 )}

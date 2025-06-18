@@ -277,24 +277,24 @@ const SkillPracticePage = () => {
     return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100vh",
-            backgroundColor: "#EFF3E6",
-          }}
-        >
-          <Typography variant="h5">Loading questions...</Typography>
-        </Box>
-      </Layout>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <Layout>
+  //       <Box
+  //         sx={{
+  //           display: "flex",
+  //           flexDirection: "column",
+  //           alignItems: "center",
+  //           justifyContent: "center",
+  //           height: "100vh",
+  //           backgroundColor: "#EFF3E6",
+  //         }}
+  //       >
+  //         <Typography variant="h5">Loading questions...</Typography>
+  //       </Box>
+  //     </Layout>
+  //   );
+  // }
 
   return (
     <Layout>
@@ -317,429 +317,475 @@ const SkillPracticePage = () => {
             flex: 1,
           }}
         >
-          <Typography
-            sx={{
-              fontSize: "32px",
-              fontWeight: "600",
-              textAlign: "center",
-              paddingY: "8px",
-            }}
-          >
-            Luyện tập Quiz
-          </Typography>
-          <Divider />
-
-          <Box sx={{}}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                padding: "40px",
-                gap: "20px",
-              }}
-            >
+          {loading ? (
+            <>
               <Box
                 sx={{
-                  flex: 3,
                   display: "flex",
                   flexDirection: "column",
-                  border: "1px solid #ccc",
-                  borderRadius: 4,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100vh",
                 }}
               >
-                <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography>Đang tải câu hỏi...</Typography>
+              </Box>
+            </>
+          ) : (
+            <>
+              <Typography
+                sx={{
+                  fontSize: "32px",
+                  fontWeight: "600",
+                  textAlign: "center",
+                  paddingY: "8px",
+                }}
+              >
+                Luyện tập Quiz
+              </Typography>
+              <Divider />
+
+              <Box sx={{}}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "40px",
+                    gap: "20px",
+                  }}
+                >
                   <Box
                     sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 20px",
-                      backgroundColor: "#99BC4D",
-                      borderTopLeftRadius: "16px",
-                      borderTopRightRadius: "16px",
-                      color: "#fff",
-                    }}
-                  >
-                    <Typography fontSize="16px" fontWeight={700}>
-                      Câu hỏi số {currentPage + 1}
-                    </Typography>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={flaggedQuestions[currentPage] || false}
-                          onChange={() => handleFlagToggle(currentPage)}
-                          icon={<FlagIcon sx={{ color: "white" }} />}
-                          checkedIcon={<FlagIcon sx={{ color: "#F8AC59" }} />}
-                          sx={{ color: "white" }}
-                        />
-                      }
-                      label="Đang cân nhắc"
-                      sx={{
-                        color: "white",
-                        "& .MuiTypography-root": { fontSize: "14px" },
-                      }}
-                    />
-                  </Box>
-                  <Divider />
-                  <Box
-                    sx={{
-                      marginBottom: "20px",
+                      flex: 3,
                       display: "flex",
                       flexDirection: "column",
-                      gap: 2,
-                      padding: "20px",
+                      border: "1px solid #ccc",
+                      borderRadius: 4,
                     }}
                   >
-                    <Typography fontSize="16px" fontWeight={700}>
-                      {question.content}
-                    </Typography>
-                    <FormControl
-                      component="fieldset"
-                      sx={{ alignItems: "center" }}
-                    >
-                      {question.image && (
-                        <img
-                          src={question.image}
-                          alt="Question"
-                          style={{ maxWidth: "300px" }}
-                        />
-                      )}
-                    </FormControl>
-                    <FormControl component="fieldset">
-                      {question.questionType === "FILL_IN_THE_BLANK" && (
-                        <TextField
-                          value={answers[currentPage]?.inputAnswer || ""}
-                          onChange={(e) => {
-                            const updatedAnswers = [...answers];
-                            updatedAnswers[currentPage] = {
-                              inputAnswer: e.target.value,
-                            };
-                            setAnswers(updatedAnswers);
+                    <Box sx={{ display: "flex", flexDirection: "column" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "8px 20px",
+                          backgroundColor: "#99BC4D",
+                          borderTopLeftRadius: "16px",
+                          borderTopRightRadius: "16px",
+                          color: "#fff",
+                        }}
+                      >
+                        <Typography fontSize="16px" fontWeight={700}>
+                          Câu hỏi số {currentPage + 1}
+                        </Typography>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={flaggedQuestions[currentPage] || false}
+                              onChange={() => handleFlagToggle(currentPage)}
+                              icon={<FlagIcon sx={{ color: "white" }} />}
+                              checkedIcon={
+                                <FlagIcon sx={{ color: "#F8AC59" }} />
+                              }
+                              sx={{ color: "white" }}
+                            />
+                          }
+                          label="Đang cân nhắc"
+                          sx={{
+                            color: "white",
+                            "& .MuiTypography-root": { fontSize: "14px" },
                           }}
-                          sx={{ width: "30%", bgcolor: "white" }}
-                          disabled={timeLeft === 0}
                         />
-                      )}
-                      {question.questionType === "MULTIPLE_CHOICE" && (
-                        <RadioGroup
-                          value={
-                            answers[currentPage]?.selectedAnswerIndex ?? -1
-                          }
-                          onChange={(e) =>
-                            handleAnswerChange(
-                              currentPage,
-                              parseInt(e.target.value)
-                            )
-                          }
-                          sx={{ display: "flex", flexDirection: "column" }}
+                      </Box>
+                      <Divider />
+                      <Box
+                        sx={{
+                          marginBottom: "20px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 2,
+                          padding: "20px",
+                        }}
+                      >
+                        <Typography fontSize="16px" fontWeight={700}>
+                          {question.content}
+                        </Typography>
+                        <FormControl
+                          component="fieldset"
+                          sx={{ alignItems: "center" }}
                         >
-                          {question.options
-                            .filter((option: string) => option.trim() !== "")
-                            .map((option: string, index: number) => (
-                              <FormControlLabel
-                                key={index}
-                                value={index.toString()}
-                                control={<Radio disabled={timeLeft === 0} />}
-                                label={option}
-                                sx={{
-                                  "& .MuiTypography-root": { fontSize: "16px" },
-                                }}
-                              />
-                            ))}
-                        </RadioGroup>
-                      )}
-
-                      {question.questionType === "MULTI_SELECT" && (
-                        <Box>
-                          {question.options
-                            .filter((option) => option.trim() !== "")
-                            .map((option, index) => (
-                              <FormControlLabel
-                                key={index}
-                                sx={{
-                                  display: "flex",
-                                  flexDirection: "row",
-                                  "& .MuiTypography-root": { fontSize: "16px" },
-                                }}
-                                control={
-                                  <Checkbox
-                                    checked={
-                                      answers[
-                                        currentPage
-                                      ]?.selectedAnswers?.includes(index) ||
-                                      false
+                          {question.image && (
+                            <img
+                              src={question.image}
+                              alt="Question"
+                              style={{ maxWidth: "300px" }}
+                            />
+                          )}
+                        </FormControl>
+                        <FormControl component="fieldset">
+                          {question.questionType === "FILL_IN_THE_BLANK" && (
+                            <TextField
+                              value={answers[currentPage]?.inputAnswer || ""}
+                              onChange={(e) => {
+                                const updatedAnswers = [...answers];
+                                updatedAnswers[currentPage] = {
+                                  inputAnswer: e.target.value,
+                                };
+                                setAnswers(updatedAnswers);
+                              }}
+                              sx={{ width: "30%", bgcolor: "white" }}
+                              disabled={timeLeft === 0}
+                            />
+                          )}
+                          {question.questionType === "MULTIPLE_CHOICE" && (
+                            <RadioGroup
+                              value={
+                                answers[currentPage]?.selectedAnswerIndex ?? -1
+                              }
+                              onChange={(e) =>
+                                handleAnswerChange(
+                                  currentPage,
+                                  parseInt(e.target.value)
+                                )
+                              }
+                              sx={{ display: "flex", flexDirection: "column" }}
+                            >
+                              {question.options
+                                .filter(
+                                  (option: string) => option.trim() !== ""
+                                )
+                                .map((option: string, index: number) => (
+                                  <FormControlLabel
+                                    key={index}
+                                    value={index.toString()}
+                                    control={
+                                      <Radio disabled={timeLeft === 0} />
                                     }
-                                    onChange={(e) => {
-                                      const updatedAnswers = [...answers];
-                                      const selectedAnswers =
-                                        updatedAnswers[currentPage]
-                                          ?.selectedAnswers || [];
-                                      if (e.target.checked) {
-                                        selectedAnswers.push(index);
-                                      } else {
-                                        const idx =
-                                          selectedAnswers.indexOf(index);
-                                        if (idx > -1)
-                                          selectedAnswers.splice(idx, 1);
-                                      }
-                                      updatedAnswers[currentPage] = {
-                                        selectedAnswers,
-                                      };
-                                      setAnswers(updatedAnswers);
+                                    label={option}
+                                    sx={{
+                                      "& .MuiTypography-root": {
+                                        fontSize: "16px",
+                                      },
                                     }}
                                   />
-                                }
-                                label={option}
-                              />
-                            ))}
-                        </Box>
-                      )}
-                    </FormControl>
-                  </Box>
+                                ))}
+                            </RadioGroup>
+                          )}
 
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "20px",
-                      paddingX: "20px",
-                    }}
-                  >
-                    <Button
-                      variant="outlined"
-                      onClick={handlePrevious}
-                      disabled={currentPage === 0}
-                      sx={{ textTransform: "none" }}
-                    >
-                      <KeyboardDoubleArrowLeftIcon /> Câu hỏi trước
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      onClick={handleNext}
-                      disabled={currentPage === questions.length - 1}
-                      sx={{ textTransform: "none" }}
-                    >
-                      Câu hỏi sau <KeyboardDoubleArrowRightIcon />
-                    </Button>
-                  </Box>
-                </Box>
-              </Box>
+                          {question.questionType === "MULTI_SELECT" && (
+                            <Box>
+                              {question.options
+                                .filter((option) => option.trim() !== "")
+                                .map((option, index) => (
+                                  <FormControlLabel
+                                    key={index}
+                                    sx={{
+                                      display: "flex",
+                                      flexDirection: "row",
+                                      "& .MuiTypography-root": {
+                                        fontSize: "16px",
+                                      },
+                                    }}
+                                    control={
+                                      <Checkbox
+                                        checked={
+                                          answers[
+                                            currentPage
+                                          ]?.selectedAnswers?.includes(index) ||
+                                          false
+                                        }
+                                        onChange={(e) => {
+                                          const updatedAnswers = [...answers];
+                                          const selectedAnswers =
+                                            updatedAnswers[currentPage]
+                                              ?.selectedAnswers || [];
+                                          if (e.target.checked) {
+                                            selectedAnswers.push(index);
+                                          } else {
+                                            const idx =
+                                              selectedAnswers.indexOf(index);
+                                            if (idx > -1)
+                                              selectedAnswers.splice(idx, 1);
+                                          }
+                                          updatedAnswers[currentPage] = {
+                                            selectedAnswers,
+                                          };
+                                          setAnswers(updatedAnswers);
+                                        }}
+                                      />
+                                    }
+                                    label={option}
+                                  />
+                                ))}
+                            </Box>
+                          )}
+                        </FormControl>
+                      </Box>
 
-              <Box
-                sx={{
-                  flex: 1,
-                  width: "250px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "20px",
-                  backgroundColor: "#fff",
-                }}
-              >
-                <Typography
-                  sx={{
-                    textAlign: "center",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 1,
-                    border: "1px solid #ccc",
-                    padding: "8px",
-                    bgcolor: "#99BC4D",
-                    color: "#fff",
-                  }}
-                  fontSize="24px"
-                >
-                  <AccessAlarmIcon sx={{ fontSize: "24px" }} />{" "}
-                  {formatTime(timeLeft)}
-                </Typography>
-                <Box
-                  sx={{
-                    padding: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    border: "1px solid #ccc",
-                    borderRadius: 2,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    sx={{
-                      textAlign: "center",
-                      borderBottom: "1px dashed #ccc",
-                      padding: "8px",
-                    }}
-                  >
-                    Danh sách câu hỏi
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: "8px",
-                      marginY: "20px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    {questions.map((_, index) => {
-                      const answer = answers[index];
-                      const isAnswered =
-                        answer &&
-                        (answer.inputAnswer ||
-                          (answer.selectedAnswers &&
-                            answer.selectedAnswers.length > 0) ||
-                          answer.selectedAnswerIndex !== undefined);
-                      const isCurrent = index === currentPage;
-                      const isFlagged = flaggedQuestions[index];
-
-                      return (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: "20px",
+                          paddingX: "20px",
+                        }}
+                      >
                         <Button
-                          key={index}
-                          variant="contained"
-                          onClick={() => setCurrentPage(index)}
-                          sx={{
-                            backgroundColor: isCurrent
-                              ? "#6593DA"
-                              : isFlagged
-                                ? "#F8AC59"
-                                : isAnswered
-                                  ? "#99BC4D"
-                                  : "transparent",
-                            color:
-                              isCurrent || isFlagged || isAnswered
-                                ? "#fff"
-                                : "#000",
-                            border:
-                              !isCurrent && !isFlagged && !isAnswered
-                                ? "1px solid #ccc"
-                                : "none",
-                            "&:hover": {
-                              backgroundColor: isCurrent
-                                ? "#5A7BC4"
-                                : isFlagged
-                                  ? "#E89A48"
-                                  : isAnswered
-                                    ? "#7A9F38"
-                                    : "#D9D9D9",
-                            },
-                          }}
+                          variant="outlined"
+                          onClick={handlePrevious}
+                          disabled={currentPage === 0}
+                          sx={{ textTransform: "none" }}
                         >
-                          {index + 1}
+                          <KeyboardDoubleArrowLeftIcon /> Câu hỏi trước
                         </Button>
-                      );
-                    })}
+                        <Button
+                          variant="outlined"
+                          onClick={handleNext}
+                          disabled={currentPage === questions.length - 1}
+                          sx={{ textTransform: "none" }}
+                        >
+                          Câu hỏi sau <KeyboardDoubleArrowRightIcon />
+                        </Button>
+                      </Box>
+                    </Box>
                   </Box>
-                </Box>
 
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleOpenConfirm}
-                  disabled={timeLeft === 0}
-                  sx={{
-                    textTransform: "none",
-                    ":hover": { backgroundColor: "#99BC4D" },
-                    color: "#FFF",
-                  }}
-                >
-                  Nộp bài
-                </Button>
-                <Box
-                  sx={{
-                    padding: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    border: "1px solid #ccc",
-                    borderRadius: 2,
-                  }}
-                >
-                  {/* Chú thích màu sắc */}
-                  <Box sx={{ padding: "0 8px", fontSize: "12px" }}>
+                  <Box
+                    sx={{
+                      flex: 1,
+                      width: "250px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "20px",
+                      backgroundColor: "#fff",
+                    }}
+                  >
                     <Typography
-                      variant="h6"
-                      fontWeight={700}
                       sx={{
                         textAlign: "center",
-                        borderBottom: "1px dashed #ccc",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 1,
+                        border: "1px solid #ccc",
                         padding: "8px",
+                        bgcolor: "#99BC4D",
+                        color: "#fff",
                       }}
+                      fontSize="24px"
                     >
-                      Chú thích
+                      <AccessAlarmIcon sx={{ fontSize: "24px" }} />{" "}
+                      {formatTime(timeLeft)}
                     </Typography>
                     <Box
                       sx={{
+                        padding: 1,
                         display: "flex",
                         flexDirection: "column",
-                        gap: 0.5,
+                        gap: 2,
+                        border: "1px solid #ccc",
+                        borderRadius: 2,
                       }}
                     >
-                      <Box
+                      <Typography
+                        variant="h6"
+                        fontWeight={700}
                         sx={{
-                          paddingTop: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
+                          textAlign: "center",
+                          borderBottom: "1px dashed #ccc",
+                          padding: "8px",
                         }}
                       >
-                        <Box
-                          sx={{
-                            width: 53,
-                            height: 25,
-                            bgcolor: "transparent",
-                            border: "1px solid #ccc",
-                            borderRadius: 2,
-                          }}
-                        />
-                        <Typography variant="caption">Chưa trả lời</Typography>
-                      </Box>
+                        Danh sách câu hỏi
+                      </Typography>
                       <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        sx={{
+                          display: "flex",
+                          gap: "8px",
+                          marginY: "20px",
+                          flexWrap: "wrap",
+                        }}
                       >
-                        <Box
+                        {questions.map((_, index) => {
+                          const answer = answers[index];
+                          const isAnswered =
+                            answer &&
+                            (answer.inputAnswer ||
+                              (answer.selectedAnswers &&
+                                answer.selectedAnswers.length > 0) ||
+                              answer.selectedAnswerIndex !== undefined);
+                          const isCurrent = index === currentPage;
+                          const isFlagged = flaggedQuestions[index];
+
+                          return (
+                            <Button
+                              key={index}
+                              variant="contained"
+                              onClick={() => setCurrentPage(index)}
+                              sx={{
+                                backgroundColor: isCurrent
+                                  ? "#6593DA"
+                                  : isFlagged
+                                    ? "#F8AC59"
+                                    : isAnswered
+                                      ? "#99BC4D"
+                                      : "transparent",
+                                color:
+                                  isCurrent || isFlagged || isAnswered
+                                    ? "#fff"
+                                    : "#000",
+                                border:
+                                  !isCurrent && !isFlagged && !isAnswered
+                                    ? "1px solid #ccc"
+                                    : "none",
+                                "&:hover": {
+                                  backgroundColor: isCurrent
+                                    ? "#5A7BC4"
+                                    : isFlagged
+                                      ? "#E89A48"
+                                      : isAnswered
+                                        ? "#7A9F38"
+                                        : "#D9D9D9",
+                                },
+                              }}
+                            >
+                              {index + 1}
+                            </Button>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleOpenConfirm}
+                      disabled={timeLeft === 0}
+                      sx={{
+                        textTransform: "none",
+                        ":hover": { backgroundColor: "#99BC4D" },
+                        color: "#FFF",
+                      }}
+                    >
+                      Nộp bài
+                    </Button>
+                    <Box
+                      sx={{
+                        padding: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        border: "1px solid #ccc",
+                        borderRadius: 2,
+                      }}
+                    >
+                      {/* Chú thích màu sắc */}
+                      <Box sx={{ padding: "0 8px", fontSize: "12px" }}>
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
                           sx={{
-                            width: 53,
-                            height: 25,
-                            borderRadius: 2,
-                            bgcolor: "#6593DA",
+                            textAlign: "center",
+                            borderBottom: "1px dashed #ccc",
+                            padding: "8px",
                           }}
-                        />
-                        <Typography variant="caption">
-                          Câu hỏi hiện tại
+                        >
+                          Chú thích
                         </Typography>
-                      </Box>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
                         <Box
                           sx={{
-                            width: 53,
-                            height: 25,
-                            borderRadius: 2,
-                            bgcolor: "#F8AC59",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.5,
                           }}
-                        />
-                        <Typography variant="caption">Đang cân nhắc</Typography>
-                      </Box>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Box
-                          sx={{
-                            width: 53,
-                            height: 25,
-                            borderRadius: 2,
-                            bgcolor: "#99BC4D",
-                          }}
-                        />
-                        <Typography variant="caption">Đã trả lời</Typography>
+                        >
+                          <Box
+                            sx={{
+                              paddingTop: "8px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 53,
+                                height: 15,
+                                bgcolor: "transparent",
+                                border: "1px solid #ccc",
+                                borderRadius: 2,
+                              }}
+                            />
+                            <Typography variant="caption">
+                              Câu hỏi chưa trả lời
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 53,
+                                height: 25,
+                                borderRadius: 2,
+                                bgcolor: "#6593DA",
+                              }}
+                            />
+                            <Typography variant="caption">
+                              Câu hỏi hiện tại
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 53,
+                                height: 25,
+                                borderRadius: 2,
+                                bgcolor: "#F8AC59",
+                              }}
+                            />
+                            <Typography variant="caption">
+                              Câu hỏi đang cân nhắc
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 53,
+                                height: 25,
+                                borderRadius: 2,
+                                bgcolor: "#99BC4D",
+                              }}
+                            />
+                            <Typography variant="caption">
+                              Câu hỏi đã trả lời
+                            </Typography>
+                          </Box>
+                        </Box>
                       </Box>
                     </Box>
                   </Box>
                 </Box>
               </Box>
-            </Box>
-          </Box>
+            </>
+          )}
         </Box>
       </Box>
 
