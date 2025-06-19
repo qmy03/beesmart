@@ -570,8 +570,8 @@ interface QuizzesResponse {
 }
 
 const SkillDetailPage = () => {
-  const accessToken = localStorage.getItem("accessToken");
-  // const { accessToken } = useAuth();
+  // const accessToken = localStorage.getItem("accessToken");
+  const { accessToken } = useAuth();
   const { lessonId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -587,24 +587,26 @@ const SkillDetailPage = () => {
 
     setLoading(true);
     // Fetch lesson without requiring accessToken
-    apiService
-      .get<ApiResponse<Lesson>>(`/lessons/${lessonId}`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-      })
-      .then((response) => {
-        setLesson(response.data.data);
-      })
-      .catch((error) => {
-        setError(
-          error.response?.data?.message || "Có lỗi xảy ra khi tải bài học."
-        );
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-
-    // Fetch quizzes only if accessToken exists
     if (accessToken) {
+      apiService
+        .get<ApiResponse<Lesson>>(`/lessons/${lessonId}`, {
+          headers: accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {},
+        })
+        .then((response) => {
+          setLesson(response.data.data);
+        })
+        .catch((error) => {
+          setError(
+            error.response?.data?.message || "Có lỗi xảy ra khi tải bài học."
+          );
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+
+      // Fetch quizzes only if accessToken exists
       apiService
         .get<ApiResponse<QuizzesResponse>>(`/lessons/${lessonId}/quizzes`, {
           headers: { Authorization: `Bearer ${accessToken}` },

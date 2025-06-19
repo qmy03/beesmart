@@ -69,7 +69,18 @@ interface SubmitResponse {
 }
 
 const SkillPracticePage = () => {
-  const accessToken = localStorage.getItem("accessToken");
+  const {accessToken} = useAuth();
+  // const accessToken = localStorage.getItem("accessToken");
+  // const [quizLoaded, setQuizLoaded] = useState(false);
+
+  // // Di chuyển accessToken vào useEffect để tránh SSR issues
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   const token = localStorage.getItem("accessToken");
+  //   setAccessToken(token);
+  // }, []);
+
   const router = useRouter();
   const { quizId } = useParams();
   const [questions, setQuestions] = useState<Question[]>([]);
