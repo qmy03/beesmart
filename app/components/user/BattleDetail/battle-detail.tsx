@@ -54,7 +54,6 @@ interface PlayerInfo {
 }
 
 export default function BattleDetailPage() {
-  // const accessToken = localStorage.getItem("accessToken");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const { userInfo } = useAuth();
   const { battleId } = useParams();
@@ -86,15 +85,15 @@ export default function BattleDetailPage() {
   const [battleStarted, setBattleStarted] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [disconnectedPlayer, setDisconnectedPlayer] = useState<string | null>(null);
-  const [reconnectionTimer, setReconnectionTimer] = useState(60);
-  const [showWinnerDialog, setShowWinnerDialog] = useState(false);
   const isNavigatingRef = useRef(false);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken");
       setAccessToken(token);
     }
   }, []);
+
   const getPlayerStatusMessage = (
     isCorrect: boolean | null,
     isAnswered: boolean
@@ -111,14 +110,12 @@ export default function BattleDetailPage() {
   useEffect(() => {
     if (!battleInfo?.status || finished) return;
 
-    // Push current state to history to allow popstate detection
     history.pushState(null, "", window.location.href);
 
     const handlePopState = (event: PopStateEvent) => {
       if (battleInfo.status === "ONGOING" && !isNavigatingRef.current) {
         event.preventDefault();
-        setShowLeaveDialog(true); // Show leave confirmation dialog
-        // Push state back to prevent navigation
+        setShowLeaveDialog(true);
         history.pushState(null, "", window.location.href);
       }
     };
@@ -159,7 +156,6 @@ export default function BattleDetailPage() {
         );
 
         const battleData = response.data.data;
-        console.log("Battle data:", battleData);
         setBattleInfo({
           ...battleData,
           lastQuestionId: battleData.lastQuestionId || null,
@@ -242,22 +238,13 @@ export default function BattleDetailPage() {
             handleAnswerResult(msg);
             break;
           case "PLAYER_DISCONNECTED":
-            setDisconnectedPlayer(msg.userId);
-            setReconnectionTimer(60);
+            handlePlayerDisconnected(msg);
             break;
           case "PLAYER_RECONNECTED":
             setDisconnectedPlayer(null);
-            setReconnectionTimer(60);
             break;
           case "END":
-            if (msg.reason === "OPPONENT_LEFT") {
-              setWinner(msg.winnerId);
-              setBattleResults(msg.playerScores || null);
-              setFinished(true);
-              setShowWinnerDialog(true); // Show winner dialog
-            } else {
-              handleBattleEnd(msg);
-            }
+            handleBattleEnd(msg);
             break;
           case "ERROR":
             setError(msg.message || "An error occurred");
@@ -315,20 +302,28 @@ export default function BattleDetailPage() {
     };
   }, [accessToken, battleId, userInfo?.userId]);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (disconnectedPlayer && reconnectionTimer > 0) {
-      timer = setInterval(() => {
-        setReconnectionTimer((prev) => prev - 1);
-      }, 1000);
+  // Handle player disconnection
+  const handlePlayerDisconnected = (msg: any) => {
+    if (msg.userId !== userInfo?.userId) {
+      // Opponent disconnected
+      setDisconnectedPlayer(msg.userId);
+      setWinner(userInfo?.userId || null);
+      setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setBattleResults(msg.playerScores || null);
+      // Redirect to battle result immediately
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
     }
-    return () => clearInterval(timer);
-  }, [disconnectedPlayer, reconnectionTimer]);
+  };
 
   // Handle explicit leave
   const handleLeaveBattle = async () => {
     try {
-      isNavigatingRef.current = true; // Prevent popstate loop
+      isNavigatingRef.current = true;
       await apiService.post(
         `/battles/${battleId}/leave`,
         {},
@@ -337,23 +332,17 @@ export default function BattleDetailPage() {
         }
       );
       setShowLeaveDialog(false);
-      setShowWinnerDialog(true); // Show Winner Dialog for loser
-      setWinner(null); // No winner for the leaver
-      setBattleResults(null); // Optional: include scores if backend provides them
       setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      // Redirect to skill-list immediately
+      router.push("/battle-home");
     } catch (error) {
       console.error("Error leaving battle:", error);
       setError("Failed to leave the battle");
-      isNavigatingRef.current = false; // Reset on error
-    }
-  };
-
-  const handleWinnerDialogClose = () => {
-    setShowWinnerDialog(false);
-    if (winner === userInfo?.userId) {
-      router.push(`/battle-result/${battleId}`); // Winner goes to battle result
-    } else {
-      router.push("/battle-home"); // Loser goes to battle home
+      isNavigatingRef.current = false;
     }
   };
 
@@ -449,7 +438,6 @@ export default function BattleDetailPage() {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           const currentQuestion = msg.question;
-          // Only submit a null answer if the user hasn't answered yet
           if (!isAnswered && currentQuestion?.questionId) {
             console.log("⏰ Timer expired. Sending null answer...");
             handleTimeExpiredAnswer(currentQuestion);
@@ -548,13 +536,29 @@ export default function BattleDetailPage() {
   };
 
   const handleBattleEnd = (msg: any) => {
-    setWinner(msg.winner);
-    setFinished(true);
-    setBattleResults(msg.results || null);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeout(() => {
+    if (msg.reason === "OPPONENT_LEFT") {
+      // Remaining player
+      setWinner(userInfo?.userId || null);
+      setBattleResults(msg.playerScores || null);
+      setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
       router.push(`/battle-result/${battleId}`);
-    }, 1000);
+    } else {
+      // Normal battle end
+      setWinner(msg.winner);
+      setFinished(true);
+      setBattleResults(msg.results || null);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
+    }
   };
 
   const updateBattleState = (battleResponse: any) => {
@@ -569,17 +573,16 @@ export default function BattleDetailPage() {
       setWinner(battleResponse.winner || null);
       setBattleResults(battleResponse.results || null);
       setFinished(true);
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
     }
   };
 
   const handleAnswer = async (answerOption: string | null | string[]) => {
-    console.log("handleAnswer called with:", {
-      question: question,
-      userId: userInfo?.userId,
-      isAnswered: isAnswered,
-    });
-
     if (!question || !userInfo?.userId || isAnswered) {
       console.log("Early return condition met in handleAnswer");
       return;
@@ -587,7 +590,6 @@ export default function BattleDetailPage() {
 
     try {
       setIsAnswered(true);
-      // Clear the timer immediately to prevent time-expired submission
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -645,7 +647,7 @@ export default function BattleDetailPage() {
         setError("Answer already submitted for this question.");
       } else {
         setError("Failed to submit answer");
-        setIsAnswered(false); // Allow retry if submission fails for non-duplicate reasons
+        setIsAnswered(false);
       }
     }
   };
@@ -751,15 +753,6 @@ export default function BattleDetailPage() {
               Leave Battle
             </Button>
           </Box>
-
-          {/* Disconnected Player Notification */}
-          {disconnectedPlayer && (
-            <Box sx={{ textAlign: "center", padding: 2, bgcolor: "#FFEBEE" }}>
-              <Typography sx={{ color: "#D32F2F" }}>
-                Opponent disconnected. Waiting for reconnection ({reconnectionTimer}s remaining)...
-              </Typography>
-            </Box>
-          )}
 
           <Box sx={{ bgcolor: "#90DD81" }}>
             <Typography
@@ -1338,7 +1331,7 @@ export default function BattleDetailPage() {
                             onChange={(e) => setTextAnswer(e.target.value)}
                             disabled={isAnswered || timer === 0}
                             sx={{ width: "100%", bgcolor: "white" }}
-                            placeholder="Type your answer here"
+                            placeholder="Nhập câu trả lời của bạn"
                           />
 
                           <Box
@@ -1426,20 +1419,6 @@ export default function BattleDetailPage() {
                 gap: 2,
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  textAlign: "center",
-                }}
-              >
-                {winner === userInfo?.userId
-                  ? "🏆 CHIẾN THẮNG! 🏆"
-                  : "🎮 Thua rồi! Hãy thử lại lần sau! 🎮"}
-              </Typography>
-              <Typography sx={{ fontSize: "16px", color: "#666" }}>
-                Đang chuyển đến trang kết quả...
-              </Typography>
               <Box
                 sx={{
                   width: "32px",
@@ -1458,7 +1437,7 @@ export default function BattleDetailPage() {
           )}
         </Box>
         {/* Leave Confirmation Dialog */}
-        <Dialog open={showLeaveDialog} onClose={() => setShowLeaveDialog(false)}>
+        <Dialog open={showLeaveDialog} onClose={() => setShowLeaveDialog(false)} maxWidth="md">
           <DialogTitle>Bạn muốn bỏ cuộc ư?</DialogTitle>
           <DialogContent>
             <Typography>
@@ -1469,30 +1448,6 @@ export default function BattleDetailPage() {
             <Button onClick={() => setShowLeaveDialog(false)}>Hủy</Button>
             <Button onClick={handleLeaveBattle} color="error">
               Rời khỏi
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Winner Dialog */}
-        <Dialog open={showWinnerDialog} onClose={handleWinnerDialogClose}>
-          <DialogTitle>Trận đấu kết thúc</DialogTitle>
-          <DialogContent>
-            <Typography variant="h6" color={winner === userInfo?.userId ? "green" : "red"}>
-              {winner === userInfo?.userId ? "You Won!" : "You Lost!"}
-            </Typography>
-            <Typography>
-              {winner === userInfo?.userId
-                ? "Đối thủ đã bỏ cuộc"
-                : "Bạn đã rời khỏi trận đấu"}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleWinnerDialogClose} color="primary">
-              <Typography>
-              {winner === userInfo?.userId
-                ? "Xem kết quả"
-                : "OK"}
-              </Typography>
             </Button>
           </DialogActions>
         </Dialog>
