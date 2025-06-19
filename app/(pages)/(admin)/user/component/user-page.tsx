@@ -50,7 +50,7 @@ interface UserResponse {
 }
 
 const UserPage = () => {
-  const { accessToken } = useAuth();
+  const { accessToken, isLoading, setIsLoading } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -58,7 +58,6 @@ const UserPage = () => {
   const [openDelete, setOpenDelete] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
-  // Search states
   const [searchUsername, setSearchUsername] = useState("");
   const [searchEmail, setSearchEmail] = useState("");
   const [searchRole, setSearchRole] = useState("");
@@ -182,6 +181,7 @@ const UserPage = () => {
 
   useEffect(() => {
     if (accessToken) {
+      setIsLoading(true);
       setLoading(true);
       apiService
         .get<UserResponse>("/users", {
@@ -196,6 +196,9 @@ const UserPage = () => {
         .catch((error) => {
           console.error("Error fetching users:", error);
           setLoading(false);
+        })
+        .finally(()=>{
+          setIsLoading(false);
         });
     }
   }, [accessToken]);

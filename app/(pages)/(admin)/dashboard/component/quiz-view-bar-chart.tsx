@@ -98,7 +98,7 @@ const QuizViewsBarChart = ({
           }}
         >
           <Typography fontWeight={600} fontSize={20} gutterBottom>
-            Lượt nộp bài quiz trong tháng {month}/{year}
+            Lượt nộp bài kiểm tra trong tháng {month}/{year}
           </Typography>
           <TextField
             select
