@@ -710,7 +710,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 bgcolor: "transparent",
                                 border: "1px solid #ccc",
@@ -730,7 +730,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#6593DA",
@@ -749,7 +749,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#F8AC59",
@@ -768,7 +768,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#99BC4D",

@@ -103,14 +103,7 @@ interface QuizzesResponse {
 }
 
 const SkillListPage: React.FC = () => {
-  // const userInfo = localStorage.getItem("userInfo");
-  const [userInfo, setUserInfo] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userInfo = localStorage.getItem("userInfo");
-      setUserInfo(userInfo);
-    }
-  }, []);
+  const userInfo = localStorage.getItem("userInfo");
   const userInfoParsed = userInfo ? JSON.parse(userInfo) : null;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -140,14 +133,6 @@ const SkillListPage: React.FC = () => {
     "Học kì 2": "term2",
   };
 
-  // Handle term change
-  // const handleTermChange = (termDisplay: string) => {
-  //   setSelectedTerm(termDisplay);
-  //   setSelectedTopic(null);
-  //   setTopics([]);
-  //   setCurrentPage(1);
-  //   setSearchText("");
-  // };
   const handleTermChange = (termDisplay: string) => {
     setSelectedTerm(termDisplay);
     localStorage.setItem("selectedSemester", termDisplay);
@@ -158,161 +143,118 @@ const SkillListPage: React.FC = () => {
     setSearchText("");
   };
 
-  // Thêm logic để lưu selectedTopic
   const handleTopicClick = (topic: Topic) => {
     setSelectedTopic(topic);
     localStorage.setItem("selectedTopic", JSON.stringify(topic));
   };
+ useEffect(() => {
+  const fetchInitialData = async () => {
+    try {
+      const gradesResponse = await apiService.get<ApiResponse<GradesResponse>>("/grades");
+      const gradesData = gradesResponse.data.data.grades;
+      setGrades(gradesData);
 
-  // Fetch initial data (grades, subjects, bookTypes)
-  // useEffect(() => {
-  //   const fetchInitialData = async () => {
-  //     try {
-  //       const gradesResponse =
-  //         await apiService.get<ApiResponse<GradesResponse>>("/grades");
-  //       const gradesData = gradesResponse.data.data.grades;
-  //       setGrades(gradesData);
+      const subjectsResponse = await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
+      const subjectsData = subjectsResponse.data.data.subjects;
+      setSubjects(subjectsData);
 
-  //       const subjectsResponse =
-  //         await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
-  //       const subjectsData = subjectsResponse.data.data.subjects;
-  //       setSubjects(subjectsData);
+      const bookTypesResponse = await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
+      const bookTypesData = bookTypesResponse.data.data.bookTypes;
+      setBookTypes(bookTypesData);
 
-  //       const bookTypesResponse =
-  //         await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
-  //       const bookTypesData = bookTypesResponse.data.data.bookTypes;
-  //       setBookTypes(bookTypesData);
+      // Khôi phục từ localStorage
+      const storedGradeName = localStorage.getItem("selectedGradeName");
+      const storedGradeId = localStorage.getItem("selectedGradeId");
+      const storedSubjectName = localStorage.getItem("selectedSubjectName");
+      const storedSubjectId = localStorage.getItem("selectedSubjectId");
+      const storedBookTypeName = localStorage.getItem("selectedBookTypeName");
+      const storedBookTypeId = localStorage.getItem("selectedBookTypeId");
+      const storedSemester = localStorage.getItem("selectedSemester");
+      const storedTopic = localStorage.getItem("selectedTopic");
 
-  //       if (!searchParams.get("subjectId") && subjectsData.length > 0) {
-  //         setSelectedSubjectId(subjectsData[0].subjectId);
-  //         setSelectedSubjectName(subjectsData[0].subjectName);
-  //       }
-  //       if (!searchParams.get("gradeName") && gradesData.length > 0) {
-  //         const userGrade = gradesData.find(
-  //           (grade) => grade.gradeName === userInfoParsed?.grade
-  //         );
-  //         if (userGrade) {
-  //           setSelectedGradeId(userGrade.gradeId);
-  //           setSelectedGradeName(userGrade.gradeName);
-  //         } else {
-  //           setSelectedGradeId(gradesData[0].gradeId);
-  //           setSelectedGradeName(gradesData[0].gradeName);
-  //         }
-  //       }
-  //       if (bookTypesData.length > 0) {
-  //         setSelectedBookTypeId(bookTypesData[0].bookId);
-  //         setSelectedBookTypeName(bookTypesData[0].bookName);
-  //       }
-  //     } catch (error) {
-  //       console.error("Error fetching initial data:", error);
-  //     }
-  //   };
-
-  //   fetchInitialData();
-  // }, [userInfo, searchParams]);
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const gradesResponse =
-          await apiService.get<ApiResponse<GradesResponse>>("/grades");
-        const gradesData = gradesResponse.data.data.grades;
-        setGrades(gradesData);
-
-        const subjectsResponse =
-          await apiService.get<ApiResponse<SubjectsResponse>>("/subjects");
-        const subjectsData = subjectsResponse.data.data.subjects;
-        setSubjects(subjectsData);
-
-        const bookTypesResponse =
-          await apiService.get<ApiResponse<BookTypesResponse>>("/book-types");
-        const bookTypesData = bookTypesResponse.data.data.bookTypes;
-        setBookTypes(bookTypesData);
-
-        // Khôi phục từ localStorage
-        const storedGradeName = localStorage.getItem("selectedGradeName");
-        const storedGradeId = localStorage.getItem("selectedGradeId");
-        const storedSubjectName = localStorage.getItem("selectedSubjectName");
-        const storedSubjectId = localStorage.getItem("selectedSubjectId");
-        const storedBookTypeName = localStorage.getItem("selectedBookTypeName");
-        const storedBookTypeId = localStorage.getItem("selectedBookTypeId");
-        const storedSemester = localStorage.getItem("selectedSemester");
-        const storedTopic = localStorage.getItem("selectedTopic");
-
-        if (
-          storedGradeName &&
-          storedGradeId &&
-          gradesData.find((g) => g.gradeName === storedGradeName)
-        ) {
-          setSelectedGradeId(storedGradeId);
-          setSelectedGradeName(storedGradeName);
-        } else if (!searchParams.get("gradeName") && gradesData.length > 0) {
-          const userGrade = gradesData.find(
-            (grade) => grade.gradeName === userInfoParsed?.grade
-          );
-          if (userGrade) {
-            setSelectedGradeId(userGrade.gradeId);
-            setSelectedGradeName(userGrade.gradeName);
-            localStorage.setItem("selectedGradeName", userGrade.gradeName);
-            localStorage.setItem("selectedGradeId", userGrade.gradeId);
-          } else {
-            setSelectedGradeId(gradesData[0].gradeId);
-            setSelectedGradeName(gradesData[0].gradeName);
-            localStorage.setItem("selectedGradeName", gradesData[0].gradeName);
-            localStorage.setItem("selectedGradeId", gradesData[0].gradeId);
-          }
-        }
-
-        if (
-          storedSubjectName &&
-          storedSubjectId &&
-          subjectsData.find((s) => s.subjectName === storedSubjectName)
-        ) {
-          setSelectedSubjectId(storedSubjectId);
-          setSelectedSubjectName(storedSubjectName);
-        } else if (!searchParams.get("subjectId") && subjectsData.length > 0) {
-          setSelectedSubjectId(subjectsData[0].subjectId);
-          setSelectedSubjectName(subjectsData[0].subjectName);
-          localStorage.setItem(
-            "selectedSubjectName",
-            subjectsData[0].subjectName
-          );
-          localStorage.setItem("selectedSubjectId", subjectsData[0].subjectId);
-        }
-
-        if (
-          storedBookTypeName &&
-          storedBookTypeId &&
-          bookTypesData.find((b) => b.bookName === storedBookTypeName)
-        ) {
-          setSelectedBookTypeId(storedBookTypeId);
-          setSelectedBookTypeName(storedBookTypeName);
-        } else if (bookTypesData.length > 0) {
-          setSelectedBookTypeId(bookTypesData[0].bookId);
-          setSelectedBookTypeName(bookTypesData[0].bookName);
-          localStorage.setItem(
-            "selectedBookTypeName",
-            bookTypesData[0].bookName
-          );
-          localStorage.setItem("selectedBookTypeId", bookTypesData[0].bookId);
-        }
-
-        if (storedSemester) {
-          setSelectedTerm(storedSemester);
+      // Logic lọc lớp (grade)
+      if (
+        storedGradeName &&
+        storedGradeId &&
+        gradesData.find((g) => g.gradeName === storedGradeName)
+      ) {
+        // Ưu tiên khôi phục từ localStorage nếu có
+        setSelectedGradeId(storedGradeId);
+        setSelectedGradeName(storedGradeName);
+      } else if (userInfoParsed?.grade && gradesData.length > 0) {
+        // Nếu userInfoParsed có grade, lọc theo grade đó
+        const userGrade = gradesData.find(
+          (grade) => grade.gradeName === userInfoParsed.grade
+        );
+        if (userGrade) {
+          setSelectedGradeId(userGrade.gradeId);
+          setSelectedGradeName(userGrade.gradeName);
+          localStorage.setItem("selectedGradeName", userGrade.gradeName);
+          localStorage.setItem("selectedGradeId", userGrade.gradeId);
         } else {
-          setSelectedTerm("Học kì 1");
-          localStorage.setItem("selectedSemester", "Học kì 1");
+          // Nếu không tìm thấy grade của user, chọn lớp đầu tiên
+          setSelectedGradeId(gradesData[0].gradeId);
+          setSelectedGradeName(gradesData[0].gradeName);
+          localStorage.setItem("selectedGradeName", gradesData[0].gradeName);
+          localStorage.setItem("selectedGradeId", gradesData[0].gradeId);
         }
-
-        if (storedTopic) {
-          setSelectedTopic(JSON.parse(storedTopic));
-        }
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
+      } else if (gradesData.length > 0) {
+        // Nếu không có userInfoParsed hoặc grade, chọn lớp đầu tiên
+        setSelectedGradeId(gradesData[0].gradeId);
+        setSelectedGradeName(gradesData[0].gradeName);
+        localStorage.setItem("selectedGradeName", gradesData[0].gradeName);
+        localStorage.setItem("selectedGradeId", gradesData[0].gradeId);
       }
-    };
 
-    fetchInitialData();
-  }, [userInfo, searchParams]);
+      // Logic cho subject
+      if (
+        storedSubjectName &&
+        storedSubjectId &&
+        subjectsData.find((s) => s.subjectName === storedSubjectName)
+      ) {
+        setSelectedSubjectId(storedSubjectId);
+        setSelectedSubjectName(storedSubjectName);
+      } else if (!searchParams.get("subjectId") && subjectsData.length > 0) {
+        setSelectedSubjectId(subjectsData[0].subjectId);
+        setSelectedSubjectName(subjectsData[0].subjectName);
+        localStorage.setItem("selectedSubjectName", subjectsData[0].subjectName);
+        localStorage.setItem("selectedSubjectId", subjectsData[0].subjectId);
+      }
+
+      // Logic cho bookType
+      if (
+        storedBookTypeName &&
+        storedBookTypeId &&
+        bookTypesData.find((b) => b.bookName === storedBookTypeName)
+      ) {
+        setSelectedBookTypeId(storedBookTypeId);
+        setSelectedBookTypeName(storedBookTypeName);
+      } else if (bookTypesData.length > 0) {
+        setSelectedBookTypeId(bookTypesData[0].bookId);
+        setSelectedBookTypeName(bookTypesData[0].bookName);
+        localStorage.setItem("selectedBookTypeName", bookTypesData[0].bookName);
+        localStorage.setItem("selectedBookTypeId", bookTypesData[0].bookId);
+      }
+
+      // Logic cho semester
+      if (storedSemester) {
+        setSelectedTerm(storedSemester);
+      } else {
+        setSelectedTerm("Học kì 1");
+        localStorage.setItem("selectedSemester", "Học kì 1");
+      }
+
+      // Logic cho topic
+      if (storedTopic) {
+        setSelectedTopic(JSON.parse(storedTopic));
+      }
+    } catch (error) {
+      console.error("Error fetching initial data:", error);
+    }
+  };
+
+  fetchInitialData();
+}, [userInfo, searchParams]);
 
   // Fetch topics with pagination and search
   const fetchTopics = useCallback(

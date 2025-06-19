@@ -742,17 +742,7 @@ export default function BattleDetailPage() {
           }}
         >
           {/* Header and Player Info */}
-          <Box sx={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h5">Battle: {battleInfo?.battleId}</Typography>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setShowLeaveDialog(true)}
-              disabled={finished}
-            >
-              Leave Battle
-            </Button>
-          </Box>
+          
 
           <Box sx={{ bgcolor: "#90DD81" }}>
             <Typography
