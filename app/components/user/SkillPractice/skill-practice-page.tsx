@@ -69,6 +69,7 @@ interface SubmitResponse {
 }
 
 const SkillPracticePage = () => {
+  const accessToken = localStorage.getItem("accessToken");
   const router = useRouter();
   const { quizId } = useParams();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -76,7 +77,6 @@ const SkillPracticePage = () => {
   const [flaggedQuestions, setFlaggedQuestions] = useState<boolean[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const { accessToken } = useAuth();
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   const [warningDialogOpen, setWarningDialogOpen] = useState<boolean>(false);

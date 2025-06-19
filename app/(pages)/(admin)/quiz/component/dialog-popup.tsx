@@ -26,7 +26,7 @@ const DialogPopup = ({
   selectedLessonId,
   selectedTopicId,
 }: any) => {
-  const { accessToken } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

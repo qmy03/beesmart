@@ -14,7 +14,7 @@ type UserInfo = {
 
 const Aside = () => {
   const router = useRouter();
-  const { accessToken } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
