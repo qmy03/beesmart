@@ -78,6 +78,12 @@ const DialogPopup: React.FC<
   );
   const [availableTopics, setAvailableTopics] = useState<any[]>([]);
   console.log(topicId);
+  
+  // Reset selectedTopicId when filters change
+  useEffect(() => {
+    setSelectedTopicId("");
+  }, [selectedGradeName, selectedSemester, selectedSubjectName, selectedBookName]);
+
   useEffect(() => {
     if (lesson) {
       apiService
@@ -142,6 +148,28 @@ const DialogPopup: React.FC<
     selectedBookName,
     selectedSubjectName,
   ]);
+
+  // Reset form when dialog is closed or type changes
+  useEffect(() => {
+    if (!open) {
+      setTopicName("");
+      setTopicNumber(1);
+      setDescription("");
+      setContent("");
+      setSelectedTopicId("");
+    }
+  }, [open]);
+
+  // Reset form when switching between add and edit modes
+  useEffect(() => {
+    if (type === "add") {
+      setTopicName("");
+      setTopicNumber(1);
+      setDescription("");
+      setContent("");
+      setSelectedTopicId("");
+    }
+  }, [type]);
 
   console.log("ABC", topic);
   const handleSubmit = () => {

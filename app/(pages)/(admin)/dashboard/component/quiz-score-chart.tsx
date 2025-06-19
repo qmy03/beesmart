@@ -73,10 +73,12 @@ const QuizScoreChart: React.FC<QuizScoreChartProps> = ({ data, loading }) => {
   };
 
   return (
-    <Card sx={{ width: "100%",  }}>
-      <CardContent sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1}}>
+    <Card sx={{ width: "100%" }}>
+      <CardContent
+        sx={{ p: 2, display: "flex", flexDirection: "column", flex: 1 }}
+      >
         <Typography fontWeight={600} fontSize={20} sx={{ mb: 2 }}>
-          Thống kê số thí sinh theo môn học và phân bố điểm kiểm tra
+          Thống kê lượt làm bài quiz theo môn học và phân bố điểm{" "}
         </Typography>
 
         <Box sx={{ height: 400 }}>
@@ -103,7 +105,7 @@ const QuizScoreChart: React.FC<QuizScoreChartProps> = ({ data, loading }) => {
                 />
                 <YAxis
                   label={{
-                    value: "Số thí sinh",
+                    value: "Số lượt làm bài",
                     angle: -90,
                     position: "insideLeft",
                     textAnchor: "middle",

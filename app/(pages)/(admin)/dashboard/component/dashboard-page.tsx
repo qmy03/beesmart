@@ -493,30 +493,6 @@ const DashboardPage = () => {
     },
   ];
 
-  // Show loading only for initial load
-  // if (dataLoading && isInitialLoad) {
-  //   return (
-  //     <Layout>
-  //       <Box
-  //         sx={{
-  //           position: "absolute",
-  //           top: 0,
-  //           left: 0,
-  //           right: 0,
-  //           bottom: 0,
-  //           backgroundColor: "rgba(0, 0, 0, 0.1)",
-  //           zIndex: 10, // Đảm bảo overlay nằm trên nội dung main nhưng không vượt qua Sidebar
-  //           display: "flex",
-  //           justifyContent: "center",
-  //           alignItems: "center",
-  //         }}
-  //       >
-  //         <CircularProgress size={30} color="inherit" />
-  //       </Box>
-  //     </Layout>
-  //   );
-  // }
-
   if (error) {
     return (
       <Layout>
