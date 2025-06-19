@@ -570,7 +570,8 @@ interface QuizzesResponse {
 }
 
 const SkillDetailPage = () => {
-  const { accessToken } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  // const { accessToken } = useAuth();
   const { lessonId } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();

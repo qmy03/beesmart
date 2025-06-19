@@ -5,12 +5,6 @@ import LessonViewsBarChart from "./lesson-view-bar-chart";
 import QuizStatisticsChart from "./quiz-statistics-chart";
 import QuizAverageBarChart from "./quiz-average-bar-chart";
 import apiService from "@/app/untils/api";
-
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
-import ClassIcon from "@mui/icons-material/Class";
-import PlayLessonIcon from "@mui/icons-material/PlayLesson";
-import SubjectIcon from "@mui/icons-material/Subject";
-
 import { useEffect, useState } from "react";
 import {
   AccountCircle,
