@@ -44,7 +44,7 @@ const EditQuestionDialog: React.FC<QuestionDialogProps> = ({
   type,
   question,
 }) => {
-  const { accessToken } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const [questionText, setQuestionText] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [optionA, setOptionA] = useState("");

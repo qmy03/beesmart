@@ -22,6 +22,7 @@ interface DialogPopupProps {
   selectedSubjectId: string;
   onSuccess: (message: string) => void;
 }
+
 interface TopicResponse {
   message: string;
 }
@@ -41,15 +42,31 @@ const DialogPopup: React.FC<
   topic,
   onSuccess,
 }) => {
-  const [topicName, setTopicName] = useState(topic?.topicName || "");
-  const [topicNumber, setTopicNumber] = useState(topic?.topicNumber || 1);
+  const [topicName, setTopicName] = useState("");
+  const [topicNumber, setTopicNumber] = useState(1);
 
+  // Reset form when dialog opens or type changes
   useEffect(() => {
-    if (type === "edit" && topic) {
-      setTopicName(topic.topicName || "");
-      setTopicNumber(topic.topicNumber || 1);
+    if (open) {
+      if (type === "edit" && topic) {
+        setTopicName(topic.topicName || "");
+        setTopicNumber(topic.topicNumber || 1);
+      } else if (type === "add") {
+        // Reset to default values for add mode
+        setTopicName("");
+        setTopicNumber(1);
+      }
     }
-  }, [type, topic]);
+  }, [open, type, topic]);
+
+  // Also reset when dialog closes to ensure clean state
+  useEffect(() => {
+    if (!open) {
+      setTopicName("");
+      setTopicNumber(1);
+    }
+  }, [open]);
+
   const handleSubmit = () => {
     const body = {
       topicName,

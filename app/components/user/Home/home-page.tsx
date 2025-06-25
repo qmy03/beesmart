@@ -25,14 +25,9 @@ interface ApiResponse<T> {
   };
 }
 const HomePage: React.FC = () => {
-  const userInfo = localStorage.getItem("userInfo");
-  const grade = userInfo? JSON.parse(userInfo).grade : "Lớp 1"; // Lấy thông tin lớp từ localStorage, nếu không có thì mặc định là "Lớp 1"
-  console.log("grade", grade);
-  // console.log("userInfo", userInfo);
   const router = useRouter();
   const handleSkillClick = (subjectId: string) => {
-    const gradeName = grade || "Lớp 1"; // Nếu userInfo null, mặc định là "Lớp 1"
-    // router.push(`/skill-list?subjectId=${subjectId}&gradeName=${gradeName}`);
+    
     router.push(`/skill-list`);
   };
   const [subjects, setSubjects] = useState<Subject[]>([]);

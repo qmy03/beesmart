@@ -24,27 +24,9 @@ import Image from "next/image";
 
 const Sidebar: React.FC = () => {
   const { logoutUser } = useAuth();
-  // const [accessToken, setAccessToken] = useState<string | null>(null);
-  // useEffect(() => {
-  //   if (typeof window !== "undefined") {
-  //     const token = localStorage.getItem("accessToken");
-  //     setAccessToken(token);
-  //   }
-  // }, []);
-  // const accessToken = localStorage.getItem("accessToken");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      const userInfo = localStorage.getItem("userInfo");
+  const accessToken = localStorage.getItem("accessToken");
 
-      setAccessToken(token);
-      setUserInfo(userInfo);
-    }
-  }, []);
-
-  // const userInfo = localStorage.getItem("userInfo");
+  const userInfo = localStorage.getItem("userInfo");
 
   const parsedUserInfo = userInfo ? JSON.parse(userInfo) : null;
 

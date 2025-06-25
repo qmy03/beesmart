@@ -22,8 +22,9 @@ interface Subject {
 }
 
 const StatisticLessonsPage = () => {
-  // const accessToken = localStorage.getItem("accessToken");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const { isLoading, setIsLoading } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
   >([]);
@@ -46,13 +47,8 @@ const StatisticLessonsPage = () => {
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
-  useEffect(() => {
     const fetchSubjects = async () => {
+      setIsLoading(true);
       try {
         const response = (await apiService.get("/subjects")) as {
           data: {
@@ -73,6 +69,8 @@ const StatisticLessonsPage = () => {
         }
       } catch (error) {
         console.error("Lỗi khi lấy danh sách môn học:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchSubjects();

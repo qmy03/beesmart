@@ -7,6 +7,7 @@ import QuizAverageBarChart from "../../dashboard/component/quiz-average-bar-char
 import BattleStatisticsChart from "../../dashboard/component/battle-statistics-chart";
 import BattleScoreChart from "../../dashboard/component/battle-score-chart";
 import QuizStatisticsChart from "../../dashboard/component/quiz-statistics-chart";
+import { useAuth } from "@/app/hooks/AuthContext";
 
 interface Subject {
   subjectId: string;
@@ -27,8 +28,8 @@ interface BattleScoreData {
 }
 
 const StatisticBattlesPage = () => {
-  // const accessToken = localStorage.getItem("accessToken");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const {isLoading, setIsLoading} = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const [selectedMonth, setSelectedMonth] = useState<string>(
     `${new Date().getMonth() + 1}`.padStart(2, "0")
   );
@@ -55,18 +56,12 @@ const StatisticBattlesPage = () => {
   const [battleScoreLoading, setBattleScoreLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
-  useEffect(() => {
     const fetchSubjectsAndStats = async () => {
       if (!accessToken) {
         setError("Không tìm thấy token xác thực");
         return;
       }
-
+      setIsLoading(true);
       try {
         const config = {
           headers: {
@@ -116,6 +111,7 @@ const StatisticBattlesPage = () => {
       } finally {
         setBattleStatisticsLoading(false);
         setBattleScoreLoading(false);
+        setIsLoading(false);
       }
     };
 

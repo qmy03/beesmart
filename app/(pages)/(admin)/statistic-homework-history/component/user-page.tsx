@@ -64,7 +64,8 @@ interface QuizRecordsResponse {
 }
 
 const StatisticHomeworkHistory = () => {
-  const { accessToken } = useAuth();
+  const { isLoading, setIsLoading } = useAuth();
+  const accessToken = localStorage.getItem("accessToken");
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -189,6 +190,7 @@ const StatisticHomeworkHistory = () => {
   // Fetch users and subjects
   useEffect(() => {
     if (accessToken) {
+      setIsLoading(true);
       setLoading(true);
       Promise.all([
         apiService.get<UsersResponse>("/users", {
@@ -219,6 +221,9 @@ const StatisticHomeworkHistory = () => {
           setSnackbarSeverity("error");
           setSnackbarOpen(true);
           setLoading(false);
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
     }
   }, [accessToken]);
@@ -349,7 +354,15 @@ const StatisticHomeworkHistory = () => {
             ))}
           </TextField>
         </Box>
-        <Box sx={{ boxShadow: 4, borderRadius: 2, marginTop: 2, width: "100%", overflowX: "auto" }}>
+        <Box
+          sx={{
+            boxShadow: 4,
+            borderRadius: 2,
+            marginTop: 2,
+            width: "100%",
+            overflowX: "auto",
+          }}
+        >
           <Box sx={{ boxShadow: 4, borderRadius: 2, minWidth: 1500 }}>
             <TableContainer
               sx={{
@@ -362,29 +375,45 @@ const StatisticHomeworkHistory = () => {
               <Table size="small">
                 <TableHead sx={{ backgroundColor: "#FFFBF3" }}>
                   <TableRow>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Tên chủ đề
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Tên bài học
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Tên bài kiểm tra
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Tổng câu hỏi
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Đáp án đúng
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>Điểm</TableCell>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
+                      Điểm
+                    </TableCell>
                     <TableCell sx={{ pb: "0", border: "none" }}>
                       Thời gian làm bài
                     </TableCell>
                     <TableCell sx={{ pb: "0", border: "none" }}>
                       Ngày làm bài
                     </TableCell>
-                    <TableCell sx={{ pb: "0", border: "none", whiteSpace: "nowrap"  }}>
+                    <TableCell
+                      sx={{ pb: "0", border: "none", whiteSpace: "nowrap" }}
+                    >
                       Xem lại
                     </TableCell>
                   </TableRow>
@@ -511,7 +540,9 @@ const StatisticHomeworkHistory = () => {
                         <TableCell>{record.correctAnswers}</TableCell>
                         <TableCell>{record.points}</TableCell>
                         <TableCell>{formatTime(record.timeSpent)}</TableCell>
-                        <TableCell>{formatDateTime(record.createdAt)}</TableCell>
+                        <TableCell>
+                          {formatDateTime(record.createdAt)}
+                        </TableCell>
                         <TableCell>
                           <Link
                             component="button"

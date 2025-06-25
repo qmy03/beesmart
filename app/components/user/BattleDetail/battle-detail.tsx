@@ -54,7 +54,6 @@ interface PlayerInfo {
 }
 
 export default function BattleDetailPage() {
-  // const accessToken = localStorage.getItem("accessToken");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const { userInfo } = useAuth();
   const { battleId } = useParams();
@@ -84,12 +83,17 @@ export default function BattleDetailPage() {
   const [currentQuestionAnswer, setCurrentQuestionAnswer] = useState<any>(null);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
   const [battleStarted, setBattleStarted] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [disconnectedPlayer, setDisconnectedPlayer] = useState<string | null>(null);
+  const isNavigatingRef = useRef(false);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken");
       setAccessToken(token);
     }
   }, []);
+
   const getPlayerStatusMessage = (
     isCorrect: boolean | null,
     isAnswered: boolean
@@ -101,6 +105,43 @@ export default function BattleDetailPage() {
       return "Hãy trả lời câu hỏi bên dưới!";
     }
   };
+
+  // Handle browser navigation (back/forward button)
+  useEffect(() => {
+    if (!battleInfo?.status || finished) return;
+
+    history.pushState(null, "", window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (battleInfo.status === "ONGOING" && !isNavigatingRef.current) {
+        event.preventDefault();
+        setShowLeaveDialog(true);
+        history.pushState(null, "", window.location.href);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [battleInfo?.status, finished]);
+
+  // Handle beforeunload for browser close/refresh
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (battleInfo?.status === "ONGOING" && !finished) {
+        event.preventDefault();
+        event.returnValue = "Are you sure you want to leave the battle? Your opponent will win.";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [battleInfo?.status, finished]);
 
   useEffect(() => {
     if (!accessToken || !battleId || !userInfo?.userId) return;
@@ -115,7 +156,6 @@ export default function BattleDetailPage() {
         );
 
         const battleData = response.data.data;
-        console.log("Battle data:", battleData);
         setBattleInfo({
           ...battleData,
           lastQuestionId: battleData.lastQuestionId || null,
@@ -197,6 +237,12 @@ export default function BattleDetailPage() {
           case "ANSWER_RESULT":
             handleAnswerResult(msg);
             break;
+          case "PLAYER_DISCONNECTED":
+            handlePlayerDisconnected(msg);
+            break;
+          case "PLAYER_RECONNECTED":
+            setDisconnectedPlayer(null);
+            break;
           case "END":
             handleBattleEnd(msg);
             break;
@@ -218,6 +264,9 @@ export default function BattleDetailPage() {
             break;
           case "BOTH_ANSWERED":
             handleBothAnswered();
+            break;
+          case "UPDATE":
+            setBattleInfo((prev) => ({ ...prev, ...msg.battle }));
             break;
           default:
             if (msg.battleId && msg.status) {
@@ -252,6 +301,50 @@ export default function BattleDetailPage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [accessToken, battleId, userInfo?.userId]);
+
+  // Handle player disconnection
+  const handlePlayerDisconnected = (msg: any) => {
+    if (msg.userId !== userInfo?.userId) {
+      // Opponent disconnected
+      setDisconnectedPlayer(msg.userId);
+      setWinner(userInfo?.userId || null);
+      setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setBattleResults(msg.playerScores || null);
+      // Redirect to battle result immediately
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
+    }
+  };
+
+  // Handle explicit leave
+  const handleLeaveBattle = async () => {
+    try {
+      isNavigatingRef.current = true;
+      await apiService.post(
+        `/battles/${battleId}/leave`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setShowLeaveDialog(false);
+      setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      // Redirect to skill-list immediately
+      router.push("/battle-home");
+    } catch (error) {
+      console.error("Error leaving battle:", error);
+      setError("Failed to leave the battle");
+      isNavigatingRef.current = false;
+    }
+  };
 
   const handleAnswerResult = (msg: any) => {
     if (msg.userId === userInfo?.userId) {
@@ -345,7 +438,6 @@ export default function BattleDetailPage() {
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           const currentQuestion = msg.question;
-          // Only submit a null answer if the user hasn't answered yet
           if (!isAnswered && currentQuestion?.questionId) {
             console.log("⏰ Timer expired. Sending null answer...");
             handleTimeExpiredAnswer(currentQuestion);
@@ -444,13 +536,29 @@ export default function BattleDetailPage() {
   };
 
   const handleBattleEnd = (msg: any) => {
-    setWinner(msg.winner);
-    setFinished(true);
-    setBattleResults(msg.results || null);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeout(() => {
+    if (msg.reason === "OPPONENT_LEFT") {
+      // Remaining player
+      setWinner(userInfo?.userId || null);
+      setBattleResults(msg.playerScores || null);
+      setFinished(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
       router.push(`/battle-result/${battleId}`);
-    }, 1000);
+    } else {
+      // Normal battle end
+      setWinner(msg.winner);
+      setFinished(true);
+      setBattleResults(msg.results || null);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
+    }
   };
 
   const updateBattleState = (battleResponse: any) => {
@@ -465,17 +573,16 @@ export default function BattleDetailPage() {
       setWinner(battleResponse.winner || null);
       setBattleResults(battleResponse.results || null);
       setFinished(true);
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      isNavigatingRef.current = true;
+      router.push(`/battle-result/${battleId}`);
     }
   };
 
   const handleAnswer = async (answerOption: string | null | string[]) => {
-    console.log("handleAnswer called with:", {
-      question: question,
-      userId: userInfo?.userId,
-      isAnswered: isAnswered,
-    });
-
     if (!question || !userInfo?.userId || isAnswered) {
       console.log("Early return condition met in handleAnswer");
       return;
@@ -483,7 +590,6 @@ export default function BattleDetailPage() {
 
     try {
       setIsAnswered(true);
-      // Clear the timer immediately to prevent time-expired submission
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -541,7 +647,7 @@ export default function BattleDetailPage() {
         setError("Answer already submitted for this question.");
       } else {
         setError("Failed to submit answer");
-        setIsAnswered(false); // Allow retry if submission fails for non-duplicate reasons
+        setIsAnswered(false);
       }
     }
   };
@@ -635,6 +741,9 @@ export default function BattleDetailPage() {
             overflow: "hidden",
           }}
         >
+          {/* Header and Player Info */}
+          
+
           <Box sx={{ bgcolor: "#90DD81" }}>
             <Typography
               sx={{
@@ -1212,7 +1321,7 @@ export default function BattleDetailPage() {
                             onChange={(e) => setTextAnswer(e.target.value)}
                             disabled={isAnswered || timer === 0}
                             sx={{ width: "100%", bgcolor: "white" }}
-                            placeholder="Type your answer here"
+                            placeholder="Nhập câu trả lời của bạn"
                           />
 
                           <Box
@@ -1300,20 +1409,6 @@ export default function BattleDetailPage() {
                 gap: 2,
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  textAlign: "center",
-                }}
-              >
-                {winner === userInfo?.userId
-                  ? "🏆 CHIẾN THẮNG! 🏆"
-                  : "🎮 Thua rồi! Hãy thử lại lần sau! 🎮"}
-              </Typography>
-              <Typography sx={{ fontSize: "16px", color: "#666" }}>
-                Đang chuyển đến trang kết quả...
-              </Typography>
               <Box
                 sx={{
                   width: "32px",
@@ -1331,6 +1426,21 @@ export default function BattleDetailPage() {
             </Box>
           )}
         </Box>
+        {/* Leave Confirmation Dialog */}
+        <Dialog open={showLeaveDialog} onClose={() => setShowLeaveDialog(false)} maxWidth="md">
+          <DialogTitle>Bạn muốn bỏ cuộc ư?</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Bạn có chắc chắn bạn muốn rời khỏi trận đấu? Đối phương sẽ được ghi nhận là người chiến thắng nếu bạn bỏ cuộc.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowLeaveDialog(false)}>Hủy</Button>
+            <Button onClick={handleLeaveBattle} color="error">
+              Rời khỏi
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Layout>
   );

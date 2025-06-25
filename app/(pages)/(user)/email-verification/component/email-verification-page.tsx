@@ -203,12 +203,12 @@ const EmailVerification = () => {
               Xác thực thành công!
             </Typography>
 
-            <Typography
+            {/* <Typography
               variant="body1"
               sx={{ mb: 2, textAlign: "center", maxWidth: 400 }}
             >
               {message}
-            </Typography>
+            </Typography> */}
 
             <Alert severity="success" sx={{ mb: 3 }}>
               Tài khoản của bạn đã được kích hoạt thành công. Bạn có thể đăng
@@ -273,7 +273,7 @@ const EmailVerification = () => {
               Xác thực thất bại
             </Typography>
 
-            <Typography
+            {/* <Typography
               variant="body1"
               sx={{ mb: 2, textAlign: "center", maxWidth: 400 }}
             >
@@ -282,7 +282,7 @@ const EmailVerification = () => {
 
             <Alert severity="error" sx={{ mb: 3 }}>
               {message}
-            </Alert>
+            </Alert> */}
 
             <Box
               sx={{

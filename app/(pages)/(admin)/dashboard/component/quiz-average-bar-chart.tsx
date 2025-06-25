@@ -57,7 +57,7 @@ const QuizAverageBarChart = ({
   const colors = ["#FF6B6B", "#4ECDC4", "#1A535C", "#FF8C00", "#2E8B57"];
   const title =
     type === "quiz"
-      ? `Điểm trung bình quiz trong tháng ${month}/${year}`
+      ? `Điểm trung bình bài kiểm tra trong tháng ${month}/${year}`
       : `Điểm trung bình đấu trường trong tháng ${month}/${year}`;
 
   // Cải thiện logic xử lý dữ liệu

@@ -1647,7 +1647,7 @@ const AccountPage: React.FC = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={8} align="center" sx={{ padding: "12px" }}>
+                          <TableCell colSpan={10} align="center" sx={{ padding: "12px" }}>
                             Không có dữ liệu
                           </TableCell>
                         </TableRow>

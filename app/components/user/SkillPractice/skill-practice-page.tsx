@@ -69,6 +69,18 @@ interface SubmitResponse {
 }
 
 const SkillPracticePage = () => {
+  const {accessToken} = useAuth();
+  // const accessToken = localStorage.getItem("accessToken");
+  // const [quizLoaded, setQuizLoaded] = useState(false);
+
+  // // Di chuyển accessToken vào useEffect để tránh SSR issues
+  // const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   const token = localStorage.getItem("accessToken");
+  //   setAccessToken(token);
+  // }, []);
+
   const router = useRouter();
   const { quizId } = useParams();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -76,7 +88,6 @@ const SkillPracticePage = () => {
   const [flaggedQuestions, setFlaggedQuestions] = useState<boolean[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [timeLeft, setTimeLeft] = useState<number>(0);
-  const { accessToken } = useAuth();
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState<boolean>(false);
   const [warningDialogOpen, setWarningDialogOpen] = useState<boolean>(false);
@@ -710,7 +721,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 bgcolor: "transparent",
                                 border: "1px solid #ccc",
@@ -730,7 +741,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#6593DA",
@@ -749,7 +760,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#F8AC59",
@@ -768,7 +779,7 @@ const SkillPracticePage = () => {
                           >
                             <Box
                               sx={{
-                                width: 53,
+                                width: 20,
                                 height: 20,
                                 borderRadius: 2,
                                 bgcolor: "#99BC4D",

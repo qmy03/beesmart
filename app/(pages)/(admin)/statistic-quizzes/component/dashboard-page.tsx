@@ -39,8 +39,8 @@ interface QuizScoreData {
 }
 
 const StatisticQuizzesPage = () => {
-  // const accessToken = localStorage.getItem("accessToken");
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const accessToken = localStorage.getItem("accessToken");
+  const { isLoading, setIsLoading } = useAuth();
   const [lessonViewData, setLessonViewData] = useState<
     { date: string; views: number }[]
   >([]);
@@ -71,17 +71,12 @@ const StatisticQuizzesPage = () => {
   const [quizScoreLoading, setQuizScoreLoading] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      setAccessToken(token);
-    }
-  }, []);
-  useEffect(() => {
     const fetchSubjectsAndStats = async () => {
       if (!accessToken) {
         setError("Không tìm thấy token xác thực");
         return;
       }
+      setIsLoading(true);
 
       try {
         const config = {
@@ -140,6 +135,7 @@ const StatisticQuizzesPage = () => {
       } finally {
         setQuizStatisticsLoading(false);
         setQuizScoreLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -269,7 +265,7 @@ const StatisticQuizzesPage = () => {
           }}
         >
           <Typography fontWeight={700} flexGrow={1}>
-            Thống kê Quiz
+            Thống kê Bài kiểm tra
           </Typography>
         </Box>
 
@@ -353,12 +349,9 @@ const StatisticQuizzesPage = () => {
                 width: "100%", // Full width within flex
               }}
             >
-              <Box sx={{ width: "100%", height: 400 }}>
-                <QuizScoreChart
-                  data={quizScoreData}
-                  loading={quizScoreLoading}
-                />
-              </Box>
+              {/* <Box sx={{ width: "100%", height: 550 }}> */}
+              <QuizScoreChart data={quizScoreData} loading={quizScoreLoading} />
+              {/* </Box> */}
             </Card>
           </Box>
         </Box>

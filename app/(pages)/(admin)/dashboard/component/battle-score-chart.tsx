@@ -97,7 +97,7 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
     <Card sx={{ width: "100%" }}>
       <CardContent sx={{ p: 2 }}>
         <Typography fontWeight={600} fontSize={20} sx={{ mb: 2 }}>
-          Thống kê số thí sinh theo môn học và phân bố điểm Đấu trường
+          Thống kê lượt tham gia đấu trường theo môn học và phân bố điểm
         </Typography>
 
         <Box height={400}>
@@ -123,7 +123,7 @@ const BattleScoreChart: React.FC<BattleScoreChartProps> = ({
                 />
                 <YAxis
                   label={{
-                    value: "Số thí sinh",
+                    value: "Số lượt tham gia",
                     angle: -90,
                     position: "insideLeft",
                     textAnchor: "middle",
